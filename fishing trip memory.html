@@ -386,6 +386,7 @@
             <p class="text-xs text-slate-400">※ 緯度・経度があると、開始天気・開始潮汐・水温を自動取得します。</p>
           </div>
           <div class="flex gap-2 mt-4">
+            <button id="btnCancelTripModal" class="flex-1 py-2 rounded-2xl bg-slate-700 hover:bg-slate-600 font-semibold">キャンセル</button>
             <button id="btnSaveTrip" class="flex-1 py-2 rounded-2xl bg-indigo-600 hover:bg-indigo-500 font-semibold">登録</button>
           </div>
         </div>
@@ -2707,7 +2708,35 @@
           const btnEdit=document.createElement('button'); btnEdit.className='px-2 py-1 text-xs rounded-lg border border-slate-700 hover:bg-slate-800'; btnEdit.textContent='編集';
           btnEdit.onclick=()=>openEditCatch(c.id);
           const btnDel=document.createElement('button'); btnDel.className='px-2 py-1 text-xs rounded-lg border border-slate-700 hover:bg-slate-800'; btnDel.textContent='削除';
-          btnDel.onclick=()=>{ draft.catches = draft.catches.filter(x=>x.id!==c.id); saveDraft(draft); render(); };
+          btnDel.onclick=async ()=>{ 
+            draft.catches = draft.catches.filter(x=>x.id!==c.id); 
+            saveDraft(draft);
+            
+            // ★修正②: 削除後に補完ロジックを実行（手動釣行時のみ）
+            if (draft.manualStarted) {
+              // 手動釣行時は削除後に時刻を再計算してから補完ロジック実行
+              const validTimes = draft.catches
+                .map(c => c.timestamp)
+                .filter(ts => !!ts);
+              
+              if (validTimes.length > 0) {
+                const earliestTime = validTimes.reduce((a, b) => a < b ? a : b);
+                const latestTime = validTimes.reduce((a, b) => a > b ? a : b);
+                draft.startedAt = earliestTime;
+                draft.endedAt = latestTime;
+                saveDraft(draft);
+              } else {
+                // 釣果が全て削除された場合
+                draft.startedAt = null;
+                draft.endedAt = null;
+                saveDraft(draft);
+              }
+              
+              await _complementTripDataOnly();
+            } else {
+              render();
+            }
+          };
           ops.appendChild(btnEdit); ops.appendChild(btnDel);
 
           li.appendChild(info); li.appendChild(ops);
@@ -3195,15 +3224,38 @@
               const btnDelete = document.createElement('button');
               btnDelete.className = 'text-xs py-1 px-2 rounded bg-red-900 hover:bg-red-800 text-red-200 ml-2';
               btnDelete.textContent = '削除';
-              btnDelete.onclick = (e) => {
+              btnDelete.onclick = async (e) => {
                 e.stopPropagation();
                 if (confirm('この釣果を削除しますか？')) {
                   console.log('[TripCard] Deleting catch at index:', idx);
                   draft.catches.splice(idx, 1);
                   saveDraft(draft);
                   console.log('[TripCard] catch deleted, remaining:', draft.catches.length);
-                  // 釣果リストを再描画（スコープ内で再度ループ）
-                  const renderEditCatchListAfterDelete = () => {
+                  
+                  // 手動釣行時は補完ロジックを実行、通常釣行時はローカル再描画
+                  if (draft.manualStarted) {
+                    // 手動釣行時は削除後に時刻を再計算してから補完ロジック実行
+                    const validTimes = draft.catches
+                      .map(c => c.timestamp)
+                      .filter(ts => !!ts);
+                    
+                    if (validTimes.length > 0) {
+                      const earliestTime = validTimes.reduce((a, b) => a < b ? a : b);
+                      const latestTime = validTimes.reduce((a, b) => a > b ? a : b);
+                      draft.startedAt = earliestTime;
+                      draft.endedAt = latestTime;
+                      saveDraft(draft);
+                    } else {
+                      // 釣果が全て削除された場合
+                      draft.startedAt = null;
+                      draft.endedAt = null;
+                      saveDraft(draft);
+                    }
+                    
+                    await _complementTripDataOnly();
+                  } else {
+                    // 釣果リストを再描画（スコープ内で再度ループ）
+                    const renderEditCatchListAfterDelete = () => {
                     const ctsList = draft.catches || [];
                     editCatchList.innerHTML = '';
                     editCatchCount.textContent = ctsList.length;
@@ -3240,11 +3292,30 @@
                       const btnDeleteTemp = document.createElement('button');
                       btnDeleteTemp.className = 'text-xs py-1 px-2 rounded bg-red-900 hover:bg-red-800 text-red-200 ml-2';
                       btnDeleteTemp.textContent = '削除';
-                      btnDeleteTemp.onclick = (e) => {
+                      btnDeleteTemp.onclick = async (e) => {
                         e.stopPropagation();
                         if (confirm('この釣果を削除しますか？')) {
                           draft.catches.splice(i, 1);
                           saveDraft(draft);
+                          
+                          // 手動釣行時は時刻を再計算
+                          if (draft.manualStarted) {
+                            const validTimes = draft.catches
+                              .map(c => c.timestamp)
+                              .filter(ts => !!ts);
+                            
+                            if (validTimes.length > 0) {
+                              const earliestTime = validTimes.reduce((a, b) => a < b ? a : b);
+                              const latestTime = validTimes.reduce((a, b) => a > b ? a : b);
+                              draft.startedAt = earliestTime;
+                              draft.endedAt = latestTime;
+                            } else {
+                              draft.startedAt = null;
+                              draft.endedAt = null;
+                            }
+                            saveDraft(draft);
+                          }
+                          
                           renderEditCatchListAfterDelete();
                         }
                       };
@@ -3255,6 +3326,7 @@
                     });
                   };
                   renderEditCatchListAfterDelete();
+                  }
                 }
               };
 
@@ -3915,11 +3987,19 @@
       imgPreview.src = '';
       imgPreview.classList.add('hidden');
       
-      // モーダルをクローズ
-      closeCatchModal();
-      
-      // ホームに戻る
-      showView('home');
+      // ★修正: 釣行ステータスで分岐
+      if (draft.status === 'active') {
+        // 釣行中: フォームのみクリア、draft保持 → ステータス画面に遷移
+        closeCatchModal();
+        render();
+      } else {
+        // 釣行未開始（idle）: 全データクリア → ホーム
+        draft = { tripId: uuid(), status: 'idle', catches: [], tide_daily_cache: {}, start_water_temp: null };
+        manualCatchMode = false;
+        saveDraft(draft);
+        closeCatchModal();
+        showView('home');
+      }
     }
 
     // ★追加：釣行中にキャンセルしてホームに戻る関数
@@ -4137,6 +4217,26 @@
       }
       saveDraft(draft);
       closeCatchModal();
+
+      // ★修正①: 手動釣行時に登録釣果から開始/終了時刻を算出（render前に実行）
+      if (manualCatchMode || !!draft.manualStarted) {
+        const validTimes = draft.catches
+          .map(c => c.timestamp)
+          .filter(ts => !!ts);
+        
+        if (validTimes.length > 0) {
+          // ★釣果がある場合：釣果タイムスタンプから時刻を設定
+          const earliestTime = validTimes.reduce((a, b) => a < b ? a : b);
+          const latestTime = validTimes.reduce((a, b) => a > b ? a : b);
+          
+          draft.startedAt = earliestTime;
+          draft.endedAt = latestTime;
+          saveDraft(draft);
+          console.log('[submitCatch] Auto-calculated times from catches:', { startedAt: draft.startedAt, endedAt: draft.endedAt });
+        }
+        // ★釣果がない場合は何もしない（既存の draft.startedAt/endedAt を保持）
+      }
+
       render();
 
       if (!editMode){
@@ -4148,10 +4248,9 @@
         }
       }
 
-
-      // ★変更：手動モード時も必ず openTripReview() を経由させて補完ロジックを発火させる
+      // ★変更：手動モード時はモーダル表示なしで補完ロジックのみを実行
       if (manualCatchMode) {
-        openTripReview();   // ← ここで complementTripFromCatches() が先に走る
+        await _complementTripDataOnly();   // ← ステータス画面更新のみ、モーダル表示なし
       }
     }
 
@@ -4389,15 +4488,53 @@
     const inpTripLat  = document.getElementById('inpTripLat');
     const inpTripLng  = document.getElementById('inpTripLng');
     const btnCloseTripModal = document.getElementById('btnCloseTripModal');
+    const btnCancelTripModal = document.getElementById('btnCancelTripModal');
     const btnSaveTrip   = document.getElementById('btnSaveTrip');
 
     // ★修正：釣行モーダルのキャンセルボタン
     if (btnCloseTripModal) btnCloseTripModal.onclick = ()=> {
-      inpTripStart.value = '';
-      inpTripLat.value = '';
-      inpTripLng.value = '';
-      tripModal && tripModal.classList.add('hidden');
-      showView('home');
+      // ★修正: 釣行ステータスで分岐
+      if (draft.status === 'active') {
+        // 釣行中: 入力フィールドのみクリア → ステータス画面
+        inpTripStart.value = '';
+        inpTripLat.value = '';
+        inpTripLng.value = '';
+        tripModal && tripModal.classList.add('hidden');
+        render();
+      } else {
+        // 釣行未開始（idle）: 入力フィールド＋全データクリア → ホーム
+        inpTripStart.value = '';
+        inpTripLat.value = '';
+        inpTripLng.value = '';
+        draft = { tripId: uuid(), status: 'idle', catches: [], tide_daily_cache: {}, start_water_temp: null };
+        manualCatchMode = false;
+        saveDraft(draft);
+        tripModal && tripModal.classList.add('hidden');
+        showView('home');
+      }
+    };
+    
+    // ★追加：釣行モーダルのキャンセルボタン（モーダル下部）
+    if (btnCancelTripModal) btnCancelTripModal.onclick = ()=> {
+      // ★修正: 釣行ステータスで分岐（×ボタンと同じ動作）
+      if (draft.status === 'active') {
+        // 釣行中: 入力フィールドのみクリア → ステータス画面
+        inpTripStart.value = '';
+        inpTripLat.value = '';
+        inpTripLng.value = '';
+        tripModal && tripModal.classList.add('hidden');
+        render();
+      } else {
+        // 釣行未開始（idle）: 入力フィールド＋全データクリア → ホーム
+        inpTripStart.value = '';
+        inpTripLat.value = '';
+        inpTripLng.value = '';
+        draft = { tripId: uuid(), status: 'idle', catches: [], tide_daily_cache: {}, start_water_temp: null };
+        manualCatchMode = false;
+        saveDraft(draft);
+        tripModal && tripModal.classList.add('hidden');
+        showView('home');
+      }
     };
     
     // ★追加：recordView 下部バーのキャンセルボタン（釣行中のキャンセル）
@@ -4648,27 +4785,18 @@
       }
     }
 
-    async function openTripReview(){
-      // ★ログ追加：openTripReview の呼び出しを記録
-      LOG.app("[TripReview] openTripReview called", {
-        manualCatchMode,
-        manualStarted: !!draft.manualStarted,
-        status: draft.status,
-        catches: Array.isArray(draft.catches) ? draft.catches.length : 0,
-        startedAt: draft.startedAt || null,
-        endedAt: draft.endedAt || null
-      });
-
+    // ★新規追加: 補完ロジックのみを実行（モーダル表示なし）
+    // submitCatch() から呼び出され、ステータス画面の更新のみを行う
+    async function _complementTripDataOnly(){
       try {
-        // ★先に EXIF 由来の位置などを draft へ反映してから補完を走らせる
         completeMissingTripInfoIfNeeded();
 
-        LOG.app("[TripReview] calling complementTripFromCatches(force=true)");
+        LOG.app("[TripData] calling complementTripFromCatches(force=true)");
         await complementTripFromCatches(true);
 
         // ★追加：手動釣果モード時、全ての釣果に対して潮汐情報を補完
         if ((manualCatchMode || draft.manualStarted) && Array.isArray(draft.catches)) {
-          LOG.app("[TripReview]補完未済の釣果に対して潮汐情報を補完開始", {
+          LOG.app("[TripData] 補完未済の釣果に対して潮汐情報を補完開始", {
             catches: draft.catches.length,
             hasPos: (typeof draft.lat === 'number' && typeof draft.lng === 'number')
           });
@@ -4678,13 +4806,13 @@
             
             // 既に潮汐情報がある場合はスキップ
             if (catch_rec.tide_level_cm != null && catch_rec.tide_trend != null) {
-              LOG.app("[TripReview] 釣果[" + i + "]は既に潮汐情報あり、スキップ");
+              LOG.app("[TripData] 釣果[" + i + "]は既に潮汐情報あり、スキップ");
               continue;
             }
             
             // 潮汐計算に必要な情報を確認
             if (!catch_rec.timestamp) {
-              LOG.app("[TripReview] 釣果[" + i + "]はタイムスタンプなし、スキップ");
+              LOG.app("[TripData] 釣果[" + i + "]はタイムスタンプなし、スキップ");
               continue;
             }
             
@@ -4699,7 +4827,7 @@
             }
             
             if (calc_lat == null || calc_lng == null) {
-              LOG.app("[TripReview] 釣果[" + i + "]は位置情報なし、スキップ");
+              LOG.app("[TripData] 釣果[" + i + "]は位置情報なし、スキップ");
               continue;
             }
             
@@ -4711,7 +4839,7 @@
               // キャッシュを確認
               if (draft.tide_daily_cache?.[dkey]?.chart) {
                 chart_data = draft.tide_daily_cache[dkey].chart;
-                LOG.app("[TripReview] 釣果[" + i + "]は潮汐キャッシュから取得");
+                LOG.app("[TripData] 釣果[" + i + "]は潮汐キャッシュから取得");
               } else {
                 // Tide736から取得
                 const pack = await getTideChartForDate(calc_lat, calc_lng, catch_rec.timestamp);
@@ -4719,7 +4847,7 @@
                   chart_data = pack.chart;
                   draft.tide_daily_cache = draft.tide_daily_cache || {};
                   draft.tide_daily_cache[dkey] = { harbor: pack.harbor || null, chart: pack.chart };
-                  LOG.app("[TripReview] 釣果[" + i + "]は Tide736 から新規取得", { lat: calc_lat, lng: calc_lng });
+                  LOG.app("[TripData] 釣果[" + i + "]は Tide736 から新規取得", { lat: calc_lat, lng: calc_lng });
                 }
               }
               
@@ -4742,30 +4870,67 @@
                 catch_rec.tide_high_times = hl.high;
                 catch_rec.tide_low_times  = hl.low;
                 
-                LOG.app("[TripReview] 釣果[" + i + "]に潮汐情報を補完", {
+                LOG.app("[TripData] 釣果[" + i + "]に潮汐情報を補完", {
                   tide_level_cm: catch_rec.tide_level_cm,
                   tide_trend: catch_rec.tide_trend,
                   harbor: catch_rec.tide_harbor_name
                 });
               }
             } catch (ex) {
-              console.warn("[TripReview] 釣果[" + i + "]の潮汐補完失敗:", ex?.message || ex);
+              console.warn("[TripData] 釣果[" + i + "]の潮汐補完失敗:", ex?.message || ex);
             }
           }
           
           saveDraft(draft);
-          LOG.app("[TripReview] 全釣果の潮汐補完完了");
+          LOG.app("[TripData] 全釣果の潮汐補完完了");
         }
 
-        LOG.app("[TripReview] complementTripFromCatches completed", {
+        LOG.app("[TripData] complementTripFromCatches completed", {
           startedAt: draft.startedAt || null,
           endedAt: draft.endedAt || null,
           lat: draft.lat, lng: draft.lng,
           hasStartTide: !!draft.start_tide
         });
       } catch(e) {
-        console.warn("[openTripReview] complement failed:", e?.message || e);
+        console.warn("[TripData] complement failed:", e?.message || e);
       }
+
+      // ★修正②: 釣行終了ボタン押下時、釣果がある場合のみ時刻を再計算
+      // ★重要: render() の BEFORE に実行し、正確な時刻を draft に設定してから画面を描画
+      if (draft.manualStarted) {
+        const validTimes = draft.catches && Array.isArray(draft.catches)
+          ? draft.catches.map(c => c.timestamp).filter(ts => !!ts)
+          : [];
+        
+        if (validTimes.length > 0) {
+          // ★釣果がある場合のみ、時刻を再計算・上書き
+          const earliestTime = validTimes.reduce((a, b) => a < b ? a : b);
+          const latestTime = validTimes.reduce((a, b) => a > b ? a : b);
+          draft.startedAt = earliestTime;
+          draft.endedAt = latestTime;
+          console.log('[TripData] Auto-calculated from catches:', { startedAt: draft.startedAt, endedAt: draft.endedAt });
+        }
+        // ★釣果がない場合は、既に設定されている draft.startedAt/endedAt をそのまま保持
+        saveDraft(draft);
+      }
+
+      // ★新規追加: 補完完了後、全ての情報が揃ってからステータス画面を再描画
+      render();
+    }
+
+    async function openTripReview(){
+      // ★ログ追加：openTripReview の呼び出しを記録
+      LOG.app("[TripReview] openTripReview called", {
+        manualCatchMode,
+        manualStarted: !!draft.manualStarted,
+        status: draft.status,
+        catches: Array.isArray(draft.catches) ? draft.catches.length : 0,
+        startedAt: draft.startedAt || null,
+        endedAt: draft.endedAt || null
+      });
+
+      // ★修正: 補完ロジックを _complementTripDataOnly() に統合
+      await _complementTripDataOnly();
 
       // ★修正：手動釣行でも終了天気を取得してアップロード確認へ
       if (draft.manualStarted) {
@@ -4790,8 +4955,76 @@
         
         saveDraft(draft);
 
+        // ★修正③: openUploadReview()呼び出し前に登録釣果のデータで画面を更新
+        // モーダルが既に表示中でも、最新の登録釣果データで内容を上書き更新
+        const cts_manual = draft.catches||[];
+        const sum_manual = document.createElement('div');
+        sum_manual.className = 'space-y-3';
+
+        const endAtDisplay_manual = draft.endedAt ? new Date(draft.endedAt).toLocaleString() : '—';
+        const head_manual = document.createElement('div');
+        head_manual.innerHTML =
+          `<div class="text-slate-300">Trip ID: <span class="text-slate-100">${draft.tripId.slice(0,8)}</span></div>
+          <div class="text-slate-300">開始: <span class="text-slate-100">${draft.startedAt?new Date(draft.startedAt).toLocaleString():'—'}</span></div>
+          <div class="text-slate-300">終了: <span class="text-slate-100">${endAtDisplay_manual}</span></div>
+          <div class="text-slate-300">件数: <span class="text-slate-100">${cts_manual.length}</span></div>`;
+        sum_manual.appendChild(head_manual);
+
+        const wx_manual = document.createElement('div');
+        wx_manual.className='grid grid-cols-1 sm:grid-cols-2 gap-2';
+        const boxWx_manual = (label, val) => {
+          const d=document.createElement('div'); d.className='rounded-xl bg-slate-800/40 p-3';
+          d.innerHTML = `<div class="text-xs text-slate-400">${label}</div>
+                        <div class="text-sm text-slate-200 mt-0.5">${val||'—'}</div>`;
+          return d;
+        };
+        const sw_manual = draft.start_weather ? formatWeatherBrief(draft.start_weather) : null;
+        const ew_manual = draft.end_weather ? formatWeatherBrief(draft.end_weather) : null;
+        const st_manual = draft.start_tide ? `${draft.start_tide.tideName} / ${draft.start_tide.trendText}` : null;
+        const wt_manual = draft.start_water_temp && draft.start_water_temp.temperature_c!=null
+          ? `${draft.start_water_temp.temperature_c}℃${draft.start_water_temp.point_name?`（${draft.start_water_temp.point_name}）`:''}`
+          : null;
+
+        wx_manual.appendChild(boxWx_manual('開始時の天気', sw_manual));
+        wx_manual.appendChild(boxWx_manual('終了時の天気', ew_manual));
+        wx_manual.appendChild(boxWx_manual('開始時の潮', st_manual));
+        wx_manual.appendChild(boxWx_manual('当日の水温', wt_manual));
+        sum_manual.appendChild(wx_manual);
+
+        if (draft.start_tide?.chart){
+          const tideWrap_manual = document.createElement('div');
+          tideWrap_manual.className = 'rounded-2xl border border-slate-800 bg-slate-900 p-3';
+          const harborName_manual = draft.start_tide?.harbor?.hn || '';
+          const dateKey_manual    = draft.start_tide?.chartDateKey || '';
+          const title_manual = document.createElement('div');
+          title_manual.className = 'text-sm text-slate-300 mb-2';
+          title_manual.textContent = `開始日の潮汐グラフ ${harborName_manual ? `（${harborName_manual}）` : ''} ${dateKey_manual ? `- ${dateKey_manual}`:''}`;
+          tideWrap_manual.appendChild(title_manual);
+          const canvas_manual = document.createElement('canvas');
+          canvas_manual.className = 'w-full h-[260px] bg-slate-950 rounded-lg';
+          tideWrap_manual.appendChild(canvas_manual);
+          sum_manual.appendChild(tideWrap_manual);
+          setTimeout(()=> drawTideChartOnCanvas(canvas_manual, draft.start_tide.chart), 0);
+        }
+
+        const list_manual = document.createElement('div');
+        list_manual.className='divide-y divide-slate-800 rounded-xl border border-slate-800';
+        cts_manual.forEach((c, idx)=>{
+          const row_manual=document.createElement('div'); row_manual.className='p-3 text-sm';
+          const t_manual   = c.timestamp? new Date(c.timestamp).toLocaleString(): '';
+          const wxs_manual = c.weather? formatWeatherBrief(c.weather): '';
+          row_manual.innerHTML =
+            `<div class="font-semibold text-slate-100">${c.species||'(魚種未設定)'} <span class="text-slate-400 text-xs ml-2">${t_manual}</span></div>
+            <div class="text-slate-300 mt-1">${[c.size_cm!=null?`サイズ:${c.size_cm}cm`:null, c.weight_g!=null?`重量:${c.weight_g}g`:null, c.method||null].filter(Boolean).join(' / ')}</div>
+            <div class="text-slate-400 text-xs mt-1">${wxs_manual}</div>`;
+          list_manual.appendChild(row_manual);
+        });
+        sum_manual.appendChild(list_manual);
+
+        uploadReviewBody.innerHTML=''; uploadReviewBody.appendChild(sum_manual);
+        uploadReviewModal.classList.remove('hidden');
+
         pendingEnd = null;
-        openUploadReview();
         return;
       }
 
@@ -5183,6 +5416,12 @@
       draft.status        = 'active';
       draft.startedAt     = startedIso;  // ★修正: null の場合は null のまま
       draft.manualStarted = true; // ★追加：手動開始フラグを明示的にON
+      
+      // ★修正①: 釣果がない場合に備えて、endedAt を現在時刻で初期化
+      if (!draft.endedAt) {
+        draft.endedAt = nowIsoLocal();  // 釣行終了時刻の初期値
+      }
+      
       if (typeof lat === 'number' && typeof lng === 'number' && isFinite(lat) && isFinite(lng)) {
         draft.lat = lat;
         draft.lng = lng;
@@ -5244,8 +5483,9 @@
       });
 
       tripModal && tripModal.classList.add('hidden');
-      render();
-      alert('釣行ドラフトを作成しました。必要なら「＋釣果」から追加入力してください。');
+      
+      // ★修正①: openTripReview() → _complementTripDataOnly() に変更（モーダル表示なし）
+      await _complementTripDataOnly();
     }
 
 
