@@ -81,6 +81,9 @@
               <div id="editTripWaterTemp" class="text-sm text-slate-200 mt-1 break-words">未設定</div>
             </div>
           </div>
+          
+          <!-- ★追加：データ再取得ボタン -->
+          <button id="btnRefetchCompData" class="mt-3 w-full py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm font-semibold">🔄 データ再取得（天気・潮汐）</button>
         </div>
 
         <!-- 釣果リスト -->
@@ -424,21 +427,21 @@
         </div>
       </div>
 
-      <!-- ★追加：アップロード中のローディングオーバーレイ -->
-      <div id="uploadingOverlay" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center">
-        <div class="text-center">
-          <div class="mb-4">
-            <div class="inline-block">
-              <div class="animate-spin rounded-full h-12 w-12 border-4 border-slate-600 border-t-sky-500"></div>
-            </div>
-          </div>
-          <div id="uploadingMessage" class="text-slate-100 text-lg font-semibold">処理中...</div>
-          <div class="text-slate-400 text-sm mt-2">しばらくお待ちください</div>
-        </div>
-      </div>
-
     </section>
   </main>
+
+  <!-- ★修正：オーバーレイを main の外に移動（z-index が効くようにするため） -->
+  <div id="uploadingOverlay" class="hidden fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center" style="pointer-events: auto;">
+    <div class="text-center pointer-events-none">
+      <div class="mb-4">
+        <div class="inline-block">
+          <div class="animate-spin rounded-full h-12 w-12 border-4 border-slate-600 border-t-sky-500"></div>
+        </div>
+      </div>
+      <div id="uploadingMessage" class="text-slate-100 text-lg font-semibold">処理中...</div>
+      <div class="text-slate-400 text-sm mt-2">しばらくお待ちください</div>
+    </div>
+  </div>
 
   <script>
     // ===== Logger =====
@@ -1801,7 +1804,7 @@
 
     // 画像アップロード
     const UPLOAD_ENDPOINT = "https://script.google.com/macros/s/AKfycbyhgEx4eUqaGYg81rtb0HTv0JFAzl3EcEJNCidikJefs3f3zo03AcKC53kKTaul_JfbBg/exec";
-
+ 
     // ★追加：ページ読み込み時に GAS から SHEET_ID を初期化
     initializeSheetId();
 
@@ -1951,40 +1954,22 @@
     }
 
     // ★追加：Google Drive からファイルを削除する関数（GAS経由）
-    async function deletePhotoFromDrive(fileId) {
+    // ★修正：画像削除は GAS 呼び出しをスキップ（ローカルのみで削除をマーク）
+    // ★修正：画像削除は GAS の定期実行に委ねる
+    // 方針：catch シートに存在しない photoFileId を持つ画像は、GAS の定期実行で自動削除される
+    // メリット：
+    //   - UI のハング問題が完全に解決
+    //   - 編集キャンセル時に画像が削除されない（必要な画像が守られる）
+    //   - orphan 画像は定期的に自動クリーンアップ
+    function deletePhotoFromDrive(fileId) {
       if (!fileId) {
         console.warn('[DeletePhoto] No fileId provided');
-        return { ok: true, skipped: true };
+        return;
       }
 
-      try {
-        console.log('[DeletePhoto] Attempting to delete file via GAS:', fileId);
-        
-        const payload = {
-          action: 'deletePhoto',
-          fileId: fileId
-        };
-
-        const res = await fetch(UPLOAD_ENDPOINT, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-          body: JSON.stringify(payload)
-        });
-
-        let j = {}; 
-        try { j = await res.json(); } catch(e) { console.warn('[DeletePhoto] JSON parse error:', e); }
-
-        if (res.ok && j?.ok) {
-          console.log('[DeletePhoto] File deleted successfully:', fileId);
-          return { ok: true, fileId: fileId };
-        } else {
-          console.warn('[DeletePhoto] GAS returned error:', j?.error || 'Unknown error');
-          return { ok: false, fileId: fileId, error: j?.error || `HTTP ${res.status}` };
-        }
-      } catch (err) {
-        console.warn('[DeletePhoto] Failed to delete file:', err?.message || err);
-        return { ok: false, fileId: fileId, error: err?.message || String(err) };
-      }
+      console.log('[DeletePhoto] Photo marked for orphan cleanup (will be deleted by GAS scheduled trigger):', fileId);
+      // ★重要：フロント側では何もしない
+      // GAS の cleanupOrphanPhotos() がシート上に存在しない fileId を定期的に削除
     }
 
     // ★追加：潮汐チャート画像取得・アップロード関数（GASプロキシ経由）
@@ -2802,45 +2787,56 @@
           btnEdit.onclick=()=>openEditCatch(c.id);
           const btnDel=document.createElement('button'); btnDel.className='px-2 py-1 text-xs rounded-lg border border-slate-700 hover:bg-slate-800'; btnDel.textContent='削除';
           btnDel.onclick = async () =>{ 
-            // ★修正：async を削除、画像削除もバックグラウンド実行
+            console.log('[DEBUG-Delete] 1. Delete button clicked');
             if (confirm('この釣果を削除しますか？')) {
+              console.log('[DEBUG-Delete] 2. Confirmed delete');
               // ★修正：削除対象の釣果から photoFileId を取得
               const photoFileIdStatus = c?.photoFileId;
+              console.log('[DEBUG-Delete] 3. photoFileId:', photoFileIdStatus);
               
+              console.log('[DEBUG-Delete] 4. Before splice, catches count:', draft.catches.length);
               draft.catches = draft.catches.filter(x=>x.id!==c.id); 
-              saveDraft(draft);
+              console.log('[DEBUG-Delete] 5. After splice, catches count:', draft.catches.length);
+              
+              console.log('[DEBUG-Delete] 6. Starting saveDraft...');
+              await saveDraft(draft);
+              console.log('[DEBUG-Delete] 7. saveDraft completed');
               
               // ★修正②: 削除後に補完ロジックを実行（手動釣行時のみ）
               if (draft.manualStarted) {
+                console.log('[DEBUG-Delete] 8. Manual started, recalculating times...');
                 // 手動釣行時は削除後に時刻を再計算してから画面更新
                 const validTimes = draft.catches
                   .map(c => c.timestamp)
                   .filter(ts => !!ts);
                 
+                console.log('[DEBUG-Delete] 9. Valid times count:', validTimes.length);
                 if (validTimes.length > 0) {
                   const earliestTime = validTimes.reduce((a, b) => a < b ? a : b);
                   const latestTime = validTimes.reduce((a, b) => a > b ? a : b);
                   draft.startedAt = earliestTime;
                   draft.endedAt = latestTime;
-                  saveDraft(draft);
+                  console.log('[DEBUG-Delete] 10. Updated times, saving...');
+                  await saveDraft(draft);
+                  console.log('[DEBUG-Delete] 11. Time save completed');
                 } else {
                   // 釣果が全て削除された場合
                   draft.startedAt = null;
                   draft.endedAt = null;
-                  saveDraft(draft);
+                  console.log('[DEBUG-Delete] 12. All catches deleted, saving empty times...');
+                  await saveDraft(draft);
+                  console.log('[DEBUG-Delete] 13. Empty save completed');
                 }
               }
               
               // ★修正③：即座に画面更新（長時間処理の _complementTripDataOnly は呼ばない）
+              console.log('[DEBUG-Delete] 14. Starting render...');
               render();
+              console.log('[DEBUG-Delete] 15. Render completed');
               
-              // ★修正④: バックグラウンドで画像削除（UIをブロックしない）
-              if (photoFileIdStatus) {
-                console.log('[StatusScreen] Deleting photo from Drive in background:', photoFileIdStatus);
-                deletePhotoFromDrive(photoFileIdStatus).catch(err => {
-                  console.warn('[StatusScreen] Photo deletion failed:', err?.message || err);
-                });
-              }
+              // ★注記：画像削除は GAS の定期実行で自動削除（フロント側では何もしない）
+              console.log('[DEBUG-Delete] 16. Photo will be cleaned up by GAS scheduled trigger');
+              console.log('[DEBUG-Delete] 17. Delete process fully completed');
             }
           };
           ops.appendChild(btnEdit); ops.appendChild(btnDel);
@@ -3200,6 +3196,20 @@
               firstRow: tripCatches[0]   // 最初の行の詳細
             });
             
+            // ★追加：raw_json から start_tide を取得
+            let start_tide = null;
+            if (col.raw_json >= 0) {
+              const rawJson = tripRow[col.raw_json];
+              try {
+                if (rawJson) {
+                  const raw = typeof rawJson === 'string' ? JSON.parse(rawJson) : rawJson;
+                  start_tide = raw?.start_tide || null;
+                }
+              } catch (e) {
+                // パース失敗時は start_tide = null
+              }
+            }
+            
             draft = {
               tripId: tripRow[col.tripId] || '',
               status: tripRow[col.status] || 'ended',
@@ -3224,6 +3234,7 @@
               tide_level_cm: tripRow[col.tide_level_cm] ? parseFloat(tripRow[col.tide_level_cm]) : null,  // ★補完用：潮位
               // ★修正：既存釣果を配列形式からオブジェクト形式に正規化
               catches: tripCatches.map(c => normalizeCatch(c, colCatchForEdit)),
+              start_tide: start_tide,  // ★追加：raw_json から取得した潮汐データ
               tide_daily_cache: {},
               manualStarted: true,  // 既存データ編集なので手動扱い
               memo: tripRow[col.memo] || null  // ★追加：メモを保存
@@ -3388,51 +3399,62 @@
               const btnDelete = document.createElement('button');
               btnDelete.className = 'text-xs py-1 px-2 rounded bg-red-900 hover:bg-red-800 text-red-200 ml-2';
               btnDelete.textContent = '削除';
-              btnDelete.onclick = (e) => {
+              btnDelete.onclick = async (e) => {
                 e.stopPropagation();
+                console.log('[DEBUG-EditDelete] 1. Delete button clicked in edit modal, idx:', idx);
                 if (confirm('この釣果を削除しますか？')) {
-                  console.log('[TripCard] Deleting catch at index:', idx);
+                  console.log('[DEBUG-EditDelete] 2. Confirmed delete at idx:', idx);
                   
                   // ★修正：削除対象の釣果から photoFileId を取得
                   const catchToDelete = draft.catches[idx];
                   const photoFileId = catchToDelete?.photoFileId;
+                  console.log('[DEBUG-EditDelete] 3. photoFileId:', photoFileId);
                   
+                  console.log('[DEBUG-EditDelete] 4. Before splice, catches count:', draft.catches.length);
                   draft.catches.splice(idx, 1);
-                  saveDraft(draft);
-                  console.log('[TripCard] catch deleted, remaining:', draft.catches.length);
+                  console.log('[DEBUG-EditDelete] 5. After splice, catches count:', draft.catches.length);
                   
-                  // ★修正：バックグラウンドで画像削除（UIをブロックしない）
-                  if (photoFileId) {
-                    console.log('[TripCard] Deleting photo from Drive in background:', photoFileId);
-                    deletePhotoFromDrive(photoFileId).catch(err => {
-                      console.warn('[TripCard] Photo deletion failed:', err?.message || err);
-                    });
-                  }
+                  console.log('[DEBUG-EditDelete] 6. Starting saveDraft...');
+                  await saveDraft(draft);
+                  console.log('[DEBUG-EditDelete] 7. saveDraft completed');
+                  
+                  // ★注記：画像削除は GAS の定期実行で自動削除（フロント側では何もしない）
+                  console.log('[DEBUG-EditDelete] 8. Photo will be cleaned up by GAS scheduled trigger');
                   
                   // 手動釣行時は補完ロジックを実行、通常釣行時はローカル再描画
+                  console.log('[DEBUG-EditDelete] 9. draft.manualStarted:', draft.manualStarted);
                   if (draft.manualStarted) {
+                    console.log('[DEBUG-EditDelete] 10. Manual mode, recalculating times...');
                     // 手動釣行時は削除後に時刻を再計算してから画面更新
                     const validTimes = draft.catches
                       .map(c => c.timestamp)
                       .filter(ts => !!ts);
                     
+                    console.log('[DEBUG-EditDelete] 11. Valid times count:', validTimes.length);
                     if (validTimes.length > 0) {
                       const earliestTime = validTimes.reduce((a, b) => a < b ? a : b);
                       const latestTime = validTimes.reduce((a, b) => a > b ? a : b);
                       draft.startedAt = earliestTime;
                       draft.endedAt = latestTime;
-                      saveDraft(draft);
+                      console.log('[DEBUG-EditDelete] 12. Updated times, saving...');
+                      await saveDraft(draft);
+                      console.log('[DEBUG-EditDelete] 13. Time save completed');
                     } else {
                       // 釣果が全て削除された場合
                       draft.startedAt = null;
                       draft.endedAt = null;
-                      saveDraft(draft);
+                      console.log('[DEBUG-EditDelete] 14. All catches deleted, saving empty times...');
+                      await saveDraft(draft);
+                      console.log('[DEBUG-EditDelete] 15. Empty save completed');
                     }
                   }
                   
+                  console.log('[DEBUG-EditDelete] 16. Starting render catch list...');
                   // 釣果リストを再描画（スコープ内で再度ループ）
                   const renderEditCatchListAfterDelete = () => {
+                    console.log('[DEBUG-EditDelete] 17. Inside renderEditCatchListAfterDelete');
                     const ctsList = draft.catches || [];
+                    console.log('[DEBUG-EditDelete] 18. ctsList length:', ctsList.length);
                     editCatchList.innerHTML = '';
                     editCatchCount.textContent = ctsList.length;
 
@@ -3468,43 +3490,54 @@
                       const btnDeleteTemp = document.createElement('button');
                       btnDeleteTemp.className = 'text-xs py-1 px-2 rounded bg-red-900 hover:bg-red-800 text-red-200 ml-2';
                       btnDeleteTemp.textContent = '削除';
-                      btnDeleteTemp.onclick = (e) => {
+                      btnDeleteTemp.onclick = async (e) => {
                         e.stopPropagation();
+                        console.log('[DEBUG-EditDeleteNested] 1. Nested delete button clicked, i:', i);
                         if (confirm('この釣果を削除しますか？')) {
+                          console.log('[DEBUG-EditDeleteNested] 2. Confirmed nested delete at i:', i);
                           // ★修正：削除対象の釣果から photoFileId を取得
                           const catchToDeleteTemp = draft.catches[i];
                           const photoFileIdTemp = catchToDeleteTemp?.photoFileId;
+                          console.log('[DEBUG-EditDeleteNested] 3. photoFileId:', photoFileIdTemp);
                           
+                          console.log('[DEBUG-EditDeleteNested] 4. Before splice, catches count:', draft.catches.length);
                           draft.catches.splice(i, 1);
-                          saveDraft(draft);
+                          console.log('[DEBUG-EditDeleteNested] 5. After splice, catches count:', draft.catches.length);
                           
-                          // ★修正：バックグラウンドで画像削除（UIをブロックしない）
-                          if (photoFileIdTemp) {
-                            console.log('[EditModal] Deleting photo from Drive in background:', photoFileIdTemp);
-                            deletePhotoFromDrive(photoFileIdTemp).catch(err => {
-                              console.warn('[EditModal] Photo deletion failed:', err?.message || err);
-                            });
-                          }
+                          console.log('[DEBUG-EditDeleteNested] 6. Starting saveDraft...');
+                          await saveDraft(draft);
+                          console.log('[DEBUG-EditDeleteNested] 7. saveDraft completed');
                           
+                          // ★注記：画像削除は GAS の定期実行で自動削除（フロント側では何もしない）
+                          console.log('[DEBUG-EditDeleteNested] 8. Photo will be cleaned up by GAS scheduled trigger');
                           // 手動釣行時は時刻を再計算
+                          console.log('[DEBUG-EditDeleteNested] 9. draft.manualStarted:', draft.manualStarted);
                           if (draft.manualStarted) {
+                            console.log('[DEBUG-EditDeleteNested] 10. Recalculating times...');
                             const validTimes = draft.catches
                               .map(c => c.timestamp)
                               .filter(ts => !!ts);
                             
+                            console.log('[DEBUG-EditDeleteNested] 11. Valid times count:', validTimes.length);
                             if (validTimes.length > 0) {
                               const earliestTime = validTimes.reduce((a, b) => a < b ? a : b);
                               const latestTime = validTimes.reduce((a, b) => a > b ? a : b);
                               draft.startedAt = earliestTime;
                               draft.endedAt = latestTime;
+                              console.log('[DEBUG-EditDeleteNested] 12. Updated times, saving...');
                             } else {
                               draft.startedAt = null;
                               draft.endedAt = null;
+                              console.log('[DEBUG-EditDeleteNested] 13. All catches deleted, saving empty times...');
                             }
-                            saveDraft(draft);
+                            console.log('[DEBUG-EditDeleteNested] 14. Saving times...');
+                            await saveDraft(draft);
+                            console.log('[DEBUG-EditDeleteNested] 15. Time save completed');
                           }
                           
+                          console.log('[DEBUG-EditDeleteNested] 16. Calling renderEditCatchListAfterDelete...');
                           renderEditCatchListAfterDelete();
+                          console.log('[DEBUG-EditDeleteNested] 17. Nested delete process completed');
                         }
                       };
 
@@ -3512,8 +3545,11 @@
                       itemTemp.appendChild(btnDeleteTemp);
                       editCatchList.appendChild(itemTemp);
                     });
+                    console.log('[DEBUG-EditDelete] 19. forEach completed, renderEditCatchListAfterDelete done');
                   };
+                  console.log('[DEBUG-EditDelete] 20. Calling renderEditCatchListAfterDelete...');
                   renderEditCatchListAfterDelete();
+                  console.log('[DEBUG-EditDelete] 21. Edit delete process completed');
                 }
               };
 
@@ -4566,6 +4602,7 @@
     const btnCancelTripEdit = document.getElementById('btnCancelTripEdit');
     const btnSaveTripEdit = document.getElementById('btnSaveTripEdit');
     const btnAddCatchInEdit = document.getElementById('btnAddCatchInEdit');
+    const btnRefetchCompData = document.getElementById('btnRefetchCompData');
     const editTripStarted = document.getElementById('editTripStarted');
     const editTripEnded = document.getElementById('editTripEnded');
     const editTripLat = document.getElementById('editTripLat');
@@ -5240,7 +5277,10 @@
       // startedAt 再評価
       // ★修正：手動釣行と自動釣行の両方で、最初に設定された開始日時を保持する
       if (cts.length) {
-        const shouldComplementStartedAt = !draft.startedAt;  // 開始日時が空ならOK
+        // 通常釣行が釣行完了時：最初の釣果タイムスタンプで startedAt を再計算
+        // 手動釣行：startedAt を保護（変更しない）
+        const shouldComplementStartedAt = !draft.startedAt || 
+          (!draft.manualStarted && draft.status === 'ended');
         
         if (shouldComplementStartedAt) {
           const xs = cts
@@ -5644,19 +5684,51 @@
 
     // ★追加：オーバーレイメッセージを設定して表示する共通関数
     function showUploadingOverlay(message = 'アップロード中...') {
+      console.log('[showUploadingOverlay] START', { message, isUploading });
       uploadingMessage = message;
       const messageEl = document.getElementById('uploadingMessage');
       if (messageEl) messageEl.textContent = message;
       
       isUploading = true;
       const uploadingOverlay = document.getElementById('uploadingOverlay');
-      uploadingOverlay.classList.remove('hidden');
+      console.log('[showUploadingOverlay] element found:', !!uploadingOverlay);
+      
+      if (!uploadingOverlay) {
+        console.error('[showUploadingOverlay] uploadingOverlay NOT FOUND!');
+        return;
+      }
+      
+      // ★颅於：hiddenクラスを明示的に削除
+      if (uploadingOverlay.classList.contains('hidden')) {
+        console.log('[showUploadingOverlay] removing hidden class');
+        uploadingOverlay.classList.remove('hidden');
+      }
+      uploadingOverlay.style.display = 'flex';
+      uploadingOverlay.style.visibility = 'visible';
+      uploadingOverlay.style.opacity = '1';
+      uploadingOverlay.style.pointerEvents = 'auto';
+      
+      console.log('[showUploadingOverlay] styles applied:', {
+        display: uploadingOverlay.style.display,
+        computed: window.getComputedStyle(uploadingOverlay).display
+      });
+      console.log('[showUploadingOverlay] END');
     }
 
     function hideUploadingOverlay() {
+      console.log('[hideUploadingOverlay] START');
       isUploading = false;
       const uploadingOverlay = document.getElementById('uploadingOverlay');
+      if (!uploadingOverlay) {
+        console.error('[hideUploadingOverlay] uploadingOverlay NOT FOUND!');
+        return;
+      }
       uploadingOverlay.classList.add('hidden');
+      uploadingOverlay.style.display = 'none';
+      uploadingOverlay.style.visibility = 'hidden';
+      uploadingOverlay.style.opacity = '0';
+      uploadingOverlay.style.pointerEvents = 'none';
+      console.log('[hideUploadingOverlay] END');
     }
 
     // ===== モーダル操作 =====
@@ -5686,6 +5758,17 @@
     // 初期表示
     render();
     // ★追加：釣行編集モーダルを開く
+    // ★追加：補完データを UI に反映する関数
+    function updateEditModalCompData() {
+      editTripWeather.textContent = draft.start_weather ? formatWeatherBrief(draft.start_weather) : '未設定';
+      editTripTide.textContent = draft.start_tide 
+        ? `${draft.start_tide.tideName || ''} / ${draft.start_tide.trendText || ''}`
+        : '未設定';
+      editTripWaterTemp.textContent = draft.start_water_temp && draft.start_water_temp.temperature_c != null
+        ? `${draft.start_water_temp.temperature_c}℃${draft.start_water_temp.point_name ? `（${draft.start_water_temp.point_name}）` : ''}`
+        : '未設定';
+    }
+
     function openTripEditModal(catchIndexToSelect = -1) {
       if (!draft) {
         alert('データが見つかりません');
@@ -5717,13 +5800,9 @@
       }
 
       // 補完データを表示
-      editTripWeather.textContent = draft.start_weather ? formatWeatherBrief(draft.start_weather) : '未設定';
-      editTripTide.textContent = draft.start_tide 
-        ? `${draft.start_tide.tideName || ''} / ${draft.start_tide.trendText || ''}`
-        : '未設定';
-            editTripWaterTemp.textContent = draft.start_water_temp && draft.start_water_temp.temperature_c != null
-              ? `${draft.start_water_temp.temperature_c}℃${draft.start_water_temp.point_name ? `（${draft.start_water_temp.point_name}）` : ''}`
-              : '未設定';      // 釣果リストを表示
+      updateEditModalCompData();
+      
+      // 釣果リストを表示
       renderEditCatchList();
 
       // モーダルを表示
@@ -5867,6 +5946,9 @@
     }
     if (btnCancelTripEdit) {
       btnCancelTripEdit.onclick = () => {
+        // ★追加：アップロード中はキャンセルできない
+        if (isUploading) return;
+        
         console.log('[ModalButton] Cancel button clicked');
         tripEditModal.style.display = 'none';
         tripEditModal.classList.add('hidden');
@@ -5880,6 +5962,98 @@
         if (formSection) {
           formSection.classList.remove('hidden');
           document.getElementById('editFormCatchTime').focus();
+        }
+      };
+    }
+    
+    // ★追加：データ再取得ボタンのハンドラ
+    if (btnRefetchCompData) {
+      btnRefetchCompData.onclick = async () => {
+        console.log('[btnRefetchCompData] clicked');
+        
+        // 入力値から日時と位置を取得
+        let startedAt = null;
+        if (editTripStarted.value) {
+          try {
+            const dt = new Date(editTripStarted.value.replace(' ', 'T'));
+            startedAt = toOffsetIsoLocal(dt);
+          } catch (e) {
+            alert('開始日時の形式が正しくありません');
+            return;
+          }
+        }
+        
+        let lat = parseFloat(editTripLat.value);
+        let lng = parseFloat(editTripLng.value);
+        
+        if (!isFinite(lat) || !isFinite(lng)) {
+          // 入力がなければ draft から取得
+          lat = parseFloat(draft.lat);
+          lng = parseFloat(draft.lng);
+        }
+        
+        if (!isFinite(lat) || !isFinite(lng)) {
+          alert('位置情報が設定されていません');
+          return;
+        }
+        
+        if (!startedAt) {
+          alert('開始日時が設定されていません');
+          return;
+        }
+        
+        console.log('[btnRefetchCompData] refetching with:', { lat, lng, startedAt });
+        
+        try {
+          // ボタンを無効化
+          btnRefetchCompData.disabled = true;
+          btnRefetchCompData.style.opacity = '0.5';
+          
+          // 天気を再取得
+          try {
+            const weatherTargetDate = new Date(startedAt);
+            const weather = await fetchWeather(lat, lng, weatherTargetDate);
+            draft.start_weather = weather;
+            console.log('[btnRefetchCompData] Weather refetched:', weather);
+          } catch (weatherErr) {
+            console.error('[btnRefetchCompData] Weather fetch error:', weatherErr);
+            draft.start_weather = null;
+          }
+          
+          // 潮汐を再取得（重要：新しい潮汐データで上書き）
+          try {
+            const tide = await fetchTideForStart(lat, lng, startedAt);
+            draft.start_tide = tide || null;
+            console.log('[btnRefetchCompData] Tide refetched:', tide);
+            
+            // 潮汐キャッシュも更新
+            if (tide?.chart && tide?.chartDateKey) {
+              draft.tide_daily_cache = draft.tide_daily_cache || {};
+              draft.tide_daily_cache[tide.chartDateKey] = {
+                harbor: tide.harbor || null,
+                chart: tide.chart
+              };
+              console.log('[btnRefetchCompData] Tide cache updated');
+            }
+          } catch (tideErr) {
+            console.error('[btnRefetchCompData] Tide fetch error:', tideErr);
+            draft.start_tide = null;
+          }
+          
+          // draft を保存
+          saveDraft(draft);
+          
+          // UI を更新（editTripWeather, editTripTide を更新）
+          updateEditModalCompData();
+          
+          alert('データを再取得しました');
+        } catch (e) {
+          console.error('[btnRefetchCompData] error:', e);
+          alert('再取得に失敗しました: ' + (e?.message || e));
+        } finally {
+          // ボタンを有効化
+          btnRefetchCompData.disabled = false;
+          btnRefetchCompData.style.opacity = '1';
         }
       };
     }
@@ -6062,8 +6236,9 @@
           }
         }
         
-        // ★修正：写真のアップロード処理（新規追加時のみ、編集時は既存写真を保持）
-        if (!isEditing && photoInput && photoInput.files && photoInput.files.length > 0) {
+        // ★修正：写真のアップロード処理（新規作成時、編集時の両方で写真変更可能）
+        if (photoInput && photoInput.files && photoInput.files.length > 0) {
+          // 新規作成または編集時に新しい写真が選択されている場合
           const file = photoInput.files[0];
           try {
             const photoResult = await uploadPhotoToDrive(file);
@@ -6077,7 +6252,7 @@
             console.warn('[EditModal] Photo upload failed:', ex?.message || ex);
           }
         } else if (isEditing && editingIndex >= 0 && editingIndex < draft.catches.length) {
-          // ★編集モード時は既存の写真情報を保持
+          // 編集時で新しい写真が選択されていない場合は既存写真を保持
           const existingCatch = draft.catches[editingIndex];
           newCatch.photoFileId = existingCatch.photoFileId;
           newCatch.photoDriveUrl = existingCatch.photoDriveUrl;
@@ -6191,6 +6366,13 @@
         
         saveDraft(draft);
         
+        // ★修正：編集フラグをリセット（次回作成を防ぐ）
+        const formSection = document.getElementById('editCatchFormSection');
+        if (formSection) {
+          formSection.dataset.isEditing = 'false';
+          formSection.dataset.editingIndex = '-1';
+        }
+        
         // フォームをクリアして隠す
         document.getElementById('editFormCatchTime').value = '';
         document.getElementById('editFormCatchSpecies').value = '';
@@ -6203,7 +6385,6 @@
           photoPreview.classList.add('hidden');
           photoPreview.src = '';
         }
-        const formSection = document.getElementById('editCatchFormSection');
         if (formSection) {
           formSection.classList.add('hidden');
         }
@@ -6283,16 +6464,13 @@
               editFormWeight.value = catchObjTemp.weight_g ? String(catchObjTemp.weight_g) : '';
               editFormMethod.value = catchObjTemp.method || '';
               
-                // 写真プレビューはクリア
-                document.getElementById('editFormCatchPhoto').value = '';
-                document.getElementById('editFormCatchPhotoPreview').classList.add('hidden');
-                
-                // ★修正：写真フィールドを非表示（編集時は写真変更不要）
+                // ★追加：写真フィールドを表示（編集時でも写真変更可能に）
                 const photoLabel = document.querySelector('label:has(#editFormCatchPhoto)');
-                if (photoLabel) photoLabel.classList.add('hidden');
+                if (photoLabel) photoLabel.classList.remove('hidden');
                 
                 // フォームセクションを表示
-                editFormSection.classList.remove('hidden');              // 保存ボタンのテキストを変更
+                editFormSection.classList.remove('hidden');
+              // 保存ボタンのテキストを変更
               document.getElementById('btnSaveCatchFormInEdit').textContent = '更新';
               
               // フォームにスクロール
@@ -6322,10 +6500,132 @@
         renderEditCatchListLocal();
       };
     }
-    if (btnSaveTripEdit) btnSaveTripEdit.onclick = submitTripEditData;
+    if (btnSaveTripEdit) {
+      btnSaveTripEdit.onclick = async (e) => {
+        console.log('[btnSaveTripEdit] clicked', { isUploading });
+        // ★修正：ボタンクリック時に最初に操作ブロック＆オーバーレイ表示
+        if (isUploading) {
+          console.log('[btnSaveTripEdit] already uploading, returning');
+          return;
+        }
+        
+        console.log('[btnSaveTripEdit] calling showUploadingOverlay');
+        showUploadingOverlay('保存中...');
+        
+        // ★追加：モーダル内のすべてのボタンと入力を無効化
+        const tripEditModalContent = tripEditModal.querySelector('div.w-full');
+        console.log('[btnSaveTripEdit] tripEditModalContent:', !!tripEditModalContent);
+        if (tripEditModalContent) {
+          const buttons = tripEditModalContent.querySelectorAll('button, input, textarea');
+          console.log('[btnSaveTripEdit] disabling', buttons.length, 'elements');
+          buttons.forEach(btn => {
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.style.pointerEvents = 'none';
+          });
+        }
+        
+        console.log('[btnSaveTripEdit] waiting for requestAnimationFrame');
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        
+        console.log('[btnSaveTripEdit] calling submitTripEditData');
+        // その後で実際の処理を実行
+        try {
+          await submitTripEditData();
+          console.log('[btnSaveTripEdit] submitTripEditData completed');
+        } catch (e) {
+          console.error('[btnSaveTripEdit] error:', e);
+          hideUploadingOverlay();
+          // ★追加：エラー時もボタンを再度有効化
+          if (tripEditModalContent) {
+            const buttons = tripEditModalContent.querySelectorAll('button, input, textarea');
+            buttons.forEach(btn => {
+              btn.disabled = false;
+              btn.style.opacity = '1';
+              btn.style.pointerEvents = 'auto';
+            });
+          }
+        }
+      };
+    }
 
     // ★追加：釣行編集データを上書き保存
     async function submitTripEditData() {
+      // ★追加：保存時に Trips シートから全データを再度取得して draft に反映（未編集データの喪失を防ぐ）
+      try {
+        const headers = tripsCache[0];
+        const col = {};
+        for (let i = 0; i < headers.length; i++) {
+          col[String(headers[i]).trim()] = i;
+        }
+        const tripRow = tripsCache.find((t, idx) => idx > 0 && String(t[col.tripId]) === String(draft.tripId));
+        
+        if (tripRow) {
+          // 元データから全カラムを draft に反映
+          draft.status = tripRow[col.status] || draft.status || 'ended';
+          
+          // 天気データ（開始・終了）を全て引き継ぐ
+          if (tripRow[col.start_weather_main]) {
+            draft.start_weather = {
+              temp: parseFloat(tripRow[col.start_temp]) || null,
+              wind_speed: parseFloat(tripRow[col.start_wind_speed]) || null,
+              wind_deg: parseFloat(tripRow[col.start_wind_deg]) || null,
+              weather_main: tripRow[col.start_weather_main] || '',
+              weather_description: tripRow[col.start_weather_desc] || ''
+            };
+          }
+          if (tripRow[col.end_weather_main]) {
+            draft.end_weather = {
+              temp: parseFloat(tripRow[col.end_temp]) || null,
+              wind_speed: parseFloat(tripRow[col.end_wind_speed]) || null,
+              wind_deg: parseFloat(tripRow[col.end_wind_deg]) || null,
+              weather_main: tripRow[col.end_weather_main] || '',
+              weather_description: tripRow[col.end_weather_desc] || ''
+            };
+          }
+          
+          // 水温データを引き継ぐ
+          if (tripRow[col.water_temp_c]) {
+            draft.start_water_temp = {
+              temperature_c: parseFloat(tripRow[col.water_temp_c]) || null,
+              point_name: String(tripRow[col.water_temp_point] || '') || null,
+              date: tripRow[col.water_temp_time] || null
+            };
+          }
+          
+          // 潮汐データを引き継ぐ
+          let start_tide = null;
+          if (col.raw_json >= 0) {
+            const rawJson = tripRow[col.raw_json];
+            try {
+              if (rawJson) {
+                const raw = typeof rawJson === 'string' ? JSON.parse(rawJson) : rawJson;
+                start_tide = raw?.start_tide || null;
+              }
+            } catch (e) {
+              // パース失敗時は start_tide = null
+            }
+          }
+          if (start_tide) {
+            draft.start_tide = start_tide;
+          }
+          
+          // その他の補完用カラム
+          draft.weather = tripRow[col.start_weather_main] || draft.weather || null;
+          draft.tide_trend = tripRow[col.tide_trend] || draft.tide_trend || null;
+          draft.tide_level_cm = tripRow[col.tide_level_cm] ? parseFloat(tripRow[col.tide_level_cm]) : (draft.tide_level_cm || null);
+          draft.memo = tripRow[col.memo] || draft.memo || null;
+          
+          // moon データを引き継ぐ
+          if (tripRow[col.moon_v]) draft.moon_v = tripRow[col.moon_v];
+          if (tripRow[col.moon_a]) draft.moon_a = tripRow[col.moon_a];
+          if (tripRow[col.sunrise]) draft.sunrise = tripRow[col.sunrise];
+          if (tripRow[col.sunset]) draft.sunset = tripRow[col.sunset];
+        }
+      } catch (e) {
+        console.error('[TripEdit] Error restoring full trip data:', e);
+      }
+      
       // 入力値から釣行データを更新
       if (editTripStarted.value) {
         try {
@@ -6362,18 +6662,16 @@
 
       // ★修正：常に補完データを再取得（位置情報の有無に関わらず）
       const hasPosition = isFinite(lat) && isFinite(lng);
-      if (hasPosition) {
-        console.log('[TripEdit] Refetching supplementary data with new position:', { lat, lng, startedAt: draft.startedAt });
-      } else if (isFinite(parseFloat(draft.lat)) && isFinite(parseFloat(draft.lng))) {
+      if (!hasPosition && isFinite(parseFloat(draft.lat)) && isFinite(parseFloat(draft.lng))) {
         lat = parseFloat(draft.lat);
         lng = parseFloat(draft.lng);
-        console.log('[TripEdit] Refetching supplementary data with existing position:', { lat, lng, startedAt: draft.startedAt });
-      } else {
-        console.log('[TripEdit] No valid position found, skipping refetch');
       }
 
       // 有効な位置情報がある場合は補完データを再取得
       if (isFinite(lat) && isFinite(lng)) {
+        // ★修正：水温を保持してからリセット
+        const preservedWaterTemp = draft.start_water_temp;
+        
         // 補完データをリセット
         draft.start_weather = null;
         draft.start_tide = null;
@@ -6382,107 +6680,58 @@
         
         try {
           // 天気を再取得（開始時刻がある場合はその日付で）
-          console.log('[TripEdit] Fetching weather...');
           try {
             const weatherTargetDate = draft.startedAt ? new Date(draft.startedAt) : null;
-            console.log('[TripEdit] Weather target date:', weatherTargetDate ? weatherTargetDate.toISOString() : 'current');
             draft.start_weather = await fetchWeather(lat, lng, weatherTargetDate);
-            console.log('[TripEdit] Weather fetched:', draft.start_weather);
           } catch (weatherErr) {
-            console.error('[TripEdit] Weather fetch error:', weatherErr?.message || weatherErr);
             draft.start_weather = null;
           }
           
           // 潮汐を再取得（開始時刻がある場合）
           if (draft.startedAt) {
-            console.log('[TripEdit] Fetching tide...');
             try {
-              console.log('[TripEdit] Tide target startedAt:', draft.startedAt);
               const tide = await fetchTideForStart(lat, lng, draft.startedAt);
               draft.start_tide = tide || null;
-              console.log('[TripEdit] Tide fetched:', tide);
               if (tide?.chart && tide?.chartDateKey) {
                 draft.tide_daily_cache = draft.tide_daily_cache || {};
                 draft.tide_daily_cache[tide.chartDateKey] = {
                   harbor: tide.harbor || null,
                   chart: tide.chart
                 };
-                console.log('[TripEdit] Tide cache updated');
               }
             } catch (tideErr) {
-              console.error('[TripEdit] Tide fetch error:', tideErr?.message || tideErr);
               draft.start_tide = null;
             }
-          } else {
-            console.log('[TripEdit] No startedAt, skipping tide fetch');
           }
           
-          // 水温を再取得
-          console.log('[TripEdit] Fetching water temp...');
-          try {
-            const waterTempTargetDate = draft.startedAt ? new Date(draft.startedAt) : null;
-            console.log('[TripEdit] Water temp target date:', waterTempTargetDate ? waterTempTargetDate.toISOString() : 'current');
-            draft.start_water_temp = await fetchTodayWaterTempByNearest(lat, lng, waterTempTargetDate);
-            console.log('[TripEdit] Water temp fetched:', draft.start_water_temp);
-          } catch (wtErr) {
-            console.error('[TripEdit] Water temp fetch error:', wtErr?.message || wtErr);
-            draft.start_water_temp = null;
-          }
+          // ★修正：水温は再取得せず、保持した値を復元
+          draft.start_water_temp = preservedWaterTemp;
         } catch (e) {
-          console.error('[TripEdit] Unexpected error in refetch:', e?.message || e);
+          // Refetch error - continue with whatever data is available
         }
       }
 
       saveDraft(draft);
-      console.log('[TripEdit] Draft saved:', {
-        tripId: draft.tripId,
-        start_weather: draft.start_weather,
-        start_tide: draft.start_tide,
-        start_water_temp: draft.start_water_temp,
-        memo: draft.memo
-      });
       LOG.app('[TripEdit] saved', { tripId: draft.tripId, catches: draft.catches?.length || 0 });
 
-      // GASへアップロード
+      // ★修正：ボタンハンドラ内でオーバーレイは既に表示されているため、ここからはアップロード処理のみ実行
       try {
-        // ★修正：多重アップロード防止とローディング表示
-        if (isUploading) {
-          alert('アップロードは既に進行中です。しばらくお待ちください。');
-          return;
-        }
-        // ★修正：共通関数でローディングオーバーレイを表示（アップロード中テキスト）
-        showUploadingOverlay('アップロード中...');
-
-        console.log('[TripEditUpload] Uploading trip data', { tripId: draft.tripId });
-        
-        // ここでGASのupdateTripメソッドを呼び出す
         await uploadTripToSpreadsheet(draft);
-        console.log('[TripEditUpload] Upload successful');
-        
-        // ★修正：共通関数でローディング表示を消す
-        hideUploadingOverlay();
-
         alert('釣行データを上書き保存しました');
         
-        // ★修正：モーダルを閉じて、Trips画面にナビゲート
-        console.log('[TripEditUpload] Closing modal and navigating to trips view');
         tripEditModal.style.display = 'none';
         tripEditModal.classList.add('hidden');
-        console.log('[TripEditUpload] Modal hidden status:', tripEditModal.classList.contains('hidden'), 'display:', tripEditModal.style.display);
         
         showView('trips');
-        
-        // ★修正：釣行リストをリロード
-        console.log('[TripEditUpload] Loading trips');
         loadTrips();
         
-        // ドラフトをリセット
         draft = { tripId: uuid(), status: 'idle', catches: [], tide_daily_cache: {}, start_water_temp: null, memo: null };
         saveDraft(draft);
-        console.log('[TripEditUpload] Completed');
+        
+        // ★修正：モーダルを完全に閉じた後にオーバーレイを隠す
+        hideUploadingOverlay();
       } catch (e) {
-        console.error('Upload failed:', e);
-        // ★修正：エラー時にも共通関数でローディング表示を消す
+        // ★修正：エラー時もオーバーレイを隠す
         hideUploadingOverlay();
         alert('アップロードに失敗しました: ' + (e?.message || e));
       }
