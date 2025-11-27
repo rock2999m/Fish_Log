@@ -1079,19 +1079,18 @@
           return;
         }
         
-        console.log('[Init] Fetching SHEET_ID from Worker:', workerUrl);
-        const res = await fetch(workerUrl + `?_=${Date.now()}`, {
-          method: 'GET',
+        const res = await fetch(workerUrl, {
+          method: 'POST',
           headers: {
+            'Content-Type': 'application/json',
             'X-Auth-Token': CONFIG.API.WORKERS_AUTH_TOKEN
-          }
+          },
+          body: JSON.stringify({ action: 'getSheetConfig' })
         });
         const json = await res.json();
-        console.log('[Init] Response:', json);
         
         if (json.ok && json.sheetId) {
           SHEET_ID = json.sheetId;
-          console.log('[Init] SHEET_ID loaded from GAS via Worker:', SHEET_ID);
         } else {
           console.warn('[Init] GAS returned not ok or no sheetId:', json);
         }
@@ -1146,16 +1145,13 @@
 
     document.getElementById('btnLoadSheet').onclick = async () => {
       try {
-        console.log('[btnLoadSheet] Starting catch load with SHEET_ID:', SHEET_ID, 'SHEET_NAME:', SHEET_NAME);
         const id = SHEET_ID.trim(), sheet = SHEET_NAME.trim();
         sheetStatus.textContent = '読込中...';
         remoteCatchList.innerHTML=''; detailWrap.classList.add('hidden');
         if (!id || !sheet) throw new Error('シートID/シート名が空です');
 
         // 1) Trips を先に読み、tripId → 月情報マップを作る
-        console.log('[btnLoadSheet] Loading Trips moon map...');
         tripsById = await loadTripsMoonMap();
-        console.log('[btnLoadSheet] Trips moon map loaded, items:', Object.keys(tripsById).length);
 
         // 2) Catches を読み込む（SHEET_ID を明示的に渡す）
         console.log('[btnLoadSheet] Loading Catches sheet...');
@@ -1300,9 +1296,7 @@
           });
         }
         
-        console.log('[loadTripsMoonMap] Loading with SHEET_ID:', SHEET_ID);
         const rows = await loadSheetViaGAS(TRIPS_SHEET_NAME, SHEET_ID);
-        console.log('[loadTripsMoonMap] Loaded rows:', rows?.length || 0);
         if (!rows || rows.length < 2) return {};
         const headers = rows[0].map(h=>String(h||'').trim());
         const idxOf = name => headers.findIndex(h => h === name);
@@ -1908,6 +1902,14 @@
     (async () => {
       try {
         console.log('[Init] Starting SHEET_ID initialization...');
+        
+        // ★追加：トークンが空の場合は警告して、ユーザーに入力を促す
+        if (!CONFIG.API.WORKERS_AUTH_TOKEN) {
+          console.warn('[Init] WORKERS_AUTH_TOKEN is empty. Please set it in Settings.');
+          alert('⚠️ 認証トークンが設定されていません。\nSettings タブで WORKERS_AUTH_TOKEN を入力してください。');
+          return;
+        }
+        
         await initializeSheetId();
         console.log('[Init] SHEET_ID initialization complete. SHEET_ID:', SHEET_ID);
       } catch (err) {
@@ -6990,4 +6992,5 @@
   </script>
 </body>
 </html>
+
 
