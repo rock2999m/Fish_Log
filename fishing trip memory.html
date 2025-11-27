@@ -503,7 +503,7 @@
     // ===== Configuration (環境変数から読み込み、デフォルト値を使用) =====
     const CONFIG = {
       API: {
-        FISHING_TRIP_API_WORKER: localStorage.getItem('FISHING_TRIP_API_WORKER') || "",
+        FISHING_TRIP_API_WORKER: localStorage.getItem('FISHING_TRIP_API_WORKER') || 'https://fishing-trip-api.yuji-fallline2999m.workers.dev',
         WORKERS_AUTH_TOKEN: localStorage.getItem('WORKERS_AUTH_TOKEN') || "",
         WORKER_PROXY_URL: localStorage.getItem('WORKER_PROXY_URL') || "",
         TIDE_PROXY_URL: localStorage.getItem('TIDE_PROXY_URL') || "",
