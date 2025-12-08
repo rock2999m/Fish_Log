@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#0f172a" />
   <meta name="description" content="釣行の記録、釣果の管理、潮汐情報の自動取得ができるPWAアプリケーション" />
-  <link rel="manifest" href="./manifest.json">
-  <link rel="apple-touch-icon" href="./icon-192.png">
-  <link rel="icon" type="image/png" href="./icon-192.png" sizes="192x192">
-  <link rel="icon" type="image/png" href="./icon-512.png" sizes="512x512">
+  <link rel="manifest" href="/dev_Fish_Log/manifest.json">
+  <link rel="apple-touch-icon" href="/dev_Fish_Log/icon-192.png">
+  <link rel="icon" type="image/png" href="/dev_Fish_Log/icon-192.png" sizes="192x192">
+  <link rel="icon" type="image/png" href="/dev_Fish_Log/icon-512.png" sizes="512x512">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="FishTrip">
@@ -17,14 +17,18 @@
 </head>
 <body class="min-h-screen bg-slate-950 text-slate-50">
   <header class="sticky top-0 z-10 backdrop-blur bg-slate-950/70 border-b border-slate-800">
-    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-      <h1 class="text-lg font-semibold">釣りログ</h1>
-      <nav class="flex gap-2 text-sm">
-        <button id="navHome" class="px-3 py-1.5 rounded-xl border border-slate-700 hover:bg-slate-800">ホーム</button>
-        <button id="navRecord" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-semibold">釣行の記録</button>
-        <button id="navTrips" class="px-3 py-1.5 rounded-xl bg-amber-700 hover:bg-amber-600 font-semibold">釣行の確認</button>
-        <button id="navCatches" class="px-3 py-1.5 rounded-xl bg-sky-700 hover:bg-sky-600 font-semibold">釣果の確認</button>
-        <button id="navSettings" class="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 font-semibold">設定</button>
+    <div class="max-w-4xl mx-auto px-4 py-3">
+      <div class="mb-3 text-center">
+        <h1 class="text-3xl font-bold">Fishing_Log</h1>
+      </div>
+      <nav class="flex gap-2 text-sm items-center justify-between">
+        <div class="flex gap-2">
+          <button id="navHome" class="px-3 py-1.5 rounded-xl border border-slate-700 hover:bg-slate-800">ホーム</button>
+          <button id="navRecord" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-semibold">釣行の記録</button>
+          <button id="navTrips" class="px-3 py-1.5 rounded-xl bg-amber-700 hover:bg-amber-600 font-semibold">釣行の確認</button>
+          <button id="navCatches" class="px-3 py-1.5 rounded-xl bg-sky-700 hover:bg-sky-600 font-semibold">釣果の確認</button>
+        </div>
+        <button id="navSettings" class="px-3 py-1.5 rounded-xl hover:bg-slate-700 text-xl">⚙️</button>
       </nav>
     </div>
   </header>
@@ -148,32 +152,30 @@
   <main class="max-w-4xl mx-auto px-4 pb-28 pt-4">
     <!-- ホーム -->
     <section id="homeView" class="space-y-4">
-      <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
-        <div class="text-xl font-bold">釣りログ ホーム</div>
-      </div>
       <!-- 釣行記録（1列、最上段） -->
       <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4 flex flex-col gap-3">
         <div class="text-lg font-semibold">釣行の記録</div>
-        <button id="homeGoRecord" class="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-semibold">釣行記録</button>
+        <button id="homeGoRecord" class="w-full py-8 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-semibold">釣行記録</button>
       </div>
-      <!-- 確認Menu と 登録Menu を2列で表示（幅狭い場合でも2列を維持） -->
-      <div class="grid grid-cols-2 gap-4">
-        <!-- 確認Menu -->
-        <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4 flex flex-col gap-3">
-          <div class="text-lg font-semibold text-slate-50">確認</div>
-          <button id="homeGoTrips" class="py-2 rounded-xl bg-amber-700 hover:bg-amber-600 font-semibold text-sm sm:text-base">釣行の確認</button>
-          <button id="homeGoCatches" class="py-2 rounded-xl bg-sky-700 hover:bg-sky-600 font-semibold text-sm sm:text-base">釣果の確認</button>
+      <!-- 確認Menu と 登録Menu を縦並びで表示 -->
+      <div class="pt-4"></div>
+      <div class="space-y-4">
+        <!-- 確認 -->
+        <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
+          <div class="text-lg font-semibold text-slate-50 mb-3">確認</div>
+          <div class="flex flex-row gap-2">
+            <button id="homeGoTrips" class="flex-1 py-2 rounded-xl bg-amber-700 hover:bg-amber-600 font-semibold text-sm sm:text-base">釣行の確認</button>
+            <button id="homeGoCatches" class="flex-1 py-2 rounded-xl bg-sky-700 hover:bg-sky-600 font-semibold text-sm sm:text-base">釣果の確認</button>
+          </div>
         </div>
-        <!-- 登録Menu -->
-        <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4 flex flex-col gap-3">
-          <div class="text-lg font-semibold text-slate-50">登録</div>
-          <button id="btnManualTripHome" class="py-2 rounded-xl bg-amber-700 hover:bg-amber-600 font-semibold text-sm sm:text-base">手動で釣行を登録</button>
-          <button id="homeAddManualCatch" class="py-2 rounded-xl bg-sky-700 hover:bg-sky-600 font-semibold text-sm sm:text-base">手動で釣果を追加</button>
+        <!-- 登録 -->
+        <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
+          <div class="text-lg font-semibold text-slate-50 mb-3">登録</div>
+          <div class="flex flex-row gap-2">
+            <button id="btnManualTripHome" class="flex-1 py-2 rounded-xl bg-amber-700 hover:bg-amber-600 font-semibold text-sm sm:text-base">手動で釣行を登録</button>
+            <button id="homeAddManualCatch" class="flex-1 py-2 rounded-xl bg-sky-700 hover:bg-sky-600 font-semibold text-sm sm:text-base">手動で釣果を追加</button>
+          </div>
         </div>
-      </div>
-      <!-- 設定ボタン -->
-      <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
-        <button id="homeGoSettings" class="w-full py-2 rounded-xl bg-slate-700 hover:bg-slate-600 font-semibold text-sm">⚙️ 設定</button>
       </div>
     </section>
 
@@ -467,11 +469,11 @@
     const devConfig = {
       // 公開情報のみ（秘密情報は設定画面で入力）
       'FISHING_TRIP_API_WORKER': 'https://fishing-trip-api.yuji-fallline2999m.workers.dev',
-      'WORKER_PROXY_URL': 'https://noisy-grass-c7e9.yuji-fallline2999m.workers.dev',
-      'TIDE_PROXY_URL': 'https://jolly-voice-b254.yuji-fallline2999m.workers.dev',
       'WATER_WORKER_URL': 'https://rough-math-5fec.yuji-fallline2999m.workers.dev',
       'CLOUDINARY_CLOUD_NAME': 'drcaeidmm',
       'CLOUDINARY_UPLOAD_PRESET': 'unsigned'
+      // ★削除：WORKER_PROXY_URL（不要 - storage から取得）
+      // ★削除：TIDE_PROXY_URL（不要 - storage から取得）
       // ★削除：WORKERS_AUTH_TOKEN（ユーザーが設定画面で入力）
       // ★削除：RAPIDAPI_KEY（ユーザーが設定画面で入力）
     };
@@ -483,26 +485,196 @@
              window.location.hostname === '::1';
     };
 
-    // ★追加：ローカルホストのみ devConfig を初期化
-    const initializeDevConfig = () => {
-      Object.entries(devConfig).forEach(([key, value]) => {
-        localStorage.setItem(key, value);
-      });
+    // ★修正：devConfig を常に初期化（isLocalhost チェック削除）
+    // ユーザー設定対象の WORKERS_AUTH_TOKEN は上書きしない
+    const initializeDevConfig = async () => {
+      for (const [key, value] of Object.entries(devConfig)) {
+        const existing = await configStorage.getItem(key);
+        if (!existing) {
+          await configStorage.setItem(key, value);
+          // ★追加：各セット後に待機（IndexedDB トランザクション完了待機）
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
+      }
+      // ★追加：最後に追加の待機（すべてのトランザクション完了確認）
+      await new Promise(resolve => setTimeout(resolve, 50));
     };
 
-    initializeDevConfig();
+    // ===== インメモリストレージ（localStorage/IndexedDB が使用不可な場合のフォールバック） =====
+    class MemoryStorage {
+      constructor() {
+        this.data = {};
+      }
+      getItem(key) {
+        return this.data[key] ?? null;
+      }
+      setItem(key, value) {
+        this.data[key] = value;
+      }
+      removeItem(key) {
+        delete this.data[key];
+      }
+    }
 
+    // ===== ハイブリッドストレージ（IndexedDB + localStorage + MemoryStorage） =====
+    class ConfigStorage {
+      constructor() {
+        this.db = null;
+        this.memStorage = new MemoryStorage();
+        this.isIndexedDBAvailable = 'indexedDB' in window;
+      }
+
+      async init() {
+        if (!this.isIndexedDBAvailable) return;
+        return new Promise((resolve) => {
+          const req = indexedDB.open('FishLogConfig', 1);
+          req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('config')) {
+              db.createObjectStore('config', { keyPath: 'key' });
+            }
+          };
+          req.onsuccess = () => {
+            this.db = req.result;
+            resolve();
+          };
+          req.onerror = () => {
+            console.warn('[ConfigStorage] IndexedDB init failed');
+            resolve();
+          };
+        });
+      }
+
+      async getItem(key) {
+        // IndexedDB から値を取得（より新しい可能性がある）
+        if (this.db) {
+          return new Promise((resolve) => {
+            const tx = this.db.transaction('config', 'readonly');
+            const req = tx.objectStore('config').get(key);
+            req.onsuccess = () => {
+              const idbValue = req.result?.value;
+              if (idbValue) {
+                resolve(idbValue);
+                return;
+              }
+              
+              // IndexedDB になければ localStorage から取得
+              try {
+                const lsValue = localStorage.getItem(key);
+                if (lsValue !== null) {
+                  // localStorage から取得した値を IndexedDB に同期
+                  const syncTx = this.db.transaction('config', 'readwrite');
+                  syncTx.objectStore('config').put({ key, value: lsValue });
+                  // メモリストレージにも同期
+                  this.memStorage.setItem(key, lsValue);
+                }
+                resolve(lsValue);
+              } catch (e) {
+                console.warn('[ConfigStorage] localStorage unavailable:', e.message);
+                // メモリストレージから取得
+                const memValue = this.memStorage.getItem(key);
+                resolve(memValue || null);
+              }
+            };
+            req.onerror = () => {
+              // IndexedDB エラー時は localStorage にフォールバック
+              try {
+                const lsValue = localStorage.getItem(key);
+                if (lsValue !== null) {
+                  this.memStorage.setItem(key, lsValue);
+                }
+                resolve(lsValue);
+              } catch (e) {
+                console.warn('[ConfigStorage] localStorage unavailable:', e.message);
+                // メモリストレージから取得
+                const memValue = this.memStorage.getItem(key);
+                resolve(memValue || null);
+              }
+            };
+          });
+        }
+
+        // IndexedDB なしの場合は localStorage から取得
+        try {
+          const value = localStorage.getItem(key);
+          if (value !== null) {
+            this.memStorage.setItem(key, value);
+          }
+          return value;
+        } catch (e) {
+          console.warn('[ConfigStorage] localStorage unavailable:', e.message);
+          // メモリストレージから取得
+          const memValue = this.memStorage.getItem(key);
+          return memValue || null;
+        }
+      }
+
+      async setItem(key, value) {
+        let lsSuccess = false;
+        
+        // localStorage に保存を試みる（但し、エラーなら無視）
+        try {
+          localStorage.setItem(key, value);
+          lsSuccess = true;
+        } catch (e) {
+          console.warn('[ConfigStorage] localStorage unavailable (skipping):', e.message);
+          // localStorage が利用不可でも処理を続行
+        }
+
+        // メモリストレージに常に保存
+        this.memStorage.setItem(key, value);
+
+        // IndexedDB にも保存（利用可能な場合）
+        if (this.db) {
+          return new Promise((resolve) => {
+            const tx = this.db.transaction('config', 'readwrite');
+            const req = tx.objectStore('config').put({ key, value });
+            req.onsuccess = () => {
+              resolve();
+            };
+            req.onerror = () => {
+              console.warn('[ConfigStorage] IndexedDB save failed');
+              resolve();
+            };
+          });
+        } else {
+          // IndexedDB が利用不可の場合も Promise で返す
+          return Promise.resolve();
+        }
+      }
+
+      async removeItem(key) {
+        try {
+          localStorage.removeItem(key);
+        } catch (e) {
+          console.warn('[ConfigStorage] localStorage unavailable');
+        }
+
+        // メモリストレージからも削除
+        this.memStorage.removeItem(key);
+
+        if (this.db) {
+          return new Promise((resolve) => {
+            const tx = this.db.transaction('config', 'readwrite');
+            tx.objectStore('config').delete(key);
+            resolve();
+          });
+        }
+      }
+    }
+
+    const configStorage = new ConfigStorage();
+    
     // ===== Configuration (環境変数から読み込み、デフォルト値を使用) =====
-    const CONFIG = {
+    let CONFIG = {
       API: {
-        FISHING_TRIP_API_WORKER: localStorage.getItem('FISHING_TRIP_API_WORKER') || 'https://fishing-trip-api.yuji-fallline2999m.workers.dev',
-        WORKERS_AUTH_TOKEN: localStorage.getItem('WORKERS_AUTH_TOKEN') || "",
-        WORKER_PROXY_URL: localStorage.getItem('WORKER_PROXY_URL') || "",
-        TIDE_PROXY_URL: localStorage.getItem('TIDE_PROXY_URL') || "",
-        WATER_WORKER_URL: localStorage.getItem('WATER_WORKER_URL') || "",
-        CLOUDINARY_CLOUD_NAME: localStorage.getItem('CLOUDINARY_CLOUD_NAME') || "drcaeidmm",
-        CLOUDINARY_UPLOAD_PRESET: localStorage.getItem('CLOUDINARY_UPLOAD_PRESET') || "unsigned"
-        // ★削除：RAPIDAPI_KEY（Worker の環境変数で管理）
+        FISHING_TRIP_API_WORKER: 'https://fishing-trip-api.yuji-fallline2999m.workers.dev',
+        WORKERS_AUTH_TOKEN: "",
+        WEATHER_WORKER_URL: "",
+        TIDE_WORKER_URL: "",
+        EXIF_WORKER_URL: "",
+        CLOUDINARY_CLOUD_NAME: "drcaeidmm",
+        CLOUDINARY_UPLOAD_PRESET: "unsigned"
       },
       TIMEOUT: {
         WEATHER: 10000,
@@ -512,9 +684,115 @@
       }
     };
 
-    // ★デバッグ：CONFIG の初期値を確認
-    console.log('[CONFIG] FISHING_TRIP_API_WORKER:', CONFIG.API.FISHING_TRIP_API_WORKER);
-    console.log('[CONFIG] WORKERS_AUTH_TOKEN:', CONFIG.API.WORKERS_AUTH_TOKEN ? '***' : 'empty');
+    // ★Worker URL 取得＆保存ロジック
+    async function fetchAndSaveWorkerUrls() {
+      try {
+        // トークンを storage から取得
+        const token = await configStorage.getItem('WORKERS_AUTH_TOKEN');
+        
+        const headers = { 
+          'Content-Type': 'application/json'
+        };
+        
+        // トークンがあれば X-Auth-Token ヘッダーに追加
+        if (token) {
+          headers['X-Auth-Token'] = token;
+        }
+        
+        const response = await fetch(`${CONFIG.API.FISHING_TRIP_API_WORKER}/api/get-worker-urls`, {
+          method: 'GET',
+          headers: headers
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // storage に保存
+        await configStorage.setItem('WORKER_URLS', JSON.stringify(data));
+
+        // CONFIG に反映
+        CONFIG.API.WEATHER_WORKER_URL = data.WEATHER_WORKER_URL || '';
+        CONFIG.API.TIDE_WORKER_URL = data.TIDE_WORKER_URL || '';
+        CONFIG.API.EXIF_WORKER_URL = data.EXIF_WORKER_URL || '';
+
+      } catch (error) {
+        console.error('[fetchAndSaveWorkerUrls] Error:', error);
+      }
+    }
+
+    // ★storage から Worker URLs を読み込む
+    async function loadWorkerUrlsFromStorage() {
+      try {
+        const stored = await configStorage.getItem('WORKER_URLS');
+        
+        if (stored) {
+          const data = typeof stored === 'string' ? JSON.parse(stored) : stored;
+          CONFIG.API.WEATHER_WORKER_URL = data.WEATHER_WORKER_URL || '';
+          CONFIG.API.TIDE_WORKER_URL = data.TIDE_WORKER_URL || '';
+          CONFIG.API.EXIF_WORKER_URL = data.EXIF_WORKER_URL || '';
+        } else {
+          await fetchAndSaveWorkerUrls();
+        }
+      } catch (error) {
+        console.error('[loadWorkerUrlsFromStorage] Error:', error);
+      }
+    }
+
+    // 非同期で設定値を読み込み
+    const loadConfigFromStorage = async () => {
+      // ★デバッグ：各値を読み込んでログ出力
+      const val_FISHING_TRIP_API_WORKER = await configStorage.getItem('FISHING_TRIP_API_WORKER');
+      CONFIG.API.FISHING_TRIP_API_WORKER = val_FISHING_TRIP_API_WORKER || 'https://fishing-trip-api.yuji-fallline2999m.workers.dev';
+      
+      const val_WORKERS_AUTH_TOKEN = await configStorage.getItem('WORKERS_AUTH_TOKEN');
+      CONFIG.API.WORKERS_AUTH_TOKEN = val_WORKERS_AUTH_TOKEN || "";
+      
+      // ★Worker URL を storage から読み込む（または新規取得）
+      await loadWorkerUrlsFromStorage();
+      
+      const val_CLOUDINARY_CLOUD_NAME = await configStorage.getItem('CLOUDINARY_CLOUD_NAME');
+      CONFIG.API.CLOUDINARY_CLOUD_NAME = val_CLOUDINARY_CLOUD_NAME || "drcaeidmm";
+      
+      const val_CLOUDINARY_UPLOAD_PRESET = await configStorage.getItem('CLOUDINARY_UPLOAD_PRESET');
+      CONFIG.API.CLOUDINARY_UPLOAD_PRESET = val_CLOUDINARY_UPLOAD_PRESET || "unsigned";
+      
+      // ★追加：デバッグログ：読み込んだ値を表示
+      
+      // デバッグ：localStorage と IndexedDB の値を比較（エラーハンドリング付き）
+      try {
+        let lsToken = null;
+        try {
+          lsToken = localStorage.getItem('WORKERS_AUTH_TOKEN');
+        } catch (lsError) {
+          console.warn('[CONFIG] localStorage unavailable for debugging:', lsError.message);
+        }
+        
+        if (lsToken && CONFIG.API.WORKERS_AUTH_TOKEN && lsToken !== CONFIG.API.WORKERS_AUTH_TOKEN) {
+          console.warn('[CONFIG] WARNING: localStorage and loaded token mismatch!');
+        }
+      } catch (e) {
+        console.warn('[CONFIG] Could not compare tokens:', e.message);
+      }
+    };
+
+    // IndexedDB の初期化と設定読み込み
+    // ★修正：CONFIG初期化完了フラグと Promise
+    let CONFIG_INITIALIZED = false;
+    const configInitPromise = (async () => {
+      await configStorage.init();
+      await initializeDevConfig();
+      
+      // ★追加：initializeDevConfig() 完了後、IndexedDB トランザクション完了待機
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      await loadConfigFromStorage();
+      CONFIG_INITIALIZED = true;
+      await initializeSheetId();
+      window.dispatchEvent(new Event('CONFIG_READY'));
+    })();
 
     // ===== Logger =====
     const DEBUG_WATER = true; // 必要に応じて true/false で出力を切替
@@ -540,7 +818,6 @@
     document.getElementById('homeGoRecord').onclick = () => { showView('record'); };
     document.getElementById('homeGoTrips').onclick = () => { showView('trips'); autoLoadTrips(); };   // ★追加
     document.getElementById('homeGoCatches').onclick = () => { showView('catches'); autoLoadCatches(); };
-    document.getElementById('homeGoSettings').onclick = () => { showView('settings'); };              // ★追加
     navHome.onclick = () => showView('home');
     navRecord.onclick = () => showView('record');
     navTrips.onclick = () => { showView('trips'); autoLoadTrips(); };                                  // ★追加
@@ -603,24 +880,6 @@
     }
 
     // ===== OWM（開始/終了時の天気）- Cloudflare Worker プロキシ経由 =====
-    const WORKER_PROXY_URL = CONFIG.API.WORKER_PROXY_URL;
-    
-    // ★テスト：Worker プロキシが起動したらすぐテストする
-    (async () => {
-      console.log("[INIT] Testing Worker proxy connectivity...");
-      try {
-        const testRes = await fetch(WORKER_PROXY_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lat: 34.62, lng: 135.05, isHistorical: false })
-        });
-        console.log("[INIT] Worker proxy response status:", testRes.status);
-        const testData = await testRes.json();
-        console.log("[INIT] Worker proxy response data:", testData);
-      } catch(e) {
-        console.error("[INIT] Worker proxy test failed:", e);
-      }
-    })();
     
     // ★追加：JST タイムスタンプを Unix タイムスタンプ（秒）に変換
     function getJSTTimestampForOWM(date = null){
@@ -645,7 +904,20 @@
     }
     
     async function fetchWeather(lat, lng, targetDate = null, timeoutMs = 10000){
-      console.log("[fetchWeather] *** CALLED ***", { lat, lng, targetDate });
+      // ★修正：CONFIG初期化完了を待機（API呼び出し前の必須処理）
+      await configInitPromise;
+      
+      // ★追加：storage から最新の Worker URL を取得
+      try {
+        const stored = await configStorage.getItem('WORKER_URLS');
+        if (stored) {
+          const data = typeof stored === 'string' ? JSON.parse(stored) : stored;
+          CONFIG.API.WEATHER_WORKER_URL = data.WEATHER_WORKER_URL || CONFIG.API.WEATHER_WORKER_URL;
+        }
+      } catch (err) {
+        console.warn('[fetchWeather] Failed to load Worker URL from storage:', err);
+      }
+      
       if (typeof lat !== 'number' || typeof lng !== 'number') throw new Error("座標が未設定です");
       
       const jstTimestamp = getJSTTimestampForOWM(targetDate);
@@ -660,29 +932,19 @@
         dt: isHistorical ? jstTimestamp : undefined
       };
       
-      // ★デバッグログ：プロキシへのリクエスト
-      console.log("[fetchWeather] Sending to Cloudflare Worker:", {
-        workerUrl: WORKER_PROXY_URL,
-        requestBody: requestBody,
-        targetDate: targetDate ? (typeof targetDate.toISOString === 'function' ? targetDate.toISOString() : String(targetDate)) : "(current)",
-        isHistorical: isHistorical,
-        jstTimestamp: jstTimestamp,
-        nowTimestamp: nowTimestamp
-      });
-      
       LOG.wx("[fetchWeather] Request to Worker:", {
         lat: lat,
         lng: lng,
         isHistorical: isHistorical,
         dt: isHistorical ? jstTimestamp : "(current)",
         jst_datetime: targetDate ? (typeof targetDate.toISOString === 'function' ? targetDate.toISOString() : String(targetDate)) : new Date().toISOString(),
-        workerUrl: WORKER_PROXY_URL
+        workerUrl: CONFIG.API.WEATHER_WORKER_URL
       });
       
       const ctrl = new AbortController();
       const t = setTimeout(() => ctrl.abort("timeout"), timeoutMs);
       try {
-        const res = await fetch(WORKER_PROXY_URL, {
+        const res = await fetch(CONFIG.API.WEATHER_WORKER_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(requestBody),
@@ -691,19 +953,24 @@
         
         if (!res.ok) {
           let msg = `HTTP ${res.status}`;
-          try { const err = await res.json(); if (err?.message) msg += `: ${err.message}`; } catch {}
+          try { 
+            const err = await res.json(); 
+            // ★追加：Worker からのエラー詳細情報を表示
+            if (err?.error) msg += ` - ${err.error}`;
+            if (err?.detail) msg += `: ${err.detail}`;
+            if (err?.message) msg += `: ${err.message}`;
+            console.error("[fetchWeather] Worker error details:", err);
+          } catch {}
           console.error("[fetchWeather] Worker returned error:", msg);
           throw new Error(msg);
         }
         
         const j = await res.json();
-        console.log("[fetchWeather] Worker response received:", j);
         
         // ★ログ：レスポンス値
         const data = isHistorical ? (j.data?.[0] || {}) : (j.current || {});
         const rain1h = data.rain?.["1h"];
         const snow1h = data.snow?.["1h"];
-        console.log("[fetchWeather] Extracted data:", { data, rain1h, snow1h });
         LOG.wx("[fetchWeather] Response:", {
           timestamp_utc: new Date(data.dt * 1000).toISOString(),
           timezone: j.timezone,
@@ -792,18 +1059,35 @@
 
     // ★追加：過去30日分の海水温データから、指定日付の水温を取得
     async function getWaterTempForDate(lat, lng, targetDate) {
+      // ★修正：CONFIG初期化完了を待機（API呼び出し前の必須処理）
+      await configInitPromise;
+      
       try {
         // targetDate: "2025-11-05" 形式の文字列
         const code = getSeaAreaCodeFromCoords(lat, lng);
         
-        // ★修正：プロキシ経由でAPIを呼び出し
-        if (!WATER_WORKER_URL || /your[_-]?worker/i.test(WATER_WORKER_URL)){
-          LOG.app("[WaterTemp] past API proxy not configured", { WATER_WORKER_URL });
+        // ★修正：storage から最新の Worker URL を取得（必須）
+        let waterWorkerUrl = CONFIG.API.WATER_WORKER_URL;
+        try {
+          const stored = await configStorage.getItem('WORKER_URLS');
+          if (stored) {
+            const data = typeof stored === 'string' ? JSON.parse(stored) : stored;
+            if (data.WATER_WORKER_URL) {
+              waterWorkerUrl = data.WATER_WORKER_URL;
+              CONFIG.API.WATER_WORKER_URL = waterWorkerUrl;
+            }
+          }
+        } catch (err) {
+          console.warn('[getWaterTempForDate] Failed to load Worker URL from storage:', err);
+        }
+        
+        if (!waterWorkerUrl || /your[_-]?worker/i.test(waterWorkerUrl)){
+          LOG.app("[WaterTemp] past API proxy not configured", { WATER_WORKER_URL: waterWorkerUrl });
           return null;
         }
         
         const baseUrl = `https://leisure-api-prod.n-kishou.co.jp/get-sea-water-temperature?code=${encodeURIComponent(code)}&type=past`;
-        const proxyUrl = `${WATER_WORKER_URL.replace(/\/$/, '')}/proxy?url=${encodeURIComponent(baseUrl)}`;
+        const proxyUrl = `${waterWorkerUrl.replace(/\/$/, '')}/proxy?url=${encodeURIComponent(baseUrl)}`;
         
         LOG.app("[WaterTemp] fetching past data via proxy", { code, targetDate, baseUrl, proxyUrl });
         
@@ -921,10 +1205,11 @@
     const HARBOR_SHEET_NAME = "港コード一覧";    // ← ここから港データ
     const POINTS_SHEET_NAME = "地点リスト";      // ★追加: 水温地点のマスタ（BuildPointsListが作る）
 
-    // （※ 既存の Workers を使用：水温も TIDE_PROXY_URL を使う）
-    const TIDE_PROXY_URL = CONFIG.API.TIDE_PROXY_URL;
-        // ★水温API用 Worker URL（既存のものを使用）
-    const WATER_WORKER_URL = CONFIG.API.WATER_WORKER_URL; 
+    // ★修正：グローバル変数を廃止（CONFIG から直接読むように変更）
+    
+    // CONFIG初期化完了イベントをリッスン
+    window.addEventListener('CONFIG_READY', () => {
+    }); 
 
     // ★修正：シートID を GAS から動的に取得する
     let SHEET_ID = ""; // GAS から起動時に取得
@@ -958,11 +1243,15 @@
     const LS_MAP_KEY_PREFIX = 'fishlog_mapping_v1';
     const mappingKey = () => `${LS_MAP_KEY_PREFIX}:${SHEET_ID}:${SHEET_NAME}`;
 
-    function readSavedMapping(){
-      try { return JSON.parse(localStorage.getItem(mappingKey())) || null; }
-      catch { return null; }
+    async function readSavedMapping(){
+      try { 
+        const data = await configStorage.getItem(mappingKey());
+        return data ? JSON.parse(data) : null;
+      } catch { 
+        return null; 
+      }
     }
-    function writeSavedMapping(){
+    async function writeSavedMapping(){
       const obj = {
         photo: mapPhoto.value, date: mapDate.value, time: mapTime.value,
         species: mapSpecies.value, size: mapSize.value, place: mapPlace.value,
@@ -970,11 +1259,15 @@
         tideLevel: mapTideLevel.value, tideTrend: mapTideTrend.value,
         highTide: mapHighTide.value, lowTide: mapLowTide.value, notes: mapNotes.value
       };
-      localStorage.setItem(mappingKey(), JSON.stringify(obj));
-      if (mappingStatus){ mappingStatus.textContent = '保存しました'; setTimeout(()=> mappingStatus.textContent='', 1500); }
+      try {
+        await configStorage.setItem(mappingKey(), JSON.stringify(obj));
+        if (mappingStatus){ mappingStatus.textContent = '保存しました'; setTimeout(()=> mappingStatus.textContent='', 1500); }
+      } catch (err) {
+        console.warn('[Mapping] Save failed:', err);
+      }
     }
-    function applySavedMapping(){
-      const s = readSavedMapping();
+    async function applySavedMapping(){
+      const s = await readSavedMapping();
       if (!s) return false;
       const set = (el, v) => { if (v != null) el.value = String(v); };
       set(mapPhoto, s.photo); set(mapDate, s.date); set(mapTime, s.time);
@@ -983,10 +1276,14 @@
       set(mapTideTrend, s.tideTrend); set(mapHighTide, s.highTide); set(mapLowTide, s.lowTide); set(mapNotes, s.notes);
       return true;
     }
-    btnSaveMapping  && (btnSaveMapping.onclick  = () => { writeSavedMapping(); });
-    btnResetMapping && (btnResetMapping.onclick = () => {
-      localStorage.removeItem(mappingKey());
-      if (mappingStatus){ mappingStatus.textContent = '保存をクリアしました'; setTimeout(()=> mappingStatus.textContent='', 1500); }
+    btnSaveMapping  && (btnSaveMapping.onclick  = async () => { await writeSavedMapping(); });
+    btnResetMapping && (btnResetMapping.onclick = async () => {
+      try {
+        await configStorage.removeItem(mappingKey());
+        if (mappingStatus){ mappingStatus.textContent = '保存をクリアしました'; setTimeout(()=> mappingStatus.textContent='', 1500); }
+      } catch (err) {
+        console.warn('[Mapping] Clear failed:', err);
+      }
     });
     
     // ★追加：キャッシュ変数の初期化
@@ -1008,12 +1305,19 @@
     }
     async function loadSheetViaGAS(sheetName, sheetId = null) {
       try {
+        // ★追加：API呼び出し時に最新のトークンを動的に読み込む
+        const latestToken = await configStorage.getItem('WORKERS_AUTH_TOKEN');
+        if (latestToken) {
+          CONFIG.API.WORKERS_AUTH_TOKEN = latestToken;
+        }
+        
         // sheetId が指定されていない場合は SHEET_ID を使用
         const id = (sheetId || SHEET_ID).trim();
         if (!id) throw new Error('Sheet ID が指定されていません');
         
         // ★修正：Worker 経由で GAS にアクセス（secrets 保護）
         const workerUrl = CONFIG.API.FISHING_TRIP_API_WORKER + '/api/getSheetData';
+        
         const res = await fetch(workerUrl, {
           method: 'POST',
           headers: {
@@ -1075,19 +1379,17 @@
           return;
         }
         
-        console.log('[Init] Fetching SHEET_ID from Worker:', workerUrl);
         const res = await fetch(workerUrl + `?_=${Date.now()}`, {
           method: 'GET',
           headers: {
             'X-Auth-Token': CONFIG.API.WORKERS_AUTH_TOKEN
           }
         });
+        
         const json = await res.json();
-        console.log('[Init] Response:', json);
         
         if (json.ok && json.sheetId) {
           SHEET_ID = json.sheetId;
-          console.log('[Init] SHEET_ID loaded from GAS via Worker:', SHEET_ID);
         } else {
           console.warn('[Init] GAS returned not ok or no sheetId:', json);
         }
@@ -1142,21 +1444,16 @@
 
     document.getElementById('btnLoadSheet').onclick = async () => {
       try {
-        console.log('[btnLoadSheet] Starting catch load with SHEET_ID:', SHEET_ID, 'SHEET_NAME:', SHEET_NAME);
         const id = SHEET_ID.trim(), sheet = SHEET_NAME.trim();
         sheetStatus.textContent = '読込中...';
         remoteCatchList.innerHTML=''; detailWrap.classList.add('hidden');
         if (!id || !sheet) throw new Error('シートID/シート名が空です');
 
         // 1) Trips を先に読み、tripId → 月情報マップを作る
-        console.log('[btnLoadSheet] Loading Trips moon map...');
         tripsById = await loadTripsMoonMap();
-        console.log('[btnLoadSheet] Trips moon map loaded, items:', Object.keys(tripsById).length);
 
         // 2) Catches を読み込む（SHEET_ID を明示的に渡す）
-        console.log('[btnLoadSheet] Loading Catches sheet...');
         const rows = await loadSheetViaGAS(sheet, id);
-        console.log('[btnLoadSheet] Catches loaded, rows:', rows?.length || 0);
         if (!rows || rows.length < 2){ sheetStatus.textContent='データが見つかりません（ヘッダ+1行以上が必要）'; hasLoadedOnce=true; return; }
         lastRows = rows; lastHeaders = rows[0];
         setupMapping(lastHeaders);
@@ -1243,8 +1540,10 @@
       const iHH = idx('tide_high_times'); if (iHH) mapHighTide.value  = iHH;
       const iLL = idx('tide_low_times');  if (iLL) mapLowTide.value   = iLL;
 
-      // ③ 保存済み（最優先）— 無条件で上書き適用
-      applySavedMapping();
+      // ③ 保存済み（最優先）— 無条件で上書き適用（非同期）
+      (async () => {
+        await applySavedMapping();
+      })();
 
       // 折りたたみを表示状態で出す（ユーザーが保存できるように）— mappingPanel が存在する場合のみ
       if (mappingPanel) {
@@ -1286,7 +1585,6 @@
       try{
         // SHEET_ID が未設定の場合は待機
         if (!SHEET_ID) {
-          console.log('[loadTripsMoonMap] Waiting for SHEET_ID...');
           await new Promise(resolve => {
             const check = () => {
               if (SHEET_ID) resolve();
@@ -1296,9 +1594,7 @@
           });
         }
         
-        console.log('[loadTripsMoonMap] Loading with SHEET_ID:', SHEET_ID);
         const rows = await loadSheetViaGAS(TRIPS_SHEET_NAME, SHEET_ID);
-        console.log('[loadTripsMoonMap] Loaded rows:', rows?.length || 0);
         if (!rows || rows.length < 2) return {};
         const headers = rows[0].map(h=>String(h||'').trim());
         const idxOf = name => headers.findIndex(h => h === name);
@@ -1335,7 +1631,6 @@
             const rawPoint = (iWtP>=0 ? r[iWtP] : '');
             rec.water_temp_point= (iWtP>=0 ? String(r[iWtP]) : '');
             rec.water_temp_time = (iWtT>=0 ? r[iWtT] : '');
-            console.log('[loadTripsCache] water_temp parse:', { raw: rawPoint, processed: rec.water_temp_point, time: rec.water_temp_time });
           } else if (iRaw>=0 && r[iRaw]) {
             // フォールバック：raw_json.start_water_temp を見る
             try{
@@ -1345,7 +1640,6 @@
                 rec.water_temp_c     = (wt.temperature_c ?? '');
                 rec.water_temp_point = (String(wt.point_name ?? ''));
                 rec.water_temp_time  = (wt.date ?? '');
-                console.log('[loadTripsCache] water_temp from raw_json:', { raw: wt.point_name, processed: rec.water_temp_point });
               }
             }catch{}
           }
@@ -1717,9 +2011,10 @@
     // ===== PWA: Service Worker 登録 =====
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
+        navigator.serviceWorker.register('/dev_Fish_Log/sw.js', {
+          scope: '/dev_Fish_Log/'
+        })
           .then(registration => {
-            console.log('[PWA] Service Worker registered:', registration);
           })
           .catch(err => {
             console.warn('[PWA] Service Worker registration failed:', err);
@@ -1730,11 +2025,12 @@
     // ===== PWA: IndexedDB 初期化 =====
     const DB_NAME = 'FishLogDB';
     const STORE_NAME = 'draftTrips';
+    const UPLOAD_QUEUE_STORE = 'uploadQueue';
     let db = null;
 
     function initIndexedDB() {
       return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, 1);
+        const request = indexedDB.open(DB_NAME, 2); // バージョン 2 に更新
 
         request.onerror = () => {
           console.warn('[IndexedDB] Open failed');
@@ -1743,15 +2039,20 @@
 
         request.onsuccess = () => {
           db = request.result;
-          console.log('[IndexedDB] Initialized');
           resolve(db);
         };
 
         request.onupgradeneeded = (event) => {
           db = event.target.result;
+          // draftTrips ストア
           if (!db.objectStoreNames.contains(STORE_NAME)) {
             db.createObjectStore(STORE_NAME, { keyPath: 'tripId' });
-            console.log('[IndexedDB] Object store created');
+          }
+          // uploadQueue ストア
+          if (!db.objectStoreNames.contains(UPLOAD_QUEUE_STORE)) {
+            const uploadStore = db.createObjectStore(UPLOAD_QUEUE_STORE, { keyPath: 'id', autoIncrement: true });
+            uploadStore.createIndex('tripId', 'tripId', { unique: false });
+            uploadStore.createIndex('timestamp', 'timestamp', { unique: false });
           }
         };
       });
@@ -1765,7 +2066,6 @@
         const request = store.put(draft);
 
         request.onsuccess = () => {
-          console.log('[IndexedDB] Draft saved:', draft.tripId);
           resolve();
         };
 
@@ -1785,11 +2085,8 @@
 
         request.onsuccess = () => {
           if (request.result) {
-            console.log('[IndexedDB] Draft loaded:', tripId, request.result);
-            console.log('[IndexedDB] start_water_temp:', request.result?.start_water_temp);
             resolve(request.result);
           } else {
-            console.log('[IndexedDB] Draft not found:', tripId);
             resolve(null);
           }
         };
@@ -1804,37 +2101,64 @@
     // ===== 釣行ドラフト =====
     const LS_KEY='fishtrip_draft_v1';
     const uuid = ()=> (crypto?.randomUUID ? crypto.randomUUID() : (Date.now().toString(36)+Math.random().toString(36).slice(2,10)));
+    
+    // ドラフト読み込みのフォールバック実装
     const loadDraft = () => {
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    if (!raw) {
-      return { tripId: uuid(), status: 'idle', catches: [], tide_daily_cache: {}, manualStarted: false, updatedAt: new Date().toISOString() };
-    }
-    const p = JSON.parse(raw);
-    return {
-      tripId: p.tripId || uuid(),
-      status: p.status || 'idle',
-      catches: p.catches || [],
-      startedAt: p.startedAt,
-      endedAt: p.endedAt,
-      lat: p.lat,
-      lng: p.lng,
-      start_weather: p.start_weather,
-      end_weather: p.end_weather,
-      start_tide: p.start_tide,
-      tide_daily_cache: p.tide_daily_cache || {},
-      start_water_temp: p.start_water_temp || null,
-      manualStarted: !!p.manualStarted,
-      updatedAt: p.updatedAt || new Date().toISOString()
+      const defaultDraft = { 
+        tripId: uuid(), 
+        status: 'idle', 
+        catches: [], 
+        tide_daily_cache: {}, 
+        manualStarted: false, 
+        updatedAt: new Date().toISOString() 
+      };
+      
+      try {
+        // 【1】localStorage から取得を試みる
+        const raw = localStorage.getItem(LS_KEY);
+        if (raw) {
+          const p = JSON.parse(raw);
+          return {
+            tripId: p.tripId || uuid(),
+            status: p.status || 'idle',
+            catches: p.catches || [],
+            startedAt: p.startedAt,
+            endedAt: p.endedAt,
+            lat: p.lat,
+            lng: p.lng,
+            start_weather: p.start_weather,
+            end_weather: p.end_weather,
+            start_tide: p.start_tide,
+            tide_daily_cache: p.tide_daily_cache || {},
+            start_water_temp: p.start_water_temp || null,
+            manualStarted: !!p.manualStarted,
+            updatedAt: p.updatedAt || new Date().toISOString()
+          };
+        }
+      } catch (e) {
+        console.warn('[Draft] localStorage load failed:', e.message);
+      }
+      
+      return defaultDraft;
     };
-  } catch {
-    return { tripId: uuid(), status: 'idle', catches: [], tide_daily_cache: {}, manualStarted: false, updatedAt: new Date().toISOString() };
-  }
-};
+    
+    // ドラフト保存のハイブリッド実装
     const saveDraft = async (d) => {
       d.updatedAt = new Date().toISOString();
-      localStorage.setItem(LS_KEY, JSON.stringify(d));
-      await saveDraftToIndexedDB(d).catch(err => console.warn('[Draft] IndexedDB save failed:', err));
+      
+      // 【1】localStorage に保存
+      try {
+        localStorage.setItem(LS_KEY, JSON.stringify(d));
+        console.log('[Draft] Saved to localStorage');
+      } catch (e) {
+        console.warn('[Draft] localStorage save failed (PWA mode?):', e.message);
+      }
+      
+      // 【2】IndexedDB に保存（非クリティカル：非同期実行）
+      // ★修正：IndexedDB トランザクション競合を避けるため、非ブロッキング実行
+      saveDraftToIndexedDB(d).catch(err => 
+        console.warn('[Draft] IndexedDB save failed (async):', err)
+      );
     };
     const fmtLocal = iso => { try{return new Date(iso).toLocaleString();}catch{return '—'}; };
 
@@ -1900,16 +2224,7 @@
 
     // 画像アップロード（CONFIG から毎回読み込み）
 
-    // ★修正：SHEET_ID を優先で取得してから他の処理を実行
-    (async () => {
-      try {
-        console.log('[Init] Starting SHEET_ID initialization...');
-        await initializeSheetId();
-        console.log('[Init] SHEET_ID initialization complete. SHEET_ID:', SHEET_ID);
-      } catch (err) {
-        console.error('[Init] SHEET_ID initialization failed:', err);
-      }
-    })();
+    // ★修正：SHEET_ID 初期化は loadConfigFromStorage() 完了後に実行される
 
     // ===== Settings UI 機能 =====
     // 初期化：GAS から読み込むため、初期値は空にしておく
@@ -1917,6 +2232,12 @@
     // Sheet ID 保存関数（統合）
     async function saveSheetConfigToGAS() {
       try {
+        // ★追加：API呼び出し時に最新のトークンを動的に読み込む
+        const latestToken = await configStorage.getItem('WORKERS_AUTH_TOKEN');
+        if (latestToken) {
+          CONFIG.API.WORKERS_AUTH_TOKEN = latestToken;
+        }
+        
         const newId = (sheetIdEl?.value || '').trim();
         if (!newId) {
           if (sheetConfigStatus) sheetConfigStatus.textContent = 'ID を入力してください';
@@ -1942,7 +2263,6 @@
           }
           // 送信後、入力値をクリア（フロント側には保持しない）
           if (sheetIdEl) sheetIdEl.value = '';
-          console.log('[Settings] Sheet ID saved to GAS');
         } else {
           if (sheetConfigStatus) sheetConfigStatus.textContent = 'エラー: ' + (json.message || '不明');
         }
@@ -1955,8 +2275,8 @@
     // ボタンのオンクリック設定
     if (btnSaveSheetConfig) btnSaveSheetConfig.onclick = saveSheetConfigToGAS;
 
-    // ★追加：秘密情報（トークン・キー）の保存関数
-    function saveAuthToken() {
+    // ★修正：秘密情報（トークン・キー）の保存関数（ハイブリッドストレージ経由）
+    async function saveAuthToken() {
       const token = (document.getElementById('workersAuthTokenEl')?.value || '').trim();
       const status = document.getElementById('secretsStatus');
       
@@ -1965,18 +2285,49 @@
         return;
       }
       
-      localStorage.setItem('WORKERS_AUTH_TOKEN', token);
-      if (status) {
-        status.textContent = '✓ 保存しました';
-        setTimeout(() => { if (status) status.textContent = ''; }, 2000);
+      try {
+        // 古い値をクリア
+        try {
+          localStorage.removeItem('WORKERS_AUTH_TOKEN');
+        } catch (e) {
+          console.warn('[Settings] Failed to clear old token:', e.message);
+        }
+        
+        // 新しい値を保存
+        await configStorage.setItem('WORKERS_AUTH_TOKEN', token);
+        
+        // ★修正：storage に保存したら、すぐに CONFIG に反映
+        CONFIG.API.WORKERS_AUTH_TOKEN = token;
+        
+        // ★追加：Token 保存後に Worker URL を再取得
+        await fetchAndSaveWorkerUrls();
+        
+        // ★追加：Token 保存後に SHEET_ID を再取得
+        if (status) {
+          status.textContent = '✓ 保存しました（Worker URL と SHEET_IDを取得中...）';
+        }
+        
+        await initializeSheetId();
+        
+        // ★追加：Token を再読み込みして確認
+        if (status) {
+          if (SHEET_ID) {
+            status.textContent = '✓ 保存しました（SHEET_ID取得完了）';
+          } else {
+            status.textContent = '✓ 保存しました（SHEET_ID取得に失敗）';
+          }
+          setTimeout(() => { if (status) status.textContent = ''; }, 3000);
+        }
+        
+        document.getElementById('workersAuthTokenEl').value = '';
+      } catch (err) {
+        console.error('[Settings] Failed to save auth token:', err);
+        if (status) status.textContent = 'エラーが発生しました';
       }
-      
-      document.getElementById('workersAuthTokenEl').value = '';
-      console.log('[Settings] Worker Auth Token saved to localStorage');
     }
 
-    // ★追加：秘密情報の一括保存ボタンハンドラ
-    function saveSecretsHandler() {
+    // ★修正：秘密情報の一括保存ボタンハンドラ
+    async function saveSecretsHandler() {
       const authToken = (document.getElementById('workersAuthTokenEl')?.value || '').trim();
       const status = document.getElementById('secretsStatus');
       
@@ -1985,7 +2336,7 @@
         return;
       }
       
-      saveAuthToken();
+      await saveAuthToken();
     }
 
     if (document.getElementById('btnSaveSecrets')) {
@@ -2041,12 +2392,22 @@
 
       const imageUrl = uploadJson.secure_url;
 
-      // ★修正：Worker 経由で EXIF を取得（RapidAPI キーは Worker が管理）
-      const exifRes = await fetch(CONFIG.API.FISHING_TRIP_API_WORKER + '/api/exif', {
+      // ★修正：storage から最新の Worker URL を取得
+      try {
+        const stored = await configStorage.getItem('WORKER_URLS');
+        if (stored) {
+          const data = typeof stored === 'string' ? JSON.parse(stored) : stored;
+          CONFIG.API.EXIF_WORKER_URL = data.EXIF_WORKER_URL || CONFIG.API.EXIF_WORKER_URL;
+        }
+      } catch (err) {
+        console.warn('[fetchExifFromCloudinary] Failed to load Worker URL from storage:', err);
+      }
+
+      // ★修正：直接 EXIF Worker を呼び出し
+      const exifRes = await fetch(CONFIG.API.EXIF_WORKER_URL, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "X-Auth-Token": CONFIG.API.WORKERS_AUTH_TOKEN
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({ imageUrl: imageUrl })
       });
@@ -2078,6 +2439,12 @@
     }
        
     async function uploadPhotoToDrive(file){
+      // ★追加：API呼び出し時に最新のトークンを動的に読み込む
+      const latestToken = await configStorage.getItem('WORKERS_AUTH_TOKEN');
+      if (latestToken) {
+        CONFIG.API.WORKERS_AUTH_TOKEN = latestToken;
+      }
+      
       // ★進捗（存在すれば使用）
       const setProgress = (msg)=>{ try{ const el=document.getElementById('uploadProgress'); if(el){ el.textContent = msg; } }catch{} };
 
@@ -2130,6 +2497,12 @@
     // ★追加：潮汐チャート画像取得・アップロード関数（GASプロキシ経由）
     async function fetchAndUploadTideImages(startedAt, endedAt) {
         console.log('[TideImageUpload] Starting tide image fetch', { startedAt, endedAt });
+        
+        // ★追加：API呼び出し時に最新のトークンを動的に読み込む
+        const latestToken = await configStorage.getItem('WORKERS_AUTH_TOKEN');
+        if (latestToken) {
+          CONFIG.API.WORKERS_AUTH_TOKEN = latestToken;
+        }
         
         if (!startedAt || !endedAt) {
           console.warn('[TideImageUpload] Missing startedAt or endedAt');
@@ -2285,7 +2658,6 @@
     }
 
     // ===== 潮汐：Worker プロキシ =====
-    const TIDE_PROXY_URL_FOR_TIDE = TIDE_PROXY_URL; // 可読用エイリアス（動作は同一）
 
     // 港コード一覧（GViz）読み込みキャッシュ
     let harborCache = null;
@@ -2293,13 +2665,20 @@
     async function loadHarborsFromSheet(){
       if (harborCache) return harborCache;
       
-      // ★追加：SHEET_ID が取得されるまで待機
+      // ★修正：SHEET_ID が取得されるまで待機（タイムアウト付き）
       if (!SHEET_ID) {
-        console.log('[loadHarborsFromSheet] Waiting for SHEET_ID...');
+        const timeout = 5000; // 5秒
+        const startTime = Date.now();
         await new Promise(resolve => {
           const check = () => {
-            if (SHEET_ID) resolve();
-            else setTimeout(check, 100);
+            if (SHEET_ID) {
+              resolve();
+            } else if (Date.now() - startTime > timeout) {
+              LOG.tide('[loadHarborsFromSheet] SHEET_ID timeout');
+              resolve(); // タイムアウト時も続行
+            } else {
+              setTimeout(check, 100);
+            }
           };
           setTimeout(check, 100);
         });
@@ -2342,6 +2721,20 @@
         Math.sin(dLat / 2) ** 2 +
         Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
       return R * 2 * Math.asin(Math.sqrt(a));
+    }
+
+    // ★追加：Harbor キャッシュを確保（同期・キャッシュ待機保証）
+    async function ensureHarborCache() {
+      try {
+        await loadHarborsFromSheet();
+        if (!harborCache || !harborCache.mapped || harborCache.mapped.length === 0) {
+          throw new Error('Harbor cache is empty');
+        }
+        return harborCache;
+      } catch (e) {
+        LOG.tide('[ensureHarborCache] Error:', e?.message || e);
+        throw e;
+      }
     }
 
     async function findNearestHarbor(lat, lon, radiusKm = 10){
@@ -2433,7 +2826,25 @@
     // === 指定日のチャート取得（キャッシュ付） ===
     const tideChartCache = {};
     async function getTideChartForDate(lat, lon, isoWithOffset){
-      if (!TIDE_PROXY_URL_FOR_TIDE || TIDE_PROXY_URL_FOR_TIDE.includes("your-worker")) return null;
+      // ★修正：CONFIG初期化完了を待機（API呼び出し前の必須処理）
+      await configInitPromise;
+      
+      // ★修正：storage から最新の Worker URL を取得（必須）
+      let tideWorkerUrl = CONFIG.API.TIDE_PROXY_URL;
+      try {
+        const stored = await configStorage.getItem('WORKER_URLS');
+        if (stored) {
+          const data = typeof stored === 'string' ? JSON.parse(stored) : stored;
+          if (data.TIDE_WORKER_URL) {
+            tideWorkerUrl = data.TIDE_WORKER_URL;
+            CONFIG.API.TIDE_PROXY_URL = tideWorkerUrl;
+          }
+        }
+      } catch (err) {
+        console.warn('[getTideChartForDate] Failed to load Worker URL from storage:', err);
+      }
+      
+      if (!tideWorkerUrl || tideWorkerUrl.includes("your-worker")) return null;
       const harbor = await findNearestHarbor(lat, lon, 10);
       if (!harbor) return null;
 
@@ -2447,7 +2858,7 @@
         return { harbor, chart: tideChartCache[cacheKey], chartDateKey: keyDate };
       }
 
-      const url = `${TIDE_PROXY_URL_FOR_TIDE}?pc=${encodeURIComponent(harbor.pc)}&hc=${encodeURIComponent(harbor.hc)}&yr=${y}&mn=${m}&dy=${da}&rg=day`;
+      const url = `${tideWorkerUrl}?pc=${encodeURIComponent(harbor.pc)}&hc=${encodeURIComponent(harbor.hc)}&yr=${y}&mn=${m}&dy=${da}&rg=day`;
       let tideJson=null;
       try{
         const res = await fetch(url);
@@ -2484,6 +2895,19 @@
       return `${y}-${m}-${da}`;
     }
 
+    // ★追加：モーダル内の要素を有効/無効化する汎用関数（グローバルスコープ）
+    const setTripEditModalElementsEnabled = (enabled) => {
+      const tripEditModalContent = tripEditModal.querySelector('div.w-full');
+      if (tripEditModalContent) {
+        const buttons = tripEditModalContent.querySelectorAll('button, input, textarea');
+        buttons.forEach(btn => {
+          btn.disabled = !enabled;
+          btn.style.opacity = enabled ? '1' : '0.5';
+          btn.style.pointerEvents = enabled ? 'auto' : 'none';
+        });
+      }
+    };
+
     function tideInfoFromChart(chart, isoWithOffset){
       const localDate = new Date(isoWithOffset);
       const level_cm = nearestTideLevelCm(chart, localDate);
@@ -2493,8 +2917,22 @@
 
     // ===== 開始時の潮 =====
     async function fetchTideForStart(lat, lon, startedAtIso){
-      if (!TIDE_PROXY_URL_FOR_TIDE || TIDE_PROXY_URL_FOR_TIDE.includes("your-worker")) {
-        LOG.tide("TIDE_PROXY_URL が未設定のためスキップ");
+      // ★修正：CONFIG初期化完了を待機（API呼び出し前の必須処理）
+      await configInitPromise;
+      
+      // ★追加：storage から最新の Worker URL を取得
+      try {
+        const stored = await configStorage.getItem('WORKER_URLS');
+        if (stored) {
+          const data = typeof stored === 'string' ? JSON.parse(stored) : stored;
+          CONFIG.API.TIDE_WORKER_URL = data.TIDE_WORKER_URL || CONFIG.API.TIDE_WORKER_URL;
+        }
+      } catch (err) {
+        console.warn('[fetchTideForStart] Failed to load Worker URL from storage:', err);
+      }
+      
+      if (!CONFIG.API.TIDE_WORKER_URL || CONFIG.API.TIDE_WORKER_URL.includes("your-worker")) {
+        LOG.tide("TIDE_WORKER_URL が未設定のためスキップ");
         return null;
       }
       const harbor = await findNearestHarbor(lat, lon, 10);
@@ -2505,7 +2943,7 @@
       const mn = d.getMonth() + 1;
       const dy = d.getDate();
 
-      const url = `${TIDE_PROXY_URL_FOR_TIDE}?pc=${encodeURIComponent(harbor.pc)}&hc=${encodeURIComponent(harbor.hc)}&yr=${yr}&mn=${mn}&dy=${dy}&rg=day`;
+      const url = `${CONFIG.API.TIDE_WORKER_URL}?pc=${encodeURIComponent(harbor.pc)}&hc=${encodeURIComponent(harbor.hc)}&yr=${yr}&mn=${mn}&dy=${dy}&rg=day`;
       LOG.tide("fetch:", url);
 
       let tideJson = null;
@@ -2739,7 +3177,25 @@
     async function fetchTodayWaterTempByNearest(lat, lon, targetDate = null){
       const tag = `[lat=${lat?.toFixed?.(5)}, lon=${lon?.toFixed?.(5)}]`;
       try{
-       if (!WATER_WORKER_URL || /your[_-]?worker/i.test(WATER_WORKER_URL)){
+        // ★修正：CONFIG初期化完了を待機（API呼び出し前の必須処理）
+        await configInitPromise;
+        
+        // ★修正：storage から最新の Worker URL を取得（必須）
+        let waterWorkerUrl = CONFIG.API.WATER_WORKER_URL;
+        try {
+          const stored = await configStorage.getItem('WORKER_URLS');
+          if (stored) {
+            const data = typeof stored === 'string' ? JSON.parse(stored) : stored;
+            if (data.WATER_WORKER_URL) {
+              waterWorkerUrl = data.WATER_WORKER_URL;
+              CONFIG.API.WATER_WORKER_URL = waterWorkerUrl;
+            }
+          }
+        } catch (err) {
+          // ストレージ読み込み失敗時はデフォルト値を使用
+        }
+        
+        if (!waterWorkerUrl || /your[_-]?worker/i.test(waterWorkerUrl)){
           if (DEBUG_WATER) LOG.wt("skip: WATER_WORKER_URL is not set/placeholder");
           return null;
         }
@@ -2751,10 +3207,10 @@
         }
 
         const base = `https://leisure-api-prod.n-kishou.co.jp/get-sea-water-temperature?code=${encodeURIComponent(point.code)}&type=forecast`;
-        const url  = `${WATER_WORKER_URL.replace(/\/$/, '')}/proxy?url=${encodeURIComponent(base)}`;
+        const url  = `${waterWorkerUrl.replace(/\/$/, '')}/proxy?url=${encodeURIComponent(base)}`;
 
 
-        if (DEBUG_WATER) LOG.wt("request", { tag, worker: WATER_WORKER_URL, base, proxy: url, point });
+        if (DEBUG_WATER) LOG.wt("request", { tag, worker: waterWorkerUrl, base, proxy: url, point });
 
         const res = await fetch(url, { method:'GET' });
 
@@ -2911,10 +3367,10 @@
         const btnReset=document.createElement('button');
         btnReset.textContent='新規釣行';
         btnReset.className='w-full py-2 rounded-xl bg-slate-700 hover:bg-slate-600 font-semibold';
-        btnReset.onclick=()=>{
+        btnReset.onclick=async ()=>{
           if(confirm('新しい釣行を開始しますか？')){
             draft = { tripId: uuid(), status: 'idle', catches: [], tide_daily_cache: {}, start_water_temp: null, memo: null };
-            saveDraft(draft);
+            await saveDraft(draft);
             render();
           }
         };
@@ -3044,7 +3500,6 @@
       if (!tripsCache) {
         // SHEET_ID が未設定の場合、初期化完了を待つ
         if (!SHEET_ID) {
-          console.log('[autoLoadTrips] SHEET_ID not yet loaded, waiting...');
           setTimeout(() => autoLoadTrips(), 100);
           return;
         }
@@ -3069,18 +3524,13 @@
         tripListEl.innerHTML = '';
         tripDetailWrap.classList.add('hidden');
         
-        console.log('[loadTrips] Starting with SHEET_ID:', SHEET_ID, 'TRIPS_SHEET_NAME:', TRIPS_SHEET_NAME);
-        
         tripsCache = await loadSheetViaGAS(TRIPS_SHEET_NAME, SHEET_ID);
-        console.log('[loadTrips] Trips loaded, rows:', tripsCache?.length || 0);
         
         // ★追加：釣果シートも読み込む
         catchesCache = await loadSheetViaGAS(SHEET_NAME, SHEET_ID);
-        console.log('[loadTrips] Loaded caches:', { tripsCache: tripsCache?.length || 0, catchesCache: catchesCache?.length || 0 });
         
         if (!tripsCache || tripsCache.length < 2){
           tripStatus.textContent = 'Trips にデータが見つかりません';
-          console.log('[loadTrips] No data found in Trips:', tripsCache);
           return;
         }
         renderTripsList(tripsCache);
@@ -3920,6 +4370,9 @@
 
     // ===== アクション =====
     async function startTrip(){
+      // ★修正：CONFIG初期化完了を待機（API呼び出し前の必須処理）
+      await configInitPromise;
+      
       if (draft.status==='active') return;
       draft.status='active'; draft.startedAt=nowIsoLocal();
 
@@ -4244,11 +4697,11 @@
           const btnDeleteTemp = document.createElement('button');
           btnDeleteTemp.className = 'text-xs py-1 px-2 rounded bg-red-900 hover:bg-red-800 text-red-200 ml-2';
           btnDeleteTemp.textContent = '削除';
-          btnDeleteTemp.onclick = (e) => {
+          btnDeleteTemp.onclick = async (e) => {
             e.stopPropagation();
             if (confirm('この釣果を削除しますか？')) {
               draft.catches.splice(i, 1);
-              saveDraft(draft);
+              await saveDraft(draft);
               closeCatchModal(); // 再度釣果リストを描画
             }
           };
@@ -4316,6 +4769,9 @@
     }
 
     async function submitCatch(){
+      // ★修正：CONFIG初期化完了を待機（API呼び出し前の必須処理）
+      await configInitPromise;
+      
       try {
         const species = inpSpecies.value.trim();
         if (!species){ 
@@ -4875,13 +5331,62 @@
       // ★修正：共通関数でローディングオーバーレイを表示（アップロード中テキスト）
       showUploadingOverlay('アップロード中...');
 
-      const enqueue = (payload) => {
-        try{
-          const key='fishlog_upload_queue_v1';
-          const q = JSON.parse(localStorage.getItem(key) || '[]');
-          q.push({ t: Date.now(), payload });
-          localStorage.setItem(key, JSON.stringify(q));
-        }catch{}
+      const enqueue = async (payload) => {
+        // IndexedDB が利用可能なら優先
+        if (db) {
+          try {
+            const tx = db.transaction(UPLOAD_QUEUE_STORE, 'readwrite');
+            const store = tx.objectStore(UPLOAD_QUEUE_STORE);
+            const item = {
+              tripId: draft.tripId,
+              payload: payload,
+              timestamp: Date.now(),
+              retries: 0
+            };
+            const req = store.add(item);
+            req.onsuccess = () => {
+              console.log('[Upload] Queued to IndexedDB:', item);
+            };
+            req.onerror = () => {
+              console.warn('[Upload] IndexedDB queue failed, trying localStorage');
+              // IndexedDB 失敗時のみ localStorage にフォールバック
+              try {
+                const key = 'fishlog_upload_queue_v1';
+                const q = JSON.parse(localStorage.getItem(key) || '[]');
+                q.push({ t: Date.now(), payload });
+                localStorage.setItem(key, JSON.stringify(q));
+                console.log('[Upload] Queued locally (localStorage fallback)');
+              } catch (lsError) {
+                console.warn('[Upload] Both IndexedDB and localStorage failed:', lsError.message);
+                // 両方失敗した場合はメモリのみ
+              }
+            };
+          } catch (e) {
+            console.warn('[Upload] IndexedDB transaction error:', e.message);
+            // IndexedDB エラー時は localStorage にフォールバック
+            try {
+              const key = 'fishlog_upload_queue_v1';
+              const q = JSON.parse(localStorage.getItem(key) || '[]');
+              q.push({ t: Date.now(), payload });
+              localStorage.setItem(key, JSON.stringify(q));
+              console.log('[Upload] Queued locally (localStorage fallback)');
+            } catch (lsError) {
+              console.warn('[Upload] localStorage also unavailable:', lsError.message);
+            }
+          }
+        } else {
+          // db がない場合は localStorage のみ試行（失敗しても無視）
+          try {
+            const key = 'fishlog_upload_queue_v1';
+            const q = JSON.parse(localStorage.getItem(key) || '[]');
+            q.push({ t: Date.now(), payload });
+            localStorage.setItem(key, JSON.stringify(q));
+            console.log('[Upload] Queued locally (localStorage, no IndexedDB)');
+          } catch (e) {
+            console.warn('[Upload] localStorage unavailable, queue will be lost:', e.message);
+            // localStorage もない場合はキューが失われる（これは期待動作）
+          }
+        }
       };
       const clearDraftAndUI = ()=>{
         // ★修正：共通関数でオーバーレイを消す
@@ -5134,6 +5639,9 @@
     // ★新規追加: 補完ロジックのみを実行（モーダル表示なし）
     // submitCatch() から呼び出され、ステータス画面の更新のみを行う
     async function _complementTripDataOnly(){
+      // ★修正：CONFIG初期化完了を待機（API呼び出し前の必須処理）
+      await configInitPromise;
+      
       try {
         completeMissingTripInfoIfNeeded();
 
@@ -5265,6 +5773,9 @@
     }
 
     async function openTripReview(){
+      // ★修正：CONFIG初期化完了を待機（API呼び出し前の必須処理）
+      await configInitPromise;
+      
       // ★追加：多重呼び出し防止
       if (isUploading) {
         alert('処理は既に進行中です。しばらくお待ちください。');
@@ -5609,38 +6120,131 @@
 
     // ★追記: アップロード再送（オンライン/起動時）
     async function retryUploadQueue(){
-      const key='fishlog_upload_queue_v1';
-      let q=[]; try{ q = JSON.parse(localStorage.getItem(key) || '[]'); }catch{ q=[]; }
-      if (!Array.isArray(q) || !q.length) return;
+      let q = [];
+      let idbItems = [];
+      let idbIds = [];
       
+      // 【1】IndexedDB からキューを取得
+      if (db) {
+        try {
+          const tx = db.transaction(UPLOAD_QUEUE_STORE, 'readonly');
+          const store = tx.objectStore(UPLOAD_QUEUE_STORE);
+          idbItems = await new Promise((resolve) => {
+            const req = store.getAll();
+            req.onsuccess = () => resolve(req.result || []);
+            req.onerror = () => resolve([]);
+          });
+          idbIds = idbItems.map(item => item.id);
+          console.log('[UploadQueue] Loaded from IndexedDB:', idbItems.length, 'items');
+          q = [...idbItems];
+        } catch (e) {
+          console.warn('[UploadQueue] IndexedDB load failed:', e.message);
+          // IndexedDB 失敗時は localStorage から取得
+          try {
+            const key = 'fishlog_upload_queue_v1';
+            q = JSON.parse(localStorage.getItem(key) || '[]');
+          } catch {
+            q = [];
+          }
+        }
+      } else {
+        // db がない場合は localStorage から取得
+        try {
+          const key = 'fishlog_upload_queue_v1';
+          q = JSON.parse(localStorage.getItem(key) || '[]');
+        } catch {
+          q = [];
+        }
+      }
+      
+      if (!Array.isArray(q) || !q.length) {
+        console.log('[UploadQueue] No pending items');
+        return;
+      }
+
       // ★追加：多重実行防止
       if (isUploading) return;
       
       // ★修正：共通関数でローディングオーバーレイを表示（アップロード中テキスト）
-      showUploadingOverlay('アップロード中...');
+      showUploadingOverlay('保留中のアップロードを再送中...');
 
-      const remain=[];
-      for (const item of q){
-        try{
+      const remain = [];
+      const successIds = [];
+      
+      for (const item of q) {
+        try {
+          const payload = item.payload || item; // 古い形式と新形式の両方に対応
           const res = await fetch(CONFIG.API.FISHING_TRIP_API_WORKER + '/api/upload', {
-            method:'POST',
+            method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-Auth-Token': CONFIG.API.WORKERS_AUTH_TOKEN },
-            body: JSON.stringify(item.payload)
+            body: JSON.stringify(payload)
           });
-          if (!res.ok){ remain.push(item); continue; }
+          if (!res.ok) {
+            remain.push(item);
+            continue;
+          }
           await res.text(); // 消費
-        }catch{
+          
+          // IndexedDB アイテムの場合は ID を記録
+          if (item.id) {
+            successIds.push(item.id);
+          }
+        } catch (e) {
+          console.warn('[UploadQueue] Send failed:', e.message);
           remain.push(item);
         }
       }
-      localStorage.setItem(key, JSON.stringify(remain));
+      
+      // 【2】成功したアイテムを IndexedDB から削除
+      if (successIds.length > 0 && db) {
+        try {
+          const tx = db.transaction(UPLOAD_QUEUE_STORE, 'readwrite');
+          const store = tx.objectStore(UPLOAD_QUEUE_STORE);
+          for (const id of successIds) {
+            store.delete(id);
+          }
+          console.log('[UploadQueue] Deleted from IndexedDB:', successIds.length, 'items');
+        } catch (e) {
+          console.warn('[UploadQueue] IndexedDB delete failed:', e.message);
+        }
+      }
+      
+      // 【3】残りのアイテムを更新
+      // 残りのアイテムが IndexedDB から来たものの場合、IndexedDB に残す
+      if (idbIds.length > 0 && db && remain.length > 0) {
+        // IndexedDB アイテムの残りは既に DB に残っているので OK
+        console.log('[UploadQueue] Remaining items stay in IndexedDB:', remain.length);
+      } else if (remain.length > 0) {
+        // localStorage に残りを保存
+        try {
+          const key = 'fishlog_upload_queue_v1';
+          localStorage.setItem(key, JSON.stringify(remain));
+          console.log('[UploadQueue] Updated localStorage with remaining:', remain.length, 'items');
+        } catch (e) {
+          console.warn('[UploadQueue] Failed to update localStorage:', e.message);
+        }
+      } else {
+        // 残りがない場合は localStorage をクリア
+        try {
+          const key = 'fishlog_upload_queue_v1';
+          localStorage.removeItem(key);
+          console.log('[UploadQueue] Cleared localStorage (all sent)');
+        } catch (e) {
+          // 無視
+        }
+      }
+      
       // ★修正：完了時に共通関数でオーバーレイを消す
       hideUploadingOverlay();
-      if (q.length && !remain.length) { try{ alert('保留中のアップロードを再送し、すべて完了しました。'); }catch{} }
+      if (q.length && !remain.length) {
+        try {
+          alert('保留中のアップロードを再送し、すべて完了しました。');
+        } catch {}
+      }
     }
-    window.addEventListener('online', ()=> retryUploadQueue());
+    window.addEventListener('online', () => retryUploadQueue());
     // 初期表示後に一度だけ試行
-    setTimeout(()=> retryUploadQueue(), 1000);
+    setTimeout(() => retryUploadQueue(), 1000);
 
     function openManualTripForm(){
       // ★追加: モーダル親の recordView を表示させる（親の hidden を外す）
@@ -5774,6 +6378,9 @@
 
     // ★変更: 手動釣行の登録（写真・現在地の取得は行わず、モーダル入力だけで確定。登録時に不足補完を実行）
     async function submitManualTrip(){
+      // ★修正：CONFIG初期化完了を待機（API呼び出し前の必須処理）
+      await configInitPromise;
+      
       let startedIso = null;
       let lat = null, lng = null;
 
@@ -6154,6 +6761,9 @@
     // ★追加：データ再取得ボタンのハンドラ
     if (btnRefetchCompData) {
       btnRefetchCompData.onclick = async () => {
+        // ★修正：CONFIG初期化完了を待機（API呼び出し前の必須処理）
+        await configInitPromise;
+        
         console.log('[btnRefetchCompData] clicked');
         
         // 入力値から日時と位置を取得
@@ -6326,6 +6936,9 @@
     const btnSaveCatchFormInEdit = document.getElementById('btnSaveCatchFormInEdit');
     if (btnSaveCatchFormInEdit) {
       btnSaveCatchFormInEdit.onclick = async () => {
+        // ★修正：CONFIG初期化完了を待機（API呼び出し前の必須処理）
+        await configInitPromise;
+        
         const timeInput = document.getElementById('editFormCatchTime').value.trim();
         const species = document.getElementById('editFormCatchSpecies').value.trim();
         const size = document.getElementById('editFormCatchSize').value.trim();
@@ -6697,18 +7310,8 @@
         console.log('[btnSaveTripEdit] calling showUploadingOverlay');
         showUploadingOverlay('保存中...');
         
-        // ★追加：モーダル内のすべてのボタンと入力を無効化
-        const tripEditModalContent = tripEditModal.querySelector('div.w-full');
-        console.log('[btnSaveTripEdit] tripEditModalContent:', !!tripEditModalContent);
-        if (tripEditModalContent) {
-          const buttons = tripEditModalContent.querySelectorAll('button, input, textarea');
-          console.log('[btnSaveTripEdit] disabling', buttons.length, 'elements');
-          buttons.forEach(btn => {
-            btn.disabled = true;
-            btn.style.opacity = '0.5';
-            btn.style.pointerEvents = 'none';
-          });
-        }
+        // ★修正：汎用関数を使用してボタンを無効化
+        setTripEditModalElementsEnabled(false);
         
         console.log('[btnSaveTripEdit] waiting for requestAnimationFrame');
         await new Promise(resolve => requestAnimationFrame(resolve));
@@ -6721,21 +7324,22 @@
         } catch (e) {
           console.error('[btnSaveTripEdit] error:', e);
           hideUploadingOverlay();
-          // ★追加：エラー時もボタンを再度有効化
-          if (tripEditModalContent) {
-            const buttons = tripEditModalContent.querySelectorAll('button, input, textarea');
-            buttons.forEach(btn => {
-              btn.disabled = false;
-              btn.style.opacity = '1';
-              btn.style.pointerEvents = 'auto';
-            });
-          }
+          // ★修正：汎用関数を使用してボタンを有効化
+          setTripEditModalElementsEnabled(true);
         }
       };
     }
 
     // ★追加：釣行編集データを上書き保存
     async function submitTripEditData() {
+      // ★追加：Harbor キャッシュを事前ロード（編集時の非同期遅延防止）
+      try {
+        await ensureHarborCache();
+      } catch (e) {
+        LOG.tide('[submitTripEditData] Warning: Harbor cache load failed:', e?.message);
+        // 警告のみ、処理は続行
+      }
+      
       // ★追加：保存時に Trips シートから全データを再度取得して draft に反映（未編集データの喪失を防ぐ）
       try {
         const headers = tripsCache[0];
@@ -6746,6 +7350,18 @@
         const tripRow = tripsCache.find((t, idx) => idx > 0 && String(t[col.tripId]) === String(draft.tripId));
         
         if (tripRow) {
+          // ★追加：日時データを復元（Trips シートから）
+          if (tripRow[col.startedAt]) {
+            draft.startedAt = tripRow[col.startedAt];
+          }
+          if (tripRow[col.endedAt]) {
+            draft.endedAt = tripRow[col.endedAt];
+          }
+          
+          // ★追加：位置情報を復元
+          if (tripRow[col.lat]) draft.lat = parseFloat(tripRow[col.lat]) || draft.lat;
+          if (tripRow[col.lng]) draft.lng = parseFloat(tripRow[col.lng]) || draft.lng;
+          
           // 元データから全カラムを draft に反映
           draft.status = tripRow[col.status] || draft.status || 'ended';
           
@@ -6811,7 +7427,7 @@
         console.error('[TripEdit] Error restoring full trip data:', e);
       }
       
-      // 入力値から釣行データを更新
+      // 入力値から釣行データを更新（入力があった場合のみ更新）
       if (editTripStarted.value) {
         try {
           const dt = new Date(editTripStarted.value.replace(' ', 'T'));
@@ -6821,6 +7437,7 @@
           return;
         }
       }
+      // ★修正：editTripStarted が空の場合、Trips シートから復元した値を保持（上書きしない）
 
       if (editTripEnded.value) {
         try {
@@ -6831,6 +7448,7 @@
           return;
         }
       }
+      // ★修正：editTripEnded が空の場合、Trips シートから復元した値を保持（上書きしない）
 
       let lat = parseFloat(editTripLat.value);
       let lng = parseFloat(editTripLng.value);
@@ -6838,6 +7456,7 @@
         draft.lat = lat;
         draft.lng = lng;
       }
+      // ★修正：lat/lng が有効でない場合、Trips シートから復元した値を保持
 
       // ★追加：メモを draft に反映
       const editTripMemo = document.getElementById('editTripMemo');
@@ -6872,9 +7491,13 @@
             draft.start_weather = null;
           }
           
-          // 潮汐を再取得（開始時刻がある場合）
+          // ★修正：潮汐を再取得（開始時刻がある場合）- Harbor キャッシュ確保後に実行
           if (draft.startedAt) {
             try {
+              // Harbor キャッシュが確保されたことを確認
+              if (harborCache && harborCache.mapped && harborCache.mapped.length > 0) {
+                LOG.tide('[submitTripEditData] Harbor cache confirmed before fetchTideForStart');
+              }
               const tide = await fetchTideForStart(lat, lng, draft.startedAt);
               draft.start_tide = tide || null;
               if (tide?.chart && tide?.chartDateKey) {
@@ -6884,7 +7507,9 @@
                   chart: tide.chart
                 };
               }
+              LOG.tide('[submitTripEditData] Tide refetched successfully');
             } catch (tideErr) {
+              LOG.tide('[submitTripEditData] Tide refetch error:', tideErr?.message || tideErr);
               draft.start_tide = null;
             }
           }
@@ -6915,10 +7540,16 @@
         
         // ★修正：モーダルを完全に閉じた後にオーバーレイを隠す
         hideUploadingOverlay();
+        
+        // ★修正：成功時もボタンを再有効化（汎用関数を使用）
+        setTripEditModalElementsEnabled(true);
       } catch (e) {
         // ★修正：エラー時もオーバーレイを隠す
         hideUploadingOverlay();
         alert('アップロードに失敗しました: ' + (e?.message || e));
+        
+        // ★修正：エラー時もボタンを再度有効化（汎用関数を使用）
+        setTripEditModalElementsEnabled(true);
       }
     }
 
