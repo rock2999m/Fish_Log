@@ -2314,7 +2314,7 @@
         
         // ★追加：Token 保存後に SHEET_ID を再取得
         if (status) {
-          status.textContent = '✓ 保存しました（Worker URL と SHEET_IDを取得中...）';
+          status.textContent = '✓ 保存しました（トークン認証中...）';
         }
         
         await initializeSheetId();
@@ -2322,9 +2322,9 @@
         // ★追加：Token を再読み込みして確認
         if (status) {
           if (SHEET_ID) {
-            status.textContent = '✓ 保存しました（SHEET_ID取得完了）';
+            status.textContent = '✓ 保存しました（トークン認証完了）';
           } else {
-            status.textContent = '✓ 保存しました（SHEET_ID取得に失敗）';
+            status.textContent = '✓ 保存しました（トークン認証に失敗）';
           }
           setTimeout(() => { if (status) status.textContent = ''; }, 3000);
         }
@@ -7656,4 +7656,5 @@
   </script>
 </body>
 </html>
+
 
