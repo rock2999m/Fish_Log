@@ -12,7 +12,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="FishTrip_dev">
-  <title>釣行記録_dev（PWAフロント / コンパクトUI）</title>
+  <title>Fishing Log</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* ★追加：入力フォーム自動ズーム抑制 */
@@ -24,12 +24,17 @@
     body {
       touch-action: manipulation;
     }
+
+    /* ★追加：PWA対応のノッチ回避（CSS変数） */
+    :root {
+      --pwa-header-pt: 0;
+    }
   </style>
 <body class="min-h-screen bg-slate-950 text-slate-50">
-  <header class="sticky top-0 z-10 backdrop-blur bg-slate-950/70 border-b border-slate-800">
+  <header class="sticky top-0 z-10 backdrop-blur bg-slate-950/70 border-b border-slate-800 pt-[var(--pwa-header-pt)]">
     <div class="max-w-4xl mx-auto px-4 py-3">
       <div class="mb-3 text-center">
-        <h1 class="text-3xl font-bold">Fishing_Log_dev</h1>
+        <h1 class="text-3xl font-bold">Fishing_Log</h1>
       </div>
       <nav class="flex gap-2 text-sm items-center justify-between">
         <div class="flex gap-2">
@@ -165,7 +170,6 @@
                 <select id="editFormLocationSelect" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-sm">
                   <option value="">位置を選択...</option>
                 </select>
-                <input id="editFormLocationCustom" type="text" placeholder="カスタム位置名" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-sm" />
               </div>
               <div id="locationCandidatesList" class="mt-2 text-xs text-slate-400"></div>
             </label>
@@ -185,7 +189,7 @@
     </div>
   </div>
 
-  <main class="max-w-4xl mx-auto px-4 pb-28 pt-4">
+  <main class="max-w-4xl mx-auto px-4 pb-40 pt-4">
     <!-- ホーム -->
     <section id="homeView" class="space-y-4">
       <!-- 釣行記録（1列、最上段） -->
@@ -394,7 +398,7 @@
         <ul id="catchList" class="space-y-2"></ul>
       </section>
 
-      <div id="bottomBar" class="hidden fixed bottom-0 left-0 right-0 border-t border-slate-800 bg-slate-950/80 backdrop-blur">
+      <div id="bottomBar" class="hidden fixed bottom-0 left-0 right-0 z-20 border-t border-slate-800 bg-slate-950/80 backdrop-blur pb-12">
         <div class="max-w-4xl mx-auto px-4 py-3 grid grid-cols-3 gap-2">
           <button id="btnAddCatchBottom" class="py-3 rounded-2xl bg-sky-600 hover:bg-sky-500 font-semibold">＋釣果</button>
           <button id="btnCancelTrip" class="py-3 rounded-2xl bg-slate-700 hover:bg-slate-600 font-semibold">キャンセル</button>
@@ -430,6 +434,17 @@
         <label class="block"><span class="text-sm text-slate-300">方法（ルアー/リグ 等）</span>
           <input id="inpMethod" type="text" placeholder="例：メタルジグ 20g" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" />
         </label>
+        
+        <!-- ★追加：釣場位置選択（水温取得用候補地） -->
+        <label class="block"><span class="text-sm text-slate-300">釣場位置</span>
+          <div class="mt-1 space-y-2">
+            <select id="catchLocationSelect" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-sm">
+              <option value="">位置を選択...</option>
+            </select>
+          </div>
+          <div id="catchLocationCandidatesList" class="mt-2 text-xs text-slate-400"></div>
+        </label>
+        
         <div id="photoFieldWrapper" class="block">
           <div class="block"><span class="text-sm text-slate-300">写真</span>
             <input id="inpPhoto" type="file" accept="image/*" class="hidden" />
@@ -454,17 +469,21 @@
       </div>
       <p class="text-sm text-slate-300 mb-3">手動釣行では写真から時刻・位置を補完します。先に写真を選択してアップロードしてください。</p>
       <div class="space-y-3">
-        <label class="block"><span class="text-sm text-slate-300">写真（JPEG推奨）</span>
-          <input id="manualPhotoInput" type="file" accept="image/*" class="mt-1 w-full text-sm bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" />
-        </label>
+        <div>
+          <label for="manualPhotoInput" class="block text-sm text-slate-300 mb-2">写真（JPEG推奨）</label>
+          <input id="manualPhotoInput" type="file" accept="image/*" class="hidden" />
+          <button type="button" onclick="document.getElementById('manualPhotoInput').click()" class="w-full py-2 px-3 rounded-xl bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-100 font-semibold transition">
+            ファイルを選択
+          </button>
+        </div>
         <div id="manualPhotoPreview" class="hidden">
           <div class="text-xs text-slate-400 mb-1">選択中の写真プレビュー</div>
           <img id="manualPhotoPreviewImg" alt="photo preview" class="mt-1 h-32 w-full rounded-xl object-cover border border-slate-800" />
         </div>
       </div>
       <div class="flex gap-2 mt-4">
-        <button id="btnCancelManualPhoto" class="flex-1 py-2 rounded-xl border border-slate-700 hover:bg-slate-800" type="button">戻る</button>
-        <button id="btnUploadManualPhoto" class="flex-1 py-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 font-semibold" type="button">アップロードして補完</button>
+        <button id="btnCancelManualPhoto" class="flex-1 py-2 rounded-xl border border-slate-700 hover:bg-slate-800 font-semibold transition" type="button">戻る</button>
+        <button id="btnUploadManualPhoto" class="flex-1 py-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 font-semibold transition" type="button">アップロードして補完</button>
       </div>
     </div>
   </div>
@@ -1439,8 +1458,62 @@
         LOG.app("[WaterTemp] start date is today, will use current temp");
       }
       
-      // 開始日が今日、または過去データが見つからない場合は null を返す
-      // （現在の海水温取得ロジックに任せる）
+      // ★修正：当日の場合も null ではなく、startedAtIso の日付を含めたオブジェクトを返す
+      // これにより、catchForm.water_temp.date が常に適切な値を持つようになる
+      const dateStr = startedAtIso.substring(0, 10);  // "YYYY-MM-DD" 形式
+      return {
+        temperature_c: null,  // 当日データは fetchWaterTempForPoint() などで別途取得
+        date: startedAtIso,   // ISO 形式で渡された日時をそのまま返す
+        isFromManualEntry: true
+      };
+    }
+    
+    // ★追加：水温取得の統一入口（getWaterTempForDate と getWaterTempForManualEntry を統合）
+    async function fetchWaterTempByContext(lat, lng, targetDateIso, context = 'normal') {
+      // ★機能：日付/位置から水温を取得する統一インターフェース
+      // context: 'normal'(通常釣行) | 'manual'(手動釣行) | 'edit'(編集モーダル) など
+      
+      if (!lat || !lng) {
+        LOG.app('[fetchWaterTempByContext] missing coordinates', { lat, lng, context });
+        return null;
+      }
+      
+      const targetDate = new Date(targetDateIso);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      targetDate.setHours(0, 0, 0, 0);
+      
+      const isToday = targetDate.getTime() === today.getTime();
+      const dateStr = targetDateIso.substring(0, 10);  // "YYYY-MM-DD"
+      
+      LOG.app('[fetchWaterTempByContext] start', {
+        lat, lng, dateStr, context, isToday
+      });
+      
+      // 過去日付の場合 → getWaterTempForDate で過去データを取得
+      if (!isToday) {
+        const pastData = await getWaterTempForDate(lat, lng, dateStr);
+        if (pastData) {
+          LOG.app('[fetchWaterTempByContext] got past data', pastData);
+          return pastData;
+        }
+        LOG.app('[fetchWaterTempByContext] past data not available, fallback');
+      }
+      
+      // 今日のデータ → fetchTodayWaterTempByNearest で現在データを取得
+      // (または null で fallback)
+      try {
+        const todayData = await fetchTodayWaterTempByNearest(lat, lng, targetDateIso);
+        if (todayData) {
+          LOG.app('[fetchWaterTempByContext] got today data', todayData);
+          return todayData;
+        }
+      } catch (e) {
+        LOG.app('[fetchWaterTempByContext] fetchTodayWaterTempByNearest failed', { error: e?.message });
+      }
+      
+      // すべて失敗時は null を返す
+      LOG.app('[fetchWaterTempByContext] all attempts failed, returning null');
       return null;
     }
     const SHEET_NAME = "Catches";
@@ -2368,7 +2441,16 @@
 
     // ===== 釣行ドラフト =====
     const LS_KEY='fishtrip_draft_v1';
-    const uuid = ()=> (crypto?.randomUUID ? crypto.randomUUID() : (Date.now().toString(36)+Math.random().toString(36).slice(2,10)));
+    // ★修正：UUID 生成を堅牢化（crypto.randomUUID 利用可能なら優先、fallback は UUIDv4 パターン）
+    const uuid = () => {
+      if (crypto?.randomUUID) return crypto.randomUUID();
+      // Fallback: UUIDv4 パターンの疑似乱数生成（予測困難性向上）
+      return [1e7]+'1e7xxxxxxx2e7xxxx8xexxxxxxxx'.replace(/[128xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      }).toString();
+    };
     
     // ★追加：潮流画像ホワイトリストキャッシュ（グローバル）
     let akashiTidePointsCache = { codes: [], names: [] };
@@ -2427,11 +2509,16 @@
         console.warn('[Draft] localStorage save failed (PWA mode?):', e.message);
       }
       
-      // 【2】IndexedDB に保存（非クリティカル：非同期実行）
-      // ★修正：IndexedDB トランザクション競合を避けるため、非ブロッキング実行
-      saveDraftToIndexedDB(d).catch(err => 
-        console.warn('[Draft] IndexedDB save failed (async):', err)
-      );
+      // 【2】IndexedDB に保存（sync完了を待機）
+      // ★修正：LocalStorage と IndexedDB の同期を保証するため await を追加
+      if (db) {
+        try {
+          await saveDraftToIndexedDB(d);
+          console.log('[Draft] Saved to IndexedDB');
+        } catch (err) {
+          console.warn('[Draft] IndexedDB save failed:', err.message);
+        }
+      }
     };
     const fmtLocal = iso => { try{return new Date(iso).toLocaleString();}catch{return '—'}; };
 
@@ -2467,6 +2554,7 @@
     })();
 
     let catchForm = { id: uuid(), timestamp: nowIsoLocal(), species:'', size_cm:null, weight_g:null, method:'', photoPreviewUrl:undefined, exif_date:null, exif_date_formatted:null, exif_lat:null, exif_lng:null, location_name:null, location_source:null, water_temp:null, location_candidates: [] };
+    let catchFormSnapshot = null;  // ★追加：編集開始時の snapshot（ロールバック用）
     let editMode=false, editingId=null;
     let manualCatchMode = false;
     let manualCatchPhotoMetadata = null;
@@ -3376,6 +3464,148 @@
       return h * 3600 + m * 60;
     }
 
+    // ★新規：edd/flood から前後の極値を取得
+    function findHighLowAroundTime(chart, chartAll, chartDateKey, localDate) {
+      const shotSec = localDate.getHours() * 3600 + localDate.getMinutes() * 60;
+      
+      // 当日データのみから極値を取得
+      const today = chart;
+      const extremaToday = [
+        ...Array.isArray(today?.edd) ? today.edd.map(e => ({ ...e, type: 'low' })) : [],
+        ...Array.isArray(today?.flood) ? today.flood.map(e => ({ ...e, type: 'high' })) : []
+      ].sort((a, b) => toSeconds_HHMM(a.time) - toSeconds_HHMM(b.time));
+      
+      console.log('[findHighLowAroundTime] Today extrema:', extremaToday.map(e => ({ time: e.time, type: e.type, cm: e.cm })));
+      
+      // ステップ1：当日のデータから前後を探す
+      let before = null;
+      let after = null;
+      
+      for (const ext of extremaToday) {
+        const extSec = toSeconds_HHMM(ext.time);
+        if (extSec <= shotSec) {
+          before = ext;  // 常に上書き（最後＝最も近い）
+        } else if (!after) {
+          after = ext;   // 最初の1個だけ取得
+          break;
+        }
+      }
+      
+      // ★修正：beforeが見つからない場合は前日のデータから探す
+      if (!before) {
+        const prevDate = new Date(localDate);
+        prevDate.setDate(prevDate.getDate() - 1);
+        const prevYr = prevDate.getFullYear();
+        const prevMn = prevDate.getMonth() + 1;
+        const prevDy = prevDate.getDate();
+        const prevKey1 = `${prevYr}-${prevMn}-${prevDy}`;
+        const prevKey2 = `${prevYr}-${String(prevMn).padStart(2,'0')}-${String(prevDy).padStart(2,'0')}`;
+        const yesterday = chartAll[prevKey1] || chartAll[prevKey2] || null;
+        
+        if (yesterday) {
+          const extremaYesterday = [
+            ...Array.isArray(yesterday?.edd) ? yesterday.edd.map(e => ({ ...e, type: 'low' })) : [],
+            ...Array.isArray(yesterday?.flood) ? yesterday.flood.map(e => ({ ...e, type: 'high' })) : []
+          ].sort((a, b) => toSeconds_HHMM(a.time) - toSeconds_HHMM(b.time));
+          
+          console.log('[findHighLowAroundTime] Yesterday extrema:', extremaYesterday.map(e => ({ time: e.time, type: e.type, cm: e.cm })));
+          
+          if (extremaYesterday.length > 0) {
+            before = extremaYesterday[extremaYesterday.length - 1];  // 前日の最後（最も遅い）極値
+          }
+        }
+      }
+      
+      // ステップ2：afterが見つからない場合、翌日のデータから探す
+      if (!after) {
+        const nextDate = new Date(localDate);
+        nextDate.setDate(nextDate.getDate() + 1);
+        const nextYr = nextDate.getFullYear();
+        const nextMn = nextDate.getMonth() + 1;
+        const nextDy = nextDate.getDate();
+        const nextKey1 = `${nextYr}-${nextMn}-${nextDy}`;
+        const nextKey2 = `${nextYr}-${String(nextMn).padStart(2,'0')}-${String(nextDy).padStart(2,'0')}`;
+        const tomorrow = chartAll[nextKey1] || chartAll[nextKey2] || null;
+        
+        if (tomorrow) {
+          const extremaTomorrow = [
+            ...Array.isArray(tomorrow?.edd) ? tomorrow.edd.map(e => ({ ...e, type: 'low' })) : [],
+            ...Array.isArray(tomorrow?.flood) ? tomorrow.flood.map(e => ({ ...e, type: 'high' })) : []
+          ].sort((a, b) => toSeconds_HHMM(a.time) - toSeconds_HHMM(b.time));
+          
+          console.log('[findHighLowAroundTime] Tomorrow extrema:', extremaTomorrow.map(e => ({ time: e.time, type: e.type, cm: e.cm })));
+          
+          if (extremaTomorrow.length > 0) {
+            after = extremaTomorrow[0];  // 翌日の最初の極値
+          }
+        }
+      }
+      
+      console.log('[findHighLowAroundTime] Before:', before ? { time: before.time, type: before.type, cm: before.cm } : null);
+      console.log('[findHighLowAroundTime] After:', after ? { time: after.time, type: after.type, cm: after.cm } : null);
+      
+      return { before, after };
+    }
+
+    // ★新規：edd/flood を使った新しい潮位傾向計算ロジック
+    function analyzeTideTrendForTime_v2(chart, chartAll, chartDateKey, localDate) {
+      try {
+        const tideList = chart?.tide;
+        if (!tideList || tideList.length < 2) return "不明";
+
+        // ステップ1：前後の極値を取得
+        const { before, after } = findHighLowAroundTime(chart, chartAll, chartDateKey, localDate);
+        if (!before || !after) {
+          console.warn('[analyzeTideTrendForTime_v2] Missing before/after extrema');
+          return "不明";
+        }
+
+        // ステップ2：現在時刻に最も近い潮位データを検索
+        const hh = localDate.getHours();
+        const mm = localDate.getMinutes();
+        const shotSec = hh * 3600 + mm * 60;
+
+        let closest = tideList[0];
+        let closestDiff = Math.abs(toSeconds_HHMM(closest.time) - shotSec);
+        for (let i = 1; i < tideList.length; i++) {
+          const sec = toSeconds_HHMM(tideList[i].time);
+          const diff = Math.abs(sec - shotSec);
+          if (diff < closestDiff) { closest = tideList[i]; closestDiff = diff; }
+        }
+
+        // ステップ3：前後データから min/max を取得
+        const minCm = Math.min(before.cm, after.cm);
+        const maxCm = Math.max(before.cm, after.cm);
+        const range = maxCm - minCm;
+        if (range <= 0) return "不明";
+
+        // ステップ4：レベル計算（前後のサイクルを基準）
+        const level = Math.round(((closest.cm - minCm) / range) * 10);
+
+        // ステップ5：前後データで潮の方向を判定
+        const idx = tideList.indexOf(closest);
+        const prev = tideList[idx - 1];
+        const next = tideList[idx + 1];
+        if (!prev || !next) return "不明";
+
+        const trend = next.cm > prev.cm ? "上げ潮" : "下げ潮";
+
+        console.log('[analyzeTideTrendForTime_v2] Result:', {
+          closest: { time: closest.time, cm: closest.cm },
+          before: { time: before.time, type: before.type, cm: before.cm },
+          after: { time: after.time, type: after.type, cm: after.cm },
+          range: range,
+          level: level,
+          trend: trend
+        });
+
+        return `${trend}（${level}分）`;
+      } catch (e) {
+        console.error('[analyzeTideTrendForTime_v2] Error:', e);
+        return "不明";
+      }
+    }
+
     function analyzeTideTrendForTime(chart, localDate){
       try{
         const tideList = chart?.tide;
@@ -3471,7 +3701,14 @@
         return { harbor, chart: tideChartCache[cacheKey], chartDateKey: keyDate };
       }
 
-      const url = `${tideWorkerUrl}?pc=${encodeURIComponent(harbor.pc)}&hc=${encodeURIComponent(harbor.hc)}&yr=${y}&mn=${m}&dy=${da}&rg=day`;
+      // ★修正：API 呼び出しは1日前の日付で実行（前日～7日分を取得）
+      const apiDate = new Date(d);
+      apiDate.setDate(apiDate.getDate() - 1);
+      const apiYr = apiDate.getFullYear();
+      const apiMn = apiDate.getMonth() + 1;
+      const apiDy = apiDate.getDate();
+
+      const url = `${tideWorkerUrl}?pc=${encodeURIComponent(harbor.pc)}&hc=${encodeURIComponent(harbor.hc)}&yr=${apiYr}&mn=${apiMn}&dy=${apiDy}&rg=week`;
       let tideJson=null;
       try{
         const res = await fetch(url);
@@ -3485,7 +3722,7 @@
       if (!chart) return null;
 
       tideChartCache[cacheKey] = chart;
-      return { harbor, chart, chartDateKey: keyDate };
+      return { harbor, chart, chartDateKey: keyDate, chartAll };
     }
 
     // === 釣果時刻の潮位(cm)と傾向 ===
@@ -3521,10 +3758,22 @@
       }
     };
 
-    function tideInfoFromChart(chart, isoWithOffset){
+    function tideInfoFromChart(chart, isoWithOffset, chartAll = null, chartDateKey = null){
       const localDate = new Date(isoWithOffset);
       const level_cm = nearestTideLevelCm(chart, localDate);
-      const trend_text = analyzeTideTrendForTime(chart, localDate);
+      
+      // chartAll と chartDateKey がある場合は _v2 ロジックを使用
+      let trend_text;
+      if (chartAll && chartDateKey) {
+        console.log('[tideInfoFromChart] Using v2 logic (chartAll + chartDateKey provided)');
+        trend_text = analyzeTideTrendForTime_v2(chart, chartAll, chartDateKey, localDate);
+      } else {
+        // フォールバック：古いロジック（単日データのみの場合）
+        console.log('[tideInfoFromChart] Using fallback (legacy logic)');
+        trend_text = analyzeTideTrendForTime(chart, localDate);
+      }
+      
+      console.log('[tideInfoFromChart] Result:', { level_cm, trend_text, hasChartAll: !!chartAll, chartDateKey });
       return { level_cm, trend_text };
     }
 
@@ -3552,11 +3801,20 @@
       if (!harbor) { LOG.tide("近傍港が見つかりません"); return null; }
 
       const d = new Date(startedAtIso);
-      const yr = d.getFullYear();
-      const mn = d.getMonth() + 1;
-      const dy = d.getDate();
+      
+      // ★修正：API 呼び出しでは1日前の日付を使用して7日分を取得（前日のデータも含める）
+      const apiDate = new Date(d);
+      apiDate.setDate(apiDate.getDate() - 1);
+      const yr = apiDate.getFullYear();
+      const mn = apiDate.getMonth() + 1;
+      const dy = apiDate.getDate();
+      
+      // ★修正：実際の釣行開始日をchartDateKey決定用に保持
+      const actualYr = d.getFullYear();
+      const actualMn = d.getMonth() + 1;
+      const actualDy = d.getDate();
 
-      const url = `${CONFIG.API.TIDE_WORKER_URL}?pc=${encodeURIComponent(harbor.pc)}&hc=${encodeURIComponent(harbor.hc)}&yr=${yr}&mn=${mn}&dy=${dy}&rg=day`;
+      const url = `${CONFIG.API.TIDE_WORKER_URL}?pc=${encodeURIComponent(harbor.pc)}&hc=${encodeURIComponent(harbor.hc)}&yr=${yr}&mn=${mn}&dy=${dy}&rg=week`;
       LOG.tide("fetch:", url);
 
       let tideJson = null;
@@ -3564,6 +3822,8 @@
         const res = await fetch(url);
         if (!res.ok){ LOG.tide("tide http error", res.status); return null; }
         tideJson = await res.json();
+        console.log('[fetchTideForStart] ✅ API Response received:', tideJson);
+        console.log('[fetchTideForStart] Chart keys:', Object.keys(tideJson?.tide?.chart || {}));
       }catch(e){
         LOG.tide("tide fetch failed", e?.message);
         return null;
@@ -3571,9 +3831,11 @@
 
       const chartAll = tideJson?.tide?.chart && typeof tideJson.tide.chart === 'object' ? tideJson.tide.chart : null;
       if (!chartAll) { LOG.tide("no chart in response"); return null; }
+      console.log('[fetchTideForStart] chartAll keys:', Object.keys(chartAll));
 
-      const key1 = `${yr}-${mn}-${dy}`;
-      const key2 = `${yr}-${String(mn).padStart(2,'0')}-${String(dy).padStart(2,'0')}`;
+      // ★修正：chartDateKey は実際の釣行開始日付から決定
+      const key1 = `${actualYr}-${actualMn}-${actualDy}`;
+      const key2 = `${actualYr}-${String(actualMn).padStart(2,'0')}-${String(actualDy).padStart(2,'0')}`;
       let chartDateKey = null;
       let chart = null;
       if (chartAll[key1]) { chartDateKey = key1; chart = chartAll[key1]; }
@@ -3584,11 +3846,16 @@
         chart = chartDateKey ? chartAll[chartDateKey] : null;
       }
       if (!chart) { LOG.tide("chart not found even after fallback"); return null; }
+      console.log('[fetchTideForStart] Selected chart date key:', chartDateKey);
+      console.log('[fetchTideForStart] Chart edd:', chart?.edd);
+      console.log('[fetchTideForStart] Chart flood:', chart?.flood);
 
       const tideName = chart?.moon?.title || "不明";
       const sunrise  = chart?.sun?.rise || "不明";
       const sunset   = chart?.sun?.set  || "不明";
-      const trendText= analyzeTideTrendForTime(chart, d);
+      
+      // ★修正：新しいロジックで潮位傾向を計算
+      const trendText= analyzeTideTrendForTime_v2(chart, chartAll, chartDateKey, d);
       const rawAge = chart?.moon?.age;
       const rawBrightness =
         (chart?.moon?.brightness ?? chart?.moon?.illumination ?? chart?.moon?.percent ?? null);
@@ -3601,6 +3868,7 @@
         tideName, sunrise, sunset, trendText,
         chartDateKey,
         chart,
+        chartAll,
         moon: (age != null || brightness != null) ? { age, brightness } : null
       };
     }
@@ -3873,6 +4141,8 @@
     }
 
     async function fetchTodayWaterTempByNearest(lat, lon, targetDate = null){
+      console.log('[fetchTodayWaterTempByNearest] Called with:', { lat, lon, targetDate });
+      
       // ★追加：キャッシュチェック (1時間TTL)
       const cacheKey = `${lat.toFixed(4)},${lon.toFixed(4)},${targetDate || 'today'}`;
       const cached = waterTempCache[cacheKey];
@@ -3888,21 +4158,89 @@
       console.log(`[🔄 CACHE MISS] key=${cacheKey}, fetching from API...`);
       
       await configInitPromise;
+      
+      // ★修正：過去日付の場合は常に MUR (GAS) を優先
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      let isTargetDatePast = false;
+      
+      if (targetDate) {
+        const targetDateObj = new Date(targetDate);
+        targetDateObj.setHours(0, 0, 0, 0);
+        isTargetDatePast = targetDateObj.getTime() < today.getTime();
+        
+        console.log('[fetchTodayWaterTempByNearest] Date check:', {
+          targetDate,
+          isTargetDatePast,
+          todayStr: today.toISOString().substring(0, 10),
+          targetDateStr: targetDateObj.toISOString().substring(0, 10)
+        });
+      }
+      
       const provider = getConfiguredWaterTempProvider();
+      console.log('[fetchTodayWaterTempByNearest] Configured provider:', provider);
+      
       let result = null;
       
-      if (provider === 'mur') {
+      // ★修正：過去日付の場合は常に MUR を試す（Worker では対応できないため）
+      if (isTargetDatePast) {
         try {
+          console.log('[fetchTodayWaterTempByNearest] Past date detected, attempting MUR via GAS...');
           const murResult = await fetchWaterTempViaGasMur(lat, lon, targetDate);
-          if (murResult) result = murResult;
+          if (murResult) {
+            console.log('[fetchTodayWaterTempByNearest] MUR result received:', {
+              temperature_c: murResult.temperature_c,
+              candidates: murResult.location_candidates?.length ?? 0
+            });
+            result = murResult;
+          } else {
+            console.log('[fetchTodayWaterTempByNearest] MUR returned null for past date');
+          }
         } catch (err) {
-          console.warn('[WaterTemp] MUR via GAS failed, falling back to Worker:', err?.message || err);
-          if (DEBUG_WATER) LOG.wt('fallback to Worker after MUR error', err?.message || err);
+          console.warn('[fetchTodayWaterTempByNearest] MUR via GAS failed for past date:', {
+            message: err?.message
+          });
+        }
+      } else {
+        // 当日またはそれ以降の場合は、設定済みプロバイダを使用
+        if (provider === 'mur') {
+          try {
+            console.log('[fetchTodayWaterTempByNearest] Attempting MUR via GAS...');
+            const murResult = await fetchWaterTempViaGasMur(lat, lon, targetDate);
+            if (murResult) {
+              console.log('[fetchTodayWaterTempByNearest] MUR result received:', {
+                temperature_c: murResult.temperature_c,
+                candidates: murResult.location_candidates?.length ?? 0
+              });
+              result = murResult;
+            } else {
+              console.log('[fetchTodayWaterTempByNearest] MUR returned null');
+            }
+          } catch (err) {
+            console.warn('[fetchTodayWaterTempByNearest] MUR via GAS failed, falling back to Worker:', {
+              message: err?.message
+            });
+          }
         }
       }
       
       if (!result) {
-        result = await fetchWaterTempViaWorkerPoints(lat, lon, targetDate);
+        try {
+          console.log('[fetchTodayWaterTempByNearest] Attempting Worker...');
+          result = await fetchWaterTempViaWorkerPoints(lat, lon, targetDate);
+          if (result) {
+            console.log('[fetchTodayWaterTempByNearest] Worker result received:', {
+              temperature_c: result.temperature_c,
+              candidates: result.location_candidates?.length ?? 0
+            });
+          } else {
+            console.log('[fetchTodayWaterTempByNearest] Worker returned null');
+          }
+        } catch (err) {
+          console.error('[fetchTodayWaterTempByNearest] Worker fetch failed:', {
+            message: err?.message
+          });
+        }
       }
       
       // ★追加：結果をキャッシュに保存
@@ -3911,6 +4249,8 @@
         const totalTime = performance.now() - startTime;
         console.log(`[✅ CACHE SAVED] key=${cacheKey}, totalTime=${totalTime.toFixed(1)}ms, temp=${result.temperature_c}°C, candidates=${result.location_candidates?.length ?? 0}`);
         if (DEBUG_WATER) LOG.wt('cached result', { cacheKey });
+      } else {
+        console.warn('[fetchTodayWaterTempByNearest] No result from any provider');
       }
       
       return result;
@@ -3939,8 +4279,19 @@
     async function fetchWaterTempViaGasMur(lat, lon, targetDate = null) {
       const isoTime = normalizeWaterTempTargetIso(targetDate);
       const latestToken = await configStorage.getItem('WORKERS_AUTH_TOKEN');
+      
+      console.log('[fetchWaterTempViaGasMur] Token check:', {
+        hasLatestToken: !!latestToken,
+        tokenLength: latestToken?.length || 0,
+        configToken: !!CONFIG.API.WORKERS_AUTH_TOKEN,
+        configTokenLength: CONFIG.API.WORKERS_AUTH_TOKEN?.length || 0
+      });
+      
       if (latestToken) {
         CONFIG.API.WORKERS_AUTH_TOKEN = latestToken;
+        console.log('[fetchWaterTempViaGasMur] Token updated from storage');
+      } else {
+        console.warn('[fetchWaterTempViaGasMur] No token found in storage');
       }
 
       const workerBase = CONFIG.API.FISHING_TRIP_API_WORKER;
@@ -3971,7 +4322,7 @@
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Auth-Token': CONFIG.API.WORKERS_AUTH_TOKEN
+            'X-Auth-Token': CONFIG.API.WORKERS_AUTH_TOKEN || 'undefined'
           },
           body: JSON.stringify(payload),
           signal: controller.signal
@@ -3997,17 +4348,21 @@
         const snappedTime = json.bestPoint?.time || json.snappedTime || isoTime;
         const dist = typeof json.bestDistanceKm === 'number' ? Math.round(json.bestDistanceKm * 10) / 10 : null;
         
-        // ★修正：point_name を Worker 経由と統一（findNearestWaterTempPoint で取得）
-        let pointName = 'MUR SST';  // デフォルト値
+        // ★修正：MUR SST の場合、最寄り地点の名前を探す
+        let pointName = 'SST-MUR';  // デフォルト値（最寄り地点が見つからない場合）
+        let pointCode = 'mur_sst';  // MUR SST を示すコード
+        let nearestPointName = null;  // 最寄り地点名を保存
         const murLat = json.bestPoint?.latitude;
         const murLon = json.bestPoint?.longitude;
         
+        // 最寄りの地点を検索（候補リスト生成用）
         if (typeof murLat === 'number' && typeof murLon === 'number') {
-          // findNearestWaterTempPoint を呼び出し（Worker 経由と同じ）
-          const point = await findNearestWaterTempPoint(murLat, murLon, 30);
-          if (point) {
-            pointName = point.name;  // ← Sheet の地点名を使用
-            if (DEBUG_WATER) LOG.wt('[GASWaterTemp] point_name set from nearest point', { point_name: pointName, code: point.code });
+          const nearestPoint = await findNearestWaterTempPoint(murLat, murLon, 30);
+          if (nearestPoint) {
+            nearestPointName = nearestPoint.name;  // 最寄り地点名を保存
+            // ★修正：初期表示は「地点名[SST-MUR]」形式
+            pointName = `${nearestPoint.name}[SST-MUR]`;
+            if (DEBUG_WATER) LOG.wt('[GASWaterTemp] nearest point found', { point_name: nearestPointName, pointNameWithTag: pointName });
           }
         }
 
@@ -4015,7 +4370,9 @@
         
         const result = {
           temperature_c: Number.isFinite(tempNum) ? Math.round(tempNum * 10) / 10 : null,
-          point_name: pointName,
+          point_name: pointName,  // ← "地点名[SST-MUR]" または "SST-MUR"
+          point_code: pointCode,  // ← "mur_sst"
+          nearest_point_name: nearestPointName,  // ★追加：最寄り地点名を保存（選択時に使用）
           date: snappedTime,
           provider: 'mur_sst',
           best_distance_km: dist,
@@ -4041,6 +4398,88 @@
         }
         console.error(`[❌ GAS ERROR] ${err.message || err} (${totalTime}ms)`);
         throw err;
+      }
+    }
+
+    // ★追加：ポイントコードから直接水温を取得する関数（候補地選択時用）
+    async function fetchWaterTempForPoint(pointCode, targetDate = null) {
+      try {
+        let waterWorkerUrl = CONFIG.API.WATER_WORKER_URL;
+        try {
+          const stored = await configStorage.getItem('WORKER_URLS');
+          if (stored) {
+            const data = typeof stored === 'string' ? JSON.parse(stored) : stored;
+            if (data.WATER_WORKER_URL) {
+              waterWorkerUrl = data.WATER_WORKER_URL;
+              CONFIG.API.WATER_WORKER_URL = waterWorkerUrl;
+            }
+          }
+        } catch (err) {
+          // ストレージ読み込み失敗時はデフォルト値を使用
+        }
+
+        if (!waterWorkerUrl || /your[_-]?worker/i.test(waterWorkerUrl)) {
+          console.warn('[fetchWaterTempForPoint] WATER_WORKER_URL not configured');
+          return null;
+        }
+
+        // ★修正：targetDate が指定されていて、かつ過去日付の場合は getWaterTempForDate を使用
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        let isTargetDatePast = false;
+        
+        if (targetDate) {
+          const targetDateObj = new Date(targetDate);
+          targetDateObj.setHours(0, 0, 0, 0);
+          isTargetDatePast = targetDateObj.getTime() < today.getTime();
+          
+          console.log('[fetchWaterTempForPoint] Date check:', {
+            targetDate,
+            isTargetDatePast,
+            todayStr: today.toISOString().substring(0, 10),
+            targetDateStr: targetDateObj.toISOString().substring(0, 10)
+          });
+        }
+
+        // 過去日付の場合は type=past を使用（日付パラメータが機能する）
+        const apiType = isTargetDatePast ? 'past' : 'forecast';
+        const base = `https://leisure-api-prod.n-kishou.co.jp/get-sea-water-temperature?code=${encodeURIComponent(pointCode)}&type=${apiType}`;
+        const url = `${waterWorkerUrl.replace(/\/$/, '')}/proxy?url=${encodeURIComponent(base)}`;
+
+        console.log('[fetchWaterTempForPoint] Requesting:', { pointCode, apiType, targetDate, url: base });
+
+        const res = await fetch(url, { method: 'GET' });
+
+        if (!res.ok) {
+          console.warn('[fetchWaterTempForPoint] Response not OK:', res.status);
+          return null;
+        }
+
+        const j = await res.json();
+        const data = j?.result_list?.data;
+        const list = Array.isArray(data?.graph_data_main) ? data.graph_data_main : [];
+
+        let targetDateKey;
+        if (targetDate) {
+          const dateObj = new Date(targetDate);
+          targetDateKey = dateObj.toISOString().split('T')[0];
+        } else {
+          targetDateKey = getTodayDateKeyJST();
+        }
+
+        const today_data = list.find(x => typeof x?.datetime === 'string' && x.datetime.startsWith(targetDateKey));
+        const temp = today_data ? parseFloat(today_data.temperature) : null;
+
+        const result = {
+          temperature_c: isFinite(temp) ? Math.round(temp * 10) / 10 : null,
+          date: targetDate  // ★修正：返された日時ではなく、渡された targetDate を返す
+        };
+
+        console.log('[fetchWaterTempForPoint] Result:', { pointCode, temperature_c: result.temperature_c, date: result.date, apiType });
+        return result;
+      } catch (err) {
+        console.warn('[fetchWaterTempForPoint] Error:', err?.message || err);
+        return null;
       }
     }
 
@@ -4073,11 +4512,37 @@
           return null;
         }
 
-        const base = `https://leisure-api-prod.n-kishou.co.jp/get-sea-water-temperature?code=${encodeURIComponent(point.code)}&type=forecast`;
+        // ★修正：targetDate が過去日付かどうかを判定し、API タイプを切り替える
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        let isTargetDatePast = false;
+        let targetDateKey;
+        
+        if (targetDate) {
+          const targetDateObj = new Date(targetDate);
+          targetDateObj.setHours(0, 0, 0, 0);
+          isTargetDatePast = targetDateObj.getTime() < today.getTime();
+          targetDateKey = targetDateObj.toISOString().split('T')[0];
+          
+          console.log('[fetchWaterTempViaWorkerPoints] Date check:', {
+            targetDate,
+            isTargetDatePast,
+            todayStr: today.toISOString().substring(0, 10),
+            targetDateStr: targetDateKey
+          });
+        } else {
+          targetDateKey = getTodayDateKeyJST();
+          console.log('[fetchWaterTempViaWorkerPoints] Using today date:', targetDateKey);
+        }
+        
+        // ★修正：過去日付なら type=past、そうでなければ type=forecast を使用
+        const apiType = isTargetDatePast ? 'past' : 'forecast';
+        const base = `https://leisure-api-prod.n-kishou.co.jp/get-sea-water-temperature?code=${encodeURIComponent(point.code)}&type=${apiType}`;
         const url  = `${waterWorkerUrl.replace(/\/$/, '')}/proxy?url=${encodeURIComponent(base)}`;
 
 
-        if (DEBUG_WATER) LOG.wt("request", { tag, worker: waterWorkerUrl, base, proxy: url, point });
+        if (DEBUG_WATER) LOG.wt("request", { tag, worker: waterWorkerUrl, base, proxy: url, point, apiType });
+        console.log('[fetchWaterTempViaWorkerPoints] Requesting:', { pointCode: point.code, apiType, targetDateKey });
 
         const res = await fetch(url, { method:'GET' });
 
@@ -4119,31 +4584,40 @@
           if (list.length) LOG.wt("first 2 entries", list.slice(0,2));
         }
 
-        // ★修正：targetDate が指定されている場合はそれを使用、無ければ今日の日付を使用
-        let targetDateKey;
-        if (targetDate && typeof targetDate === 'object' && typeof targetDate.toISOString === 'function') {
-          // ISO形式の日付文字列から YYYY-MM-DD を抽出
-          targetDateKey = targetDate.toISOString().split('T')[0];
-          if (DEBUG_WATER) LOG.wt("target date (from param)", targetDateKey);
-        } else {
-          targetDateKey = getTodayDateKeyJST();
-          if (DEBUG_WATER) LOG.wt("target date (today)", targetDateKey);
-        }
+        // ★修正：targetDateKey に合致するデータを探す
+        const matchedData = list.find(x => typeof x?.datetime === 'string' && x.datetime.startsWith(targetDateKey));
+        const temp = matchedData ? parseFloat(matchedData.temperature) : null;
+
+        if (DEBUG_WATER) LOG.wt("match date", { targetDateKey, matched: matchedData ?? null, temp });
+        console.log('[fetchWaterTempViaWorkerPoints] Matched data:', { targetDateKey, found: !!matchedData, temperature_c: temp });
+
+        // ★追加：複数の近いポイントを候補として取得（MUR と統一するため）
+        const pc = await loadWaterTempPointsFromSheet();
+        const nearbyPoints = pc.mapped
+          .map(p => ({ ...p, dist: haversineDistance(lat, lon, p.lat, p.lon) }))
+          .sort((a, b) => a.dist - b.dist)
+          .slice(0, 5);  // 最も近い5つのポイント
         
-        const today = list.find(x => typeof x?.datetime === 'string' && x.datetime.startsWith(targetDateKey));
-        const temp = today ? parseFloat(today.temperature) : null;
-
-        if (DEBUG_WATER) LOG.wt("match date", { targetDateKey, matched: today ?? null, temp });
-
+        const location_candidates = nearbyPoints.map(p => ({
+          name: p.name,
+          code: p.code,
+          distance_km: Math.round(p.dist * 10) / 10,
+          temperature_c: p.name === point.name ? temp : null,  // 選択中のポイント以外は温度不明
+          latitude: p.lat,
+          longitude: p.lon
+        }));
+        
+        // ★修正：date フィールドに targetDate を使用（API レスポンスから日付を抽出するのではなく）
         return {
           point_code: point.code,
           point_name: point.name,
           dist_km: point.dist,
-          date: today?.datetime ?? null,
+          date: targetDate || matchedData?.datetime || null,  // targetDate を優先
           temperature_c: isFinite(temp) ? Math.round(temp*10)/10 : null,
           graph_min: data?.temperature_min_of_graph ?? null,
           graph_max: data?.temperature_max_of_graph ?? null,
-          _debug: DEBUG_WATER ? { proxy_url: url, base_url: base } : undefined
+          location_candidates: location_candidates,
+          _debug: DEBUG_WATER ? { proxy_url: url, base_url: base, nearby_points: nearbyPoints.length, apiType } : undefined
         };
       }catch(e){
         if (DEBUG_WATER) LOG.wt("failed", { tag, error: e?.message || String(e) });
@@ -5371,14 +5845,16 @@
       if (photoFieldWrapper) photoFieldWrapper.classList.remove('hidden');
       if (inpCatchTime) inpCatchTime.readOnly = false;
 
-      // ★変更：手動釣行中（manualStarted または manualCatchMode）なら時刻初期値は空欄
+      // ★修正：通常釣行も手動釣行も timestamp は null で統一
+      // submitCatch() で EXIF/ユーザー入力/現時刻で決定されるため、ここでの初期化は不要
       if (draft.manualStarted || manualCatchMode) {
         catchForm={ id:uuid(), timestamp:null, species:'', size_cm:null, weight_g:null, method:'', photoPreviewUrl:undefined, exif_date:null, exif_date_formatted:null, exif_lat:null, exif_lng:null, location_name:null, location_source:null, water_temp:null, location_candidates: [] };
-        try{ inpCatchTime.value=''; }catch{ inpCatchTime.value=''; }
       } else {
-        catchForm={ id:uuid(), timestamp:nowIsoLocal(), species:'', size_cm:null, weight_g:null, method:'', photoPreviewUrl:undefined, exif_date:null, exif_date_formatted:null, exif_lat:null, exif_lng:null, location_name:null, location_source:null, water_temp:null, location_candidates: [] };
-        try{ inpCatchTime.value = toLocalInputValue(new Date(catchForm.timestamp)); }catch{ inpCatchTime.value=''; }
+        // ★修正：timestamp=null で統一（submitCatch で決定される）
+        catchForm={ id:uuid(), timestamp:null, species:'', size_cm:null, weight_g:null, method:'', photoPreviewUrl:undefined, exif_date:null, exif_date_formatted:null, exif_lat:null, exif_lng:null, location_name:null, location_source:null, water_temp:null, location_candidates: [] };
       }
+      // UI 入力欄は常に空
+      try{ inpCatchTime.value=''; }catch{ inpCatchTime.value=''; }
 
       inpSpecies.value=''; inpSize.value=''; inpWeight.value=''; inpMethod.value=''; inpPhoto.value='';
       imgPreview.src=''; imgPreview.classList.add('hidden');
@@ -5392,14 +5868,24 @@
       
       // ★追加：ロケーション選択をリセット（編集モーダル用とcatchModal用の両方）
       const locationSelect = document.getElementById('editFormLocationSelect');
-      const locationCustom = document.getElementById('editFormLocationCustom');
       if (locationSelect) locationSelect.value = '';
-      if (locationCustom) locationCustom.value = '';
       
       if (catchLocationSelect) catchLocationSelect.value = '';
       updateLocationSelector([], true);
       updateLocationSelector([], false);
-      if (catchLocationCustom) catchLocationCustom.value = '';
+
+      // ★追加：位置情報がある場合、候補地を取得して表示
+      if (typeof draft.lat === 'number' && typeof draft.lng === 'number') {
+        (async () => {
+          try {
+            const candidates = await getLocationCandidates(draft.lat, draft.lng);
+            updateLocationSelector(candidates || [], false);  // catchModal用
+          } catch (err) {
+            console.warn('[openAddCatch] Failed to fetch location candidates:', err?.message || err);
+            updateLocationSelector([], false);
+          }
+        })();
+      }
 
       catchModal.classList.remove('hidden');
       console.log('[openAddCatch] catchModal display state:', {
@@ -5411,6 +5897,8 @@
     function openEditCatch(id){
       const c = draft.catches.find(x=>x.id===id); if(!c) return;
       editMode=true; editingId=id; modalTitle.textContent='釣果を編集'; catchForm={...c};
+      // ★追加：編集開始時の snapshot を保存（ロールバック用）
+      catchFormSnapshot = JSON.parse(JSON.stringify(c));
       try{ inpCatchTime.value = toLocalInputValue(new Date(catchForm.timestamp)); }catch{ inpCatchTime.value=''; }
       inpSpecies.value=catchForm.species||''; inpSize.value=(catchForm.size_cm??''); inpWeight.value=(catchForm.weight_g??''); inpMethod.value=catchForm.method||'';
       inpPhoto.value=''; if (catchForm.photoPreviewUrl){ imgPreview.src=catchForm.photoPreviewUrl; imgPreview.classList.remove('hidden'); } else { imgPreview.src=''; imgPreview.classList.add('hidden'); }
@@ -5440,11 +5928,8 @@
 
       // ★追加：既存のロケーション情報があれば表示
       const locationSelect = document.getElementById('editFormLocationSelect');
-      const locationCustom = document.getElementById('editFormLocationCustom');
       if (locationSelect && c.location_name && c.location_source === 'selected') {
         locationSelect.value = c.location_name;
-      } else if (locationCustom && c.location_name) {
-        locationCustom.value = c.location_name;
       }
 
       manualCatchPhotoMetadata = null;
@@ -5541,8 +6026,16 @@
     // ★追加：キャンセルしてホームに戻る際、データをクリアする関数
     function cancelAndReturnHome(){
       clearUploadReviewBackup();
-      // 釣果フォームをクリア
-      catchForm = { id:uuid(), timestamp:null, species:'', size_cm:null, weight_g:null, method:'', photoPreviewUrl:undefined, exif_date:null, exif_date_formatted:null, exif_lat:null, exif_lng:null, location_name:null, location_source:null, water_temp:null, location_candidates: [] };
+      
+      // ★修正：編集モード時は snapshot からロールバック
+      if (editMode && catchFormSnapshot) {
+        catchForm = JSON.parse(JSON.stringify(catchFormSnapshot));
+        catchFormSnapshot = null;
+      } else {
+        // 新規追加モード時は空フォームにクリア
+        catchForm = { id:uuid(), timestamp:null, species:'', size_cm:null, weight_g:null, method:'', photoPreviewUrl:undefined, exif_date:null, exif_date_formatted:null, exif_lat:null, exif_lng:null, location_name:null, location_source:null, water_temp:null, location_candidates: [] };
+      }
+      
       editMode = false;
       editingId = null;
       
@@ -5609,9 +6102,8 @@
         
         // ★修正：draft形式で保存（draft.catchesと同じ構造）
         if (exifDate) {
-          catchForm.exif_date = exifDate;  // 生のオブジェクト：{year, month, day, hour, minute}
-          const formatted = new Date(exifDate.year, exifDate.month - 1, exifDate.day, exifDate.hour || 0, exifDate.minute || 0).toLocaleString('ja-JP');
-          catchForm.exif_date_formatted = formatted;
+          catchForm.exif_date = exifDate;
+          catchForm.exif_date_formatted = formatExifDateString(exifDate);
         } else {
           catchForm.exif_date = null;
           catchForm.exif_date_formatted = null;
@@ -5644,25 +6136,63 @@
 
     async function refreshLocationCandidates(isEditModal = false) {
       if (catchForm.exif_lat === null || catchForm.exif_lng === null) {
+        console.log('[refreshLocationCandidates] EXIF GPS not available');
         catchForm.location_candidates = [];
         updateLocationSelector([], isEditModal);
         return;
       }
 
+      console.log('[refreshLocationCandidates] Starting with EXIF position:', {
+        lat: catchForm.exif_lat,
+        lng: catchForm.exif_lng,
+        timestamp: catchForm.timestamp
+      });
+
       try {
-        const targetDate = catchForm.timestamp || nowIsoLocal();
+        // ★修正：釣行開始日時を優先的に使用（手動釣果追加時は catchForm.timestamp が null のため）
+        const targetDate = catchForm.timestamp || draft.startedAt || nowIsoLocal();
+        console.log('[refreshLocationCandidates] Calling fetchTodayWaterTempByNearest:', {
+          lat: catchForm.exif_lat,
+          lng: catchForm.exif_lng,
+          targetDate,
+          source: catchForm.timestamp ? 'catchForm.timestamp' : (draft.startedAt ? 'draft.startedAt' : 'nowIsoLocal()')
+        });
+        
         const waterTempResult = await fetchTodayWaterTempByNearest(catchForm.exif_lat, catchForm.exif_lng, targetDate);
+        
+        console.log('[refreshLocationCandidates] API result received:', {
+          hasResult: !!waterTempResult,
+          resultKeys: waterTempResult ? Object.keys(waterTempResult) : null,
+          candidates: waterTempResult?.location_candidates?.length ?? 0
+        });
+        
         if (waterTempResult) {
           catchForm.water_temp = waterTempResult;
           const candidates = Array.isArray(waterTempResult.location_candidates) ? waterTempResult.location_candidates : [];
           catchForm.location_candidates = candidates;
+          console.log('[refreshLocationCandidates] Updated location candidates:', {
+            count: candidates.length,
+            names: candidates.map(c => c.name),
+            targetDate
+          });
+          // ★修正：デフォルト候補を適用する際に、targetDate を渡す
+          if (candidates.length > 0) {
+            applyLocationCandidateSelection(candidates[0], targetDate);
+          }
           updateLocationSelector(candidates, isEditModal);
           return;
+        } else {
+          console.warn('[refreshLocationCandidates] waterTempResult is null or undefined');
         }
       } catch (err) {
-        console.warn('[WaterTemp] candidate fetch failed:', err);
+        console.error('[refreshLocationCandidates] Error caught:', {
+          message: err?.message,
+          stack: err?.stack,
+          fullError: err
+        });
       }
 
+      console.log('[refreshLocationCandidates] Setting empty candidates');
       catchForm.location_candidates = [];
       updateLocationSelector([], isEditModal);
     }
@@ -5672,19 +6202,41 @@
       return candidate.id || candidate.code || candidate.name || '';
     }
 
-    function applyLocationCandidateSelection(candidate) {
+    function applyLocationCandidateSelection(candidate, targetDate = null) {
       if (!candidate) return;
+      console.log('[applyLocationCandidateSelection] Before:', {
+        location_name: catchForm.location_name,
+        location_source: catchForm.location_source,
+        water_temp: catchForm.water_temp,
+        targetDate
+      });
+      
       catchForm.location_name = candidate.name || catchForm.location_name;
       catchForm.location_source = 'selected';
+      
+      // ★修正：MUR SST の場合は「地点名[SST-MUR]」という形式で表示
+      const base = catchForm.water_temp || {};
+      const isMurSST = base.provider === 'mur_sst' || base.point_code === 'mur_sst';
+      
+      catchForm.water_temp = {
+        ...base,
+        // MUR の場合：「選択した地点名[SST-MUR]」、Worker の場合：「地点名」
+        point_name: isMurSST ? `${candidate.name}[SST-MUR]` : (candidate.name || base.point_name || null),
+        point_code: isMurSST ? 'mur_sst' : (candidate.code || base.point_code || null),  // MUR は 'mur_sst' で固定
+        date: targetDate || candidate.date || base.date || null  // targetDate を優先
+      };
+      
+      // 有効な温度がある場合は追加
       if (candidate.temperature_c != null) {
-        const base = catchForm.water_temp || {};
-        catchForm.water_temp = {
-          ...base,
-          temperature_c: candidate.temperature_c,
-          point_name: candidate.name || base.point_name || null,
-          date: candidate.date || base.date || null
-        };
+        catchForm.water_temp.temperature_c = candidate.temperature_c;
       }
+      
+      console.log('[applyLocationCandidateSelection] After:', {
+        location_name: catchForm.location_name,
+        location_source: catchForm.location_source,
+        water_temp: catchForm.water_temp,
+        isMurSST
+      });
     }
 
     // ★追加：ロケーション選択セクターの更新
@@ -5743,7 +6295,6 @@
     // ★追加：ロケーション選択イベントリスナー
     (function() {
       const select = document.getElementById('editFormLocationSelect');
-      const customInput = document.getElementById('editFormLocationCustom');
       
       if (select) {
         select.addEventListener('change', function() {
@@ -5755,17 +6306,6 @@
             catchForm.location_name = this.dataset.name || this.value;
             catchForm.location_source = 'selected';
           }
-          if (customInput) customInput.value = '';
-        });
-      }
-      
-      if (customInput) {
-        customInput.addEventListener('input', function() {
-          if (this.value) {
-            catchForm.location_name = this.value;
-            catchForm.location_source = 'custom';
-            if (select) select.value = '';
-          }
         });
       }
     })();
@@ -5773,14 +6313,80 @@
     // ★追加：catchModal用ロケーション選択イベントリスナー
     (function() {
       if (catchLocationSelect) {
-        catchLocationSelect.addEventListener('change', function() {
+        catchLocationSelect.addEventListener('change', async function() {
+          console.log('[catchLocationSelect change] value:', this.value);
           if (!this.value) return;
           const candidate = catchForm.location_candidates?.find(c => getLocationCandidateId(c) === this.value);
+          console.log('[catchLocationSelect change] found candidate:', candidate);
           if (candidate) {
-            applyLocationCandidateSelection(candidate);
+            // ★修正：釣行開始日時を優先的に使用
+            const targetDate = catchForm.timestamp || draft.startedAt || nowIsoLocal();
+            // ★修正：applyLocationCandidateSelection に targetDate を渡す
+            applyLocationCandidateSelection(candidate, targetDate);
+            
+            // ★追加：選択されたポイントの水温を取得（同期）
+            if (candidate.code || (candidate.latitude && candidate.longitude)) {
+              try {
+                // ★修正：釣行開始日時を優先的に使用（上で定義済み）
+                console.log('[catchLocationSelect change] Fetching water temp for point:', {
+                  code: candidate.code,
+                  lat: candidate.latitude,
+                  lng: candidate.longitude,
+                  targetDate,
+                  source: catchForm.timestamp ? 'catchForm.timestamp' : (draft.startedAt ? 'draft.startedAt' : 'nowIsoLocal()')
+                });
+                
+                let waterTemp = null;
+                
+                // ★修正：まずポイントコードで当日データを試す
+                if (candidate.code) {
+                  waterTemp = await fetchWaterTempForPoint(candidate.code, targetDate);
+                  console.log('[catchLocationSelect change] Point code fetch result:', waterTemp);
+                }
+                
+                // ★修正：当日データが無い場合（0℃含む）は過去データロジックで再取得
+                if (!waterTemp || waterTemp.temperature_c == null || waterTemp.temperature_c === 0) {
+                  console.log('[catchLocationSelect change] Fallback to historical data using lat/lng');
+                  if (candidate.latitude && candidate.longitude) {
+                    waterTemp = await getWaterTempForManualEntry(
+                      candidate.latitude, 
+                      candidate.longitude, 
+                      targetDate, 
+                      true
+                    );
+                    console.log('[catchLocationSelect change] Historical fetch result:', waterTemp);
+                  }
+                }
+                
+                if (waterTemp && (waterTemp.temperature_c != null && waterTemp.temperature_c !== 0)) {
+                  const base = catchForm.water_temp || {};
+                  catchForm.water_temp = {
+                    ...base,
+                    temperature_c: waterTemp.temperature_c,
+                    date: waterTemp.date || waterTemp.snappedTime || null,
+                    point_name: candidate.name || base.point_name || null,
+                    point_code: candidate.code || base.point_code || null
+                  };
+                  console.log('[catchLocationSelect change] Updated water temp:', {
+                    temperature_c: catchForm.water_temp.temperature_c,
+                    point_name: catchForm.water_temp.point_name,
+                    point_code: catchForm.water_temp.point_code,
+                    date: catchForm.water_temp.date
+                  });
+                } else {
+                  console.log('[catchLocationSelect change] Water temp fetch returned no valid temperature, keeping existing');
+                }
+              } catch (err) {
+                console.warn('[catchLocationSelect change] Failed to fetch water temp:', err?.message || err);
+              }
+            }
           } else {
             catchForm.location_name = this.dataset.name || this.value;
             catchForm.location_source = 'selected';
+            console.log('[catchLocationSelect change] Set by dataset/value:', {
+              location_name: catchForm.location_name,
+              location_source: catchForm.location_source
+            });
           }
         });
       }
@@ -5840,8 +6446,8 @@
           whenLocal = toOffsetIsoLocal(parsed);
         }
       } else if (!treatAsManual) {
-        // 自動記録など“手動ではない”ときのみ現在時刻で補完
-        whenLocal = nowIsoLocal();
+        // ★修正：初期段階では現在時刻を補完しない（写真処理後に決定する）
+        // whenLocal = nowIsoLocal(); ← 削除（EXIF 優先を可能にするため）
       }
       if (manualMetadata?.timestamp) {
         whenLocal = manualMetadata.timestamp;
@@ -5857,7 +6463,8 @@
 
       // ★修正：潮汐ロジックは写真処理(EXIF)後に移動
 
-      // 写真アップロード
+      // 写真アップロード - EXIF 処理の後に timestamp を最終決定
+      let exifProcessed = false;
       if (manualMetadata) {
         catchForm.photoFileId = manualMetadata.photoFileId || '';
         catchForm.photoDriveUrl = manualMetadata.photoDriveUrl || '';
@@ -5891,13 +6498,13 @@
             LOG.app("[EXIF] raw extracted", { exifDate, exifGps });
             console.log("[EXIF] 抽出した日時と場所:", { exifDate, exifGps });
 
-            // 時刻：フォーム未入力（catchForm.timestamp が falsy）なら EXIF から補完
-            if (!catchForm.timestamp && exifDate) {
+            // ★修正：EXIF日付を優先（ユーザー入力がなければ EXIF を使用）
+            if (!whenLocal && exifDate) {
               const jstIso = exifDateToJstIso(exifDate);
               if (jstIso) {
+                whenLocal = jstIso;
                 catchForm.timestamp = jstIso;
-                whenLocal = jstIso;  // ★追加：whenLocal も更新
-                LOG.app("[EXIF] timestamp set from EXIF", { exifDate, jstIso });
+                LOG.app("[EXIF] timestamp set from EXIF (priority)", { exifDate, jstIso });
               } else {
                 console.warn("[EXIF] jstIso conversion failed:", exifDate);
               }
@@ -5935,10 +6542,31 @@
         // 写真なしの時の観測ログ
         LOG.app("[EXIF] skip (no photo selected). catch timestamp?", { hasTimestamp: !!catchForm.timestamp });
       }
+      
+      // ★修正：タイムスタンプ最終決定
+      // EXIF 処理後に whenLocal をチェックし、もし未設定なら現在時刻で補完（自動記録のみ）
+      
+      // ★重要：初期段階で whenLocal に現在時刻が設定されてしまった場合、EXIF が優先されない
+      // そのため、写真処理後に改めて判定する
+      if (!whenLocal) {
+        if (!treatAsManual) {
+          whenLocal = nowIsoLocal();
+          LOG.app("[Timestamp] Step 4a: Fallback to current time (automatic mode, no photo/exif)", { whenLocal });
+        } else {
+          LOG.app("[Timestamp] Manual mode - no timestamp set", { whenLocal });
+        }
+      } else {
+        // whenLocal が既に設定されている場合のログ
+        LOG.app("[Timestamp] whenLocal already set before fallback", { whenLocal, source: "user_input or manual_metadata" });
+      }
+      
+      // catchForm.timestamp を最終決定値で設定
+      catchForm.timestamp = whenLocal;
+      LOG.app("[Timestamp] Final timestamp determined", { whenLocal });
 
       // 天気
       let wx = null;
-      const weatherTargetDate = manualMetadata?.timestamp || catchForm.timestamp || whenLocal || null;
+      const weatherTargetDate = catchForm.timestamp || whenLocal || null;
       if (typeof draft.lat === 'number' && typeof draft.lng === 'number'){
         try { wx = await fetchWeather(draft.lat, draft.lng, weatherTargetDate); } catch(e){ console.error('[3940] fetchWeather error:', e); }
       }
@@ -5964,7 +6592,9 @@
 
         if (draft.tide_daily_cache?.[dkey]?.chart){
           const chart = draft.tide_daily_cache[dkey].chart;
-          const info = tideInfoFromChart(chart, whenLocal);
+          const chartAll = draft.tide_daily_cache[dkey].chartAll || null;
+          const chartDateKey = draft.tide_daily_cache[dkey].chartDateKey || dkey;
+          const info = tideInfoFromChart(chart, whenLocal, chartAll, chartDateKey);
           catchForm.tide_level_cm    = info.level_cm;
           catchForm.tide_trend       = info.trend_text;
           catchForm.tide_name        = draft.start_tide?.tideName || null;
@@ -5978,7 +6608,8 @@
           const startKey = draft.start_tide?.chartDateKey;
           if (startKey && startKey === dkey && draft.start_tide?.chart){
             const chart = draft.start_tide.chart;
-            const info = tideInfoFromChart(chart, whenLocal);
+            const chartAll = draft.start_tide.chartAll || null;
+            const info = tideInfoFromChart(chart, whenLocal, chartAll, startKey);
             catchForm.tide_level_cm    = info.level_cm;
             catchForm.tide_trend       = info.trend_text;
             catchForm.tide_name        = draft.start_tide?.tideName || null;
@@ -5987,7 +6618,9 @@
             draft.tide_daily_cache = draft.tide_daily_cache || {};
             draft.tide_daily_cache[dkey] = {
               harbor: draft.start_tide?.harbor || null,
-              chart
+              chart,
+              chartAll: draft.start_tide?.chartAll || null,
+              chartDateKey: draft.start_tide?.chartDateKey || dkey
             };
             dayChart = chart;
 
@@ -5996,8 +6629,8 @@
               const pack = await getTideChartForDate(tideCalcLat, tideCalcLng, whenLocal);
               if (pack?.chart){
                 draft.tide_daily_cache = draft.tide_daily_cache || {};
-                draft.tide_daily_cache[dkey] = { harbor: pack.harbor || null, chart: pack.chart };
-                const info = tideInfoFromChart(pack.chart, whenLocal);
+                draft.tide_daily_cache[dkey] = { harbor: pack.harbor || null, chart: pack.chart, chartAll: pack.chartAll || null, chartDateKey: pack.chartDateKey || dkey };
+                const info = tideInfoFromChart(pack.chart, whenLocal, pack.chartAll, pack.chartDateKey);
                 catchForm.tide_level_cm    = info.level_cm;
                 catchForm.tide_trend       = info.trend_text;
                 catchForm.tide_name        = pack.chart?.moon?.title || null;
@@ -6019,9 +6652,11 @@
         }
       }
 
-      // ★追加: Catch に水温を付与（開始時に取得済みの水温をそのまま採用）
+      // ★修正: 位置選択による水温更新を保持（未選択時は釣行開始時の水温を採用）
       // 形式: { temperature_c:number|null, point_name:string|null, date:string|null } または null
-      catchForm.water_temp = draft.start_water_temp || null;
+      if (!catchForm.water_temp) {
+        catchForm.water_temp = draft.start_water_temp || null;
+      }
 
       // ★追加: 手動入力からの保存時に“釣行中”へ自動遷移 & 開始時刻補完
      // ★変更: 手動入力の保存時は start 時刻をここでは入れない（後で補完ロジックに任せる）
@@ -6043,16 +6678,49 @@
         tide_high_times: catchForm.tide_high_times,
         tide_low_times: catchForm.tide_low_times,
         photoFileId: catchForm.photoFileId,
+        location_name: catchForm.location_name,
+        location_source: catchForm.location_source,
+        water_temp: catchForm.water_temp
       });
 
       const sanitizedCatch = { ...catchForm };
       delete sanitizedCatch.location_candidates;
+      console.log('[submitCatch] Location info in sanitizedCatch:', {
+        location_name: sanitizedCatch.location_name,
+        location_source: sanitizedCatch.location_source,
+        water_temp: sanitizedCatch.water_temp
+      });
+      console.log('[submitCatch] Full sanitizedCatch object:', sanitizedCatch);
+      console.log('[submitCatch] water_temp detailed:', {
+        temperature_c: sanitizedCatch.water_temp?.temperature_c,
+        point_name: sanitizedCatch.water_temp?.point_name,
+        point_code: sanitizedCatch.water_temp?.point_code,
+        date: sanitizedCatch.water_temp?.date
+      });
       if (editMode && editingId) {
         const i = draft.catches.findIndex(x => x.id === editingId);
         if (i >= 0) { draft.catches[i] = { ...sanitizedCatch, id: editingId }; }
       } else {
         draft.catches.push({ ...sanitizedCatch });
       }
+      
+      console.log('[submitCatch] After draft.catches update:', {
+        catchCount: draft.catches.length,
+        lastCatch: draft.catches[draft.catches.length - 1] ? {
+          id: draft.catches[draft.catches.length - 1].id,
+          species: draft.catches[draft.catches.length - 1].species,
+          location_name: draft.catches[draft.catches.length - 1].location_name,
+          location_source: draft.catches[draft.catches.length - 1].location_source,
+          water_temp: draft.catches[draft.catches.length - 1].water_temp
+        } : null
+      });
+      
+      // ★追加：手動釣果追加時に draft.start_water_temp も更新（UI表示用）
+      if (!editMode && catchForm.water_temp && !draft.start_water_temp) {
+        draft.start_water_temp = catchForm.water_temp;
+        console.log('[submitCatch] Updated draft.start_water_temp from first catch:', draft.start_water_temp);
+      }
+      
       manualCatchPhotoMetadata = null;
       if (photoFieldWrapper) photoFieldWrapper.classList.remove('hidden');
       if (inpCatchTime) inpCatchTime.readOnly = false;
@@ -6083,16 +6751,16 @@
         hideUploadingOverlay();
       } else if (!editMode) {
         openUploadReview();
-        hideUploadingOverlay();
       } else {
-        hideUploadingOverlay();
+        // editMode true の場合：何もしない（オーバーレイは finally で消す）
       }
-      } catch (e) {
-        // ★追加：エラー時もオーバーレイを消す
-        hideUploadingOverlay();
-        console.error('[submitCatch] error:', e);
-      }
+    } catch (e) {
+      console.error('[submitCatch] error:', e);
+    } finally {
+      // ★修正：どのフロー（成功/エラー）でも必ずオーバーレイをクリア
+      hideUploadingOverlay();
     }
+  }
 
     // ★追加: JPEG EXIF から DateTimeOriginal を読み出す（"YYYY:MM:DD HH:mm:ss" を返す）
     async function extractExifDate(file) {
@@ -6812,13 +7480,15 @@
                 if (pack?.chart) {
                   chart_data = pack.chart;
                   draft.tide_daily_cache = draft.tide_daily_cache || {};
-                  draft.tide_daily_cache[dkey] = { harbor: pack.harbor || null, chart: pack.chart };
+                  draft.tide_daily_cache[dkey] = { harbor: pack.harbor || null, chart: pack.chart, chartAll: pack.chartAll || null, chartDateKey: pack.chartDateKey || dkey };
                   LOG.app("[TripData] 釣果[" + i + "]は Tide736 から新規取得", { lat: calc_lat, lng: calc_lng });
                 }
               }
               
               if (chart_data) {
-                const info = tideInfoFromChart(chart_data, catch_rec.timestamp);
+                const chartAll = draft.tide_daily_cache?.[dkey]?.chartAll || null;
+                const chartDateKey = draft.tide_daily_cache?.[dkey]?.chartDateKey || dkey;
+                const info = tideInfoFromChart(chart_data, catch_rec.timestamp, chartAll, chartDateKey);
                 catch_rec.tide_level_cm    = info.level_cm;
                 catch_rec.tide_trend       = info.trend_text;
                 catch_rec.tide_name        = chart_data?.moon?.title || null;
@@ -7086,6 +7756,29 @@
       return `${y}-${mo}-${d}T${hh}:${mi}:${ss}+09:00`;
     }
 
+    // ★追加：EXIF日付文字列をローカル表記にフォーマット（Invalid Date回避）
+    function formatExifDateString(exifDateStr) {
+      if (!exifDateStr || typeof exifDateStr !== 'string') return null;
+      const m = exifDateStr.match(/^(\d{4}):?(\d{2}):?(\d{2})[ T]?(\d{2}):?(\d{2}):?(\d{2})$/);
+      if (!m) return null;
+      const [_, y, mo, d, hh, mi, ss] = m;
+      try {
+        const date = new Date(`${y}-${mo}-${d}T${hh}:${mi}:${ss}`);
+        if (isNaN(date.getTime())) return null;
+        return date.toLocaleString('ja-JP', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        });
+      } catch (e) {
+        console.warn('[formatExifDateString] failed:', e?.message || e);
+        return null;
+      }
+    }
+
     // ★追加: 代表位置を「釣果の最初の写真EXIF（lat/lng）」優先で決める
     function pickRepresentativePositionFromCatches(catches) {
       if (!Array.isArray(catches) || !catches.length) return null;
@@ -7218,7 +7911,12 @@
 
       // ★追加：手動追加時の水温補完（開始日が今日以外なら過去データから取得）
       // ★修正：開始日時が変更された場合も再取得
-      if ((force || !draft.start_water_temp || (startedAtChanged && draft.manualStarted)) &&
+      // ★修正2：最初の釣果で手動選択された水温位置を保持（location_source === 'selected' の場合はスキップ）
+      const hasUserSelectedWaterTemp = draft.catches && draft.catches.length > 0 
+        && draft.catches[0]?.location_source === 'selected';
+      
+      if (!hasUserSelectedWaterTemp &&
+          (force || !draft.start_water_temp || (startedAtChanged && draft.manualStarted)) &&
           typeof draft.lat === 'number' && typeof draft.lng === 'number' &&
           draft.startedAt && draft.manualStarted) {
         try {
@@ -7248,6 +7946,11 @@
           console.warn("[Complement] start_water_temp fetch failed:", e?.message || e);
           LOG.app("[Complement] start_water_temp fetch failed", { error: e?.message || String(e) });
         }
+      } else if (hasUserSelectedWaterTemp) {
+        LOG.app("[Complement] user-selected water temp preserved", {
+          point_name: draft.catches[0]?.location_name,
+          temperature_c: draft.start_water_temp?.temperature_c
+        });
       }
 
       // ここまでで startedAt / endedAt / 代表位置 / start_tide / start_weather / start_water_temp を確定済み
@@ -7455,6 +8158,13 @@
       if (photoUploadModal) photoUploadModal.classList.add('hidden');
       if (photoFieldWrapper) photoFieldWrapper.classList.remove('hidden');
       if (inpCatchTime) inpCatchTime.readOnly = false;
+      
+      // ★修正: 手動釣果追加をキャンセルした場合、draft を初期化してホームに戻す
+      draft = { tripId: uuid(), status: 'idle', catches: [], tide_daily_cache: {}, start_water_temp: null, memo: null };
+      saveDraft(draft);
+      if (catchModal) catchModal.classList.add('hidden');
+      showView('home');
+      render();
     }
 
     function closeManualPhotoUploadModal(){
@@ -7547,9 +8257,8 @@
           catchForm.timestamp = metadata.timestamp;
         }
         if (metadata.exifDate) {
-          const { year, month, day, hour = 0, minute = 0 } = metadata.exifDate;
           catchForm.exif_date = metadata.exifDate;
-          catchForm.exif_date_formatted = new Date(year, month - 1, day, hour, minute).toLocaleString('ja-JP');
+          catchForm.exif_date_formatted = formatExifDateString(metadata.exifDate);
         }
         if (typeof metadata.lat === 'number' && typeof metadata.lng === 'number') {
           catchForm.exif_lat = metadata.lat;
@@ -8324,7 +9033,9 @@
               // draft.tide_daily_cache にキャッシュがあるか確認
               if (draft.tide_daily_cache?.[dkey]?.chart) {
                 dayChart = draft.tide_daily_cache[dkey].chart;
-                const info = tideInfoFromChart(dayChart, newCatch.timestamp);
+                const chartAll = draft.tide_daily_cache[dkey].chartAll || null;
+                const chartDateKey = draft.tide_daily_cache[dkey].chartDateKey || dkey;
+                const info = tideInfoFromChart(dayChart, newCatch.timestamp, chartAll, chartDateKey);
                 newCatch.tide_level_cm = info.level_cm;
                 newCatch.tide_trend = info.trend_text;
                 console.log('[EditModal] Tide from cache:', info);
@@ -8334,8 +9045,8 @@
                 if (pack?.chart) {
                   dayChart = pack.chart;
                   draft.tide_daily_cache = draft.tide_daily_cache || {};
-                  draft.tide_daily_cache[dkey] = { harbor: pack.harbor || null, chart: pack.chart };
-                  const info = tideInfoFromChart(pack.chart, newCatch.timestamp);
+                  draft.tide_daily_cache[dkey] = { harbor: pack.harbor || null, chart: pack.chart, chartAll: pack.chartAll || null, chartDateKey: pack.chartDateKey || dkey };
+                  const info = tideInfoFromChart(pack.chart, newCatch.timestamp, pack.chartAll, pack.chartDateKey);
                   newCatch.tide_level_cm = info.level_cm;
                   newCatch.tide_trend = info.trend_text;
                   // ★潮汐チャートから満潮・干潮時刻を計算
@@ -8952,6 +9663,27 @@
         }
       });
     })();
+
+    // ★追加：PWA判定とノッチ対応
+    (function setupPWADisplay(){
+      const isPWA = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+      if (isPWA) {
+        // PWAモード: ノッチ回避のため padding-top を設定
+        document.documentElement.style.setProperty('--pwa-header-pt', '2rem');
+        console.log('[PWA] PWAモード検出: ヘッダーをノッチ下に配置');
+      } else {
+        // ブラウザモード: そのまま
+        console.log('[PWA] ブラウザモード: デフォルト表示');
+      }
+    })();
   </script>
+
+  <!-- ★修正：バージョン情報フッター（z-index を下げてボタンが見えるように） -->
+  <footer class="fixed bottom-0 left-0 right-0 z-0 bg-slate-950/95 border-t border-slate-800 text-xs text-slate-400 text-center py-2 pb-safe">
+    <span id="versionInfo">Fishing_Log_dev | v1.1.0</span>
+  </footer>
 </body>
 </html>
+
+
+
