@@ -12,7 +12,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="FishTrip_dev">
-  <title>Fishing Log</title>
+  <title>釣行記録_dev（PWAフロント / コンパクトUI）</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* ★追加：入力フォーム自動ズーム抑制 */
@@ -28,6 +28,22 @@
     /* ★追加：PWA対応のノッチ回避（CSS変数） */
     :root {
       --pwa-header-pt: 0;
+    }
+
+    /* ★追加：オーバーレイの統一管理 */
+    #uploadingOverlay {
+      display: flex !important;
+      visibility: visible;
+      opacity: 1;
+      pointer-events: auto;
+      transition: opacity 0.2s ease-in-out;
+    }
+
+    #uploadingOverlay.hidden {
+      display: none !important;
+      visibility: hidden;
+      opacity: 0;
+      pointer-events: none;
     }
   </style>
 <body class="min-h-screen bg-slate-950 text-slate-50">
@@ -1024,6 +1040,12 @@
       tripsView.classList.toggle('hidden', name !== 'trips');    // ★追加
       catchesView.classList.toggle('hidden', name !== 'catches');
       settingsView.classList.toggle('hidden', name !== 'settings'); // ★追加
+      
+      // ★追加：バージョン情報フッターはホーム画面でのみ表示
+      const versionFooter = document.getElementById('versionFooter');
+      if (versionFooter) {
+        versionFooter.classList.toggle('hidden', name !== 'home');
+      }
     }
     showView('home');
 
@@ -2527,6 +2549,24 @@
     // ★追加：アップロード状態管理
     let isUploading = false;
     let uploadingMessage = '処理中...';  // ★追加：処理内容を表示するメッセージ
+    
+    // ★追加：draft統一初期化関数
+    function resetDraft() {
+      draft = {
+        tripId: uuid(),
+        status: 'idle',
+        catches: [],
+        tide_daily_cache: {},
+        start_water_temp: null,
+        memo: null,
+        manualStarted: false,
+        shouldFetchTideImages: false,
+        updatedAt: new Date().toISOString()
+      };
+      saveDraft(draft);
+      manualCatchMode = false;
+      return draft;
+    }
     
     // IndexedDB 初期化と非同期ロード
     (async () => {
@@ -4627,12 +4667,15 @@
 
 
     // ===== UIレンダリング =====
+    const DEBUG = false;  // デバッグログ制御フラグ（本番時は false）
     function render(){
-      console.log('[render] full draft:', JSON.stringify(draft, null, 2));
-      console.log('[render] draft.start_water_temp:', draft.start_water_temp);
-      if (draft.start_water_temp) {
-        console.log('[render] draft.start_water_temp.point_name:', draft.start_water_temp.point_name);
-        console.log('[render] draft.start_water_temp.date:', draft.start_water_temp.date);
+      if (DEBUG) {
+        LOG.app('[render] state', {
+          status: draft.status,
+          catches: draft.catches.length,
+          hasWater: !!draft.start_water_temp,
+          tempC: draft.start_water_temp?.temperature_c
+        });
       }
       txtTripId.textContent = draft.tripId.slice(0,8);
       txtStatus.textContent = draft.status==='idle' ? '未開始' : (draft.status==='active' ? '釣行中' : '終了');
@@ -7021,9 +7064,7 @@
         inpTripStart.value = '';
         inpTripLat.value = '';
         inpTripLng.value = '';
-        draft = { tripId: uuid(), status: 'idle', catches: [], tide_daily_cache: {}, start_water_temp: null, memo: null };
-        manualCatchMode = false;
-        saveDraft(draft);
+        resetDraft();
         tripModal && tripModal.classList.add('hidden');
         showView('home');
       }
@@ -7133,16 +7174,10 @@
       };
       const clearDraftAndUI = ()=>{
         captureUploadReviewBackup();
-        // ★修正：共通関数でオーバーレイを消す
         hideUploadingOverlay();
         uploadReviewModal.classList.add('hidden');
         pendingEnd = null;
-        draft = { tripId: uuid(), status: 'idle', catches: [], tide_daily_cache: {}, start_water_temp: null, memo: null };
-        saveDraft(draft);
-
-        // ★追加：手動モード解除
-        manualCatchMode = false;
-
+        resetDraft();
         render();
         showView('home');
         alert('アップロードが完了しました。');
@@ -8153,15 +8188,12 @@
       manualCatchMode = false;
       manualCatchPhotoMetadata = null;
       manualCatchSuppressRecordView = false;
-      console.log('[ManualPhoto] cancel flow, suppressRecordView reset');
       resetManualPhotoPreview();
       if (photoUploadModal) photoUploadModal.classList.add('hidden');
       if (photoFieldWrapper) photoFieldWrapper.classList.remove('hidden');
       if (inpCatchTime) inpCatchTime.readOnly = false;
       
-      // ★修正: 手動釣果追加をキャンセルした場合、draft を初期化してホームに戻す
-      draft = { tripId: uuid(), status: 'idle', catches: [], tide_daily_cache: {}, start_water_temp: null, memo: null };
-      saveDraft(draft);
+      resetDraft();
       if (catchModal) catchModal.classList.add('hidden');
       showView('home');
       render();
@@ -8429,51 +8461,18 @@
 
     // ★追加：オーバーレイメッセージを設定して表示する共通関数
     function showUploadingOverlay(message = 'アップロード中...') {
-      console.log('[showUploadingOverlay] START', { message, isUploading });
       uploadingMessage = message;
       const messageEl = document.getElementById('uploadingMessage');
       if (messageEl) messageEl.textContent = message;
-      
       isUploading = true;
       const uploadingOverlay = document.getElementById('uploadingOverlay');
-      console.log('[showUploadingOverlay] element found:', !!uploadingOverlay);
-      
-      if (!uploadingOverlay) {
-        console.error('[showUploadingOverlay] uploadingOverlay NOT FOUND!');
-        return;
-      }
-      
-      // ★颅於：hiddenクラスを明示的に削除
-      if (uploadingOverlay.classList.contains('hidden')) {
-        console.log('[showUploadingOverlay] removing hidden class');
-        uploadingOverlay.classList.remove('hidden');
-      }
-      uploadingOverlay.style.display = 'flex';
-      uploadingOverlay.style.visibility = 'visible';
-      uploadingOverlay.style.opacity = '1';
-      uploadingOverlay.style.pointerEvents = 'auto';
-      
-      console.log('[showUploadingOverlay] styles applied:', {
-        display: uploadingOverlay.style.display,
-        computed: window.getComputedStyle(uploadingOverlay).display
-      });
-      console.log('[showUploadingOverlay] END');
+      if (uploadingOverlay) uploadingOverlay.classList.remove('hidden');
     }
 
     function hideUploadingOverlay() {
-      console.log('[hideUploadingOverlay] START');
       isUploading = false;
       const uploadingOverlay = document.getElementById('uploadingOverlay');
-      if (!uploadingOverlay) {
-        console.error('[hideUploadingOverlay] uploadingOverlay NOT FOUND!');
-        return;
-      }
-      uploadingOverlay.classList.add('hidden');
-      uploadingOverlay.style.display = 'none';
-      uploadingOverlay.style.visibility = 'hidden';
-      uploadingOverlay.style.opacity = '0';
-      uploadingOverlay.style.pointerEvents = 'none';
-      console.log('[hideUploadingOverlay] END');
+      if (uploadingOverlay) uploadingOverlay.classList.add('hidden');
     }
 
     // ===== モーダル操作 =====
@@ -9678,8 +9677,8 @@
     })();
   </script>
 
-  <!-- ★修正：バージョン情報フッター（z-index を下げてボタンが見えるように） -->
-  <footer class="fixed bottom-0 left-0 right-0 z-0 bg-slate-950/95 border-t border-slate-800 text-xs text-slate-400 text-center py-2 pb-safe">
+  <!-- ★修正：バージョン情報フッター（ホーム画面でのみ表示） -->
+  <footer id="versionFooter" class="fixed bottom-0 left-0 right-0 z-0 bg-slate-950/95 border-t border-slate-800 text-xs text-slate-400 text-center py-2 pb-safe">
     <span id="versionInfo">Fishing_Log_dev | v1.1.0</span>
   </footer>
 </body>
