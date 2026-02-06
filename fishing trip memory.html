@@ -1833,7 +1833,7 @@
       }catch(e){
         console.error('[btnLoadSheet] Error:', e);
         console.error('[btnLoadSheet] Stack:', e.stack);
-        sheetStatus.innerHTML = `読込に失敗しました。<span class="text-slate-400">(${e.message||e})</span><br><span class="text-slate-400">共有設定を「リンクを知っている全員（閲覧者）」にし、シート名を確認してください。</span>`;
+        sheetStatus.textContent = `読込失敗: ${e.message||e}`;
         hasLoadedOnce = true;
       }
     };
@@ -9679,7 +9679,7 @@
 
   <!-- ★修正：バージョン情報フッター（ホーム画面でのみ表示） -->
   <footer id="versionFooter" class="fixed bottom-0 left-0 right-0 z-0 bg-slate-950/95 border-t border-slate-800 text-xs text-slate-400 text-center py-2 pb-safe">
-    <span id="versionInfo">Fishing_Log_dev | v1.1.0</span>
+    <span id="versionInfo">Fishing_Log_dev | v1.1.1</span>
   </footer>
 </body>
 </html>
