@@ -1,6 +1,6 @@
 {
-  "name": "Fishing Trip Memory",
-  "short_name": "FishTrip",
+  "name": "Fishing Log",
+  "short_name": "Fishing Log",
   "description": "釣行記録アプリ - 釣果、潮汐、天気を自動で記録",
   "start_url": "./fishing trip memory.html",
   "scope": "./",
@@ -24,3 +24,4 @@
     }
   ]
 }
+
