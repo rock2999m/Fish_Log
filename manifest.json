@@ -1,7 +1,7 @@
 {
   "name": "Fishing Log",
   "short_name": "Fishing Log",
-  "description": "釣行記録アプリ - 釣果、潮汐、天気を自動で記録",
+  "description": "釣行記録アプリ - 釣果、潮汐、天気を自動で取得して記録",
   "start_url": "./fishing trip memory.html",
   "scope": "./",
   "display": "standalone",
@@ -24,4 +24,5 @@
     }
   ]
 }
+
 
