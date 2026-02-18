@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#0f172a" />
   <meta name="description" content="釣行の記録、釣果の管理、潮汐情報の自動取得ができるPWAアプリケーション" />
-  <link rel="manifest" href="/Fish_Log/manifest.json">
-  <link rel="apple-touch-icon" href="/Fish_Log/icon-192.png">
-  <link rel="icon" type="image/png" href="/Fish_Log/icon-192.png" sizes="192x192">
-  <link rel="icon" type="image/png" href="/Fish_Log/icon-512.png" sizes="512x512">
+  <link rel="manifest" href="/dev_Fish_Log/manifest.json">
+  <link rel="apple-touch-icon" href="/dev_Fish_Log/icon-192.png">
+  <link rel="icon" type="image/png" href="/dev_Fish_Log/icon-192.png" sizes="192x192">
+  <link rel="icon" type="image/png" href="/dev_Fish_Log/icon-512.png" sizes="512x512">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Fishing Log">
@@ -50,7 +50,7 @@
   <header class="sticky top-0 z-10 backdrop-blur bg-slate-950/70 border-b border-slate-800 pt-[var(--pwa-header-pt)]">
     <div class="max-w-4xl mx-auto px-4 py-3">
       <div class="mb-3 text-center">
-        <h1 class="text-3xl font-bold">Fishing_Log</h1>
+        <h1 class="text-3xl font-bold">Fishing Log</h1>
       </div>
       <nav class="flex gap-2 text-sm items-center justify-between">
         <div class="flex gap-2">
@@ -66,7 +66,7 @@
 
   <!-- ★追加：釣行編集用モーダル（<main> の外に配置） -->
   <div id="tripEditModal" class="hidden fixed inset-0 z-30 bg-black/60 grid place-items-center p-4">
-    <div class="w-full max-w-2xl rounded-2xl bg-slate-900 border border-slate-800 p-4" onclick="event.stopPropagation()">
+    <div class="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-slate-900 border border-slate-800 p-4" onclick="event.stopPropagation()">
       <div class="flex items-center justify-between mb-4">
         <h3 class="font-semibold text-lg">釣行データ編集</h3>
         <button id="btnCloseTripEdit" class="text-slate-400 hover:text-slate-200">×</button>
@@ -427,7 +427,7 @@
 
   <!-- ★修正：オーバーレイを main の外に移動（z-index が効くようにするため） -->
   <div id="catchModal" class="hidden fixed inset-0 z-20 bg-black/60 grid place-items-center p-4">
-    <div class="w-full max-w-md rounded-2xl bg-slate-900 border border-slate-800 p-4" onclick="event.stopPropagation()">
+    <div class="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-slate-900 border border-slate-800 p-4" onclick="event.stopPropagation()">
       <div class="flex items-center justify-between mb-2">
         <h3 id="modalTitle" class="font-semibold">釣果を追加</h3>
         <button id="btnCloseModal" class="text-slate-400 hover:text-slate-200">×</button>
@@ -478,7 +478,7 @@
   </div>
 
   <div id="photoUploadModal" class="hidden fixed inset-0 z-30 bg-black/60 grid place-items-center p-4">
-    <div class="w-full max-w-md rounded-2xl bg-slate-900 border border-slate-800 p-4" onclick="event.stopPropagation()">
+    <div class="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-slate-900 border border-slate-800 p-4" onclick="event.stopPropagation()">
       <div class="flex items-center justify-between mb-2">
         <h3 class="font-semibold">写真をアップロード</h3>
         <button id="btnClosePhotoUpload" class="text-slate-400 hover:text-slate-200" type="button">×</button>
@@ -496,6 +496,9 @@
           <div class="text-xs text-slate-400 mb-1">選択中の写真プレビュー</div>
           <img id="manualPhotoPreviewImg" alt="photo preview" class="mt-1 h-32 w-full rounded-xl object-cover border border-slate-800" />
         </div>
+        <button id="btnSkipManualPhoto" type="button" class="w-full py-1 px-3 rounded-lg bg-slate-800/50 border border-slate-700/50 hover:bg-slate-700/50 text-slate-400 hover:text-slate-300 text-sm transition">
+          写真を追加しない
+        </button>
       </div>
       <div class="flex gap-2 mt-4">
         <button id="btnCancelManualPhoto" class="flex-1 py-2 rounded-xl border border-slate-700 hover:bg-slate-800 font-semibold transition" type="button">戻る</button>
@@ -504,8 +507,24 @@
     </div>
   </div>
 
+  <!-- 位置情報選択モーダル -->
+  <div id="locationSelectionModal" class="hidden fixed inset-0 z-40 bg-black/60 grid place-items-center p-4">
+    <div class="w-full max-w-md rounded-2xl bg-slate-900 border border-slate-800 p-4 max-h-96 overflow-y-auto" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between mb-4 sticky top-0 bg-slate-900 pb-2 border-b border-slate-800">
+        <h3 class="font-semibold text-lg">釣り場所を選択</h3>
+        <button id="btnCloseLocationModal" class="text-slate-400 hover:text-slate-200" type="button">×</button>
+      </div>
+      <div id="locationSelectionContent" class="space-y-2">
+        <p class="text-sm text-slate-400">読込中...</p>
+      </div>
+      <div class="flex gap-2 mt-4">
+        <button id="btnConfirmLocation" class="flex-1 py-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 font-semibold transition" type="button">確定</button>
+      </div>
+    </div>
+  </div>
+
   <div id="tripModal" class="hidden fixed inset-0 z-20 bg-black/60 grid place-items-center p-4">
-    <div class="w-full max-w-lg rounded-2xl bg-slate-900 border border-slate-800 p-4" onclick="event.stopPropagation()">
+    <div class="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-slate-900 border border-slate-800 p-4" onclick="event.stopPropagation()">
       <div class="flex items-center justify-between mb-2">
         <h3 class="font-semibold">手動で釣行を登録</h3>
         <button id="btnCloseTripModal" class="text-slate-400 hover:text-slate-200">×</button>
@@ -2044,8 +2063,12 @@
     }
 
     const DRIVE_THUMB_SZ = 'w1200';
-    function resolvePhotoUrl(raw){
-      if (!raw) return '';
+    function resolvePhotoUrl(raw, type = 'thumbnail'){
+      if (!raw) {
+        return type === 'detail' 
+          ? '/Fish_Log/assets/nophotoimame600.png'
+          : '/Fish_Log/assets/nophotoimame200.png';
+      }
       let s = String(raw).trim();
       const urlInText = s.match(/https?:\/\/[^\s")]+/i);
       if (urlInText) s = urlInText[0];
@@ -2089,7 +2112,7 @@
     }
 
     // 画像URL正規化（一覧で使っているものを流用）
-    const resolvePhotoUrlDetail = resolvePhotoUrl;
+    const resolvePhotoUrlDetail = (raw) => resolvePhotoUrl(raw, 'detail');
 
     function renderRemoteList(items){
       // 一覧を折りたたみ(details)にし、展開中はhover無効・枠線は外枠のみ・閉じるボタン付き
@@ -2561,6 +2584,9 @@
         memo: null,
         manualStarted: false,
         shouldFetchTideImages: false,
+        selected_location_name: null,
+        selected_location_lat: null,
+        selected_location_lng: null,
         updatedAt: new Date().toISOString()
       };
       saveDraft(draft);
@@ -5580,7 +5606,9 @@
 
             // モーダルを表示
             uploadReviewModal.classList.add('hidden');
+            document.body.style.overflow = 'hidden';
             tripEditModal.classList.remove('hidden');
+            console.log('[uploadReviewModal] 🔓 Body overflow state managed (tripCard click)');
             
             // ★強制的に display を設定（inline style で上書き）
             tripEditModal.style.display = 'grid';
@@ -5755,34 +5783,87 @@
     // ===== アクション =====
     async function startTrip(){
       clearUploadReviewBackup();
+      console.log('[startTrip] 🟦 START startTrip');
       // ★修正：CONFIG初期化完了を待機（API呼び出し前の必須処理）
       await configInitPromise;
       showUploadingOverlay('釣行を開始しています...');
 
       let startedThisCall = false;
       try{
-        if (draft.status==='active') return;
+        if (draft.status==='active') {
+          console.log('[startTrip] ℹ️ Trip already active, skipping');
+          return;
+        }
         draft.status='active'; draft.startedAt=nowIsoLocal();
         startedThisCall = true;
 
         if (navigator.geolocation){
+          console.log('[startTrip] 📍 Getting GPS location...');
           await new Promise(res=>{
             navigator.geolocation.getCurrentPosition(
-              p => { draft.lat=p.coords.latitude; draft.lng=p.coords.longitude; res(); },
-              () => res(),
+              p => {
+                draft.lat=p.coords.latitude;
+                draft.lng=p.coords.longitude;
+                console.log('[startTrip] ✅ GPS acquired:', { lat: draft.lat, lng: draft.lng });
+                LOG.app('[startTrip] GPS location acquired', { lat: draft.lat, lng: draft.lng });
+                res();
+              },
+              (err) => {
+                console.warn('[startTrip] ⚠️ GPS error:', err.message);
+                res();
+              },
               { enableHighAccuracy:true, timeout:8000 }
             );
           });
         }
-        // 天気
+        
+        // ★修正：GPS取得後、位置選択モーダルを表示
         if (typeof draft.lat === 'number' && typeof draft.lng === 'number'){
-          try { draft.start_weather = await fetchWeather(draft.lat, draft.lng); } catch(e){ console.error('[3543] fetchWeather error:', e); }
+          console.log('[startTrip] 📋 Showing location selection modal');
+          await showLocationSelectionModal(draft.lat, draft.lng);
+          // モーダルでの選択を待機（confirmボタンのコールバックが続行処理を実行）
+        } else {
+          // GPS失敗時はデフォルト位置で続行
+          console.warn('[startTrip] ⚠️ GPS not available, using fallback');
+          draft.selected_location_name = '現在地';
+          draft.selected_location_lat = draft.lat || null;
+          draft.selected_location_lng = draft.lng || null;
+          LOG.app('[startTrip] Using fallback location', { name: draft.selected_location_name, lat: draft.selected_location_lat, lng: draft.selected_location_lng });
+          await continueStartTripAfterLocationSelection();
         }
-        // 潮汐（開始時の概況）
-        try{
-          if (typeof draft.lat === 'number' && typeof draft.lng === 'number'){
-            const tide = await fetchTideForStart(draft.lat, draft.lng, draft.startedAt);
+        
+      }catch(e){
+        console.error("[startTrip] ❌ Unexpected error:", e?.message || e, e);
+        LOG.app('[startTrip] Unexpected error', { message: e?.message || e });
+        hideUploadingOverlay();
+      }
+    }
+
+    // ★追加：位置選択後のデータ取得処理を継続
+    async function continueStartTripAfterLocationSelection(){
+      console.log('[continueStartTripAfterLocationSelection] 🟦 START - Using selected location', {
+        name: draft.selected_location_name,
+        lat: draft.selected_location_lat,
+        lng: draft.selected_location_lng
+      });
+      try{
+        // 選択位置を使用して海況データを取得
+        if (typeof draft.selected_location_lat === 'number' && typeof draft.selected_location_lng === 'number'){
+          // 天気
+          console.log('[continueStartTripAfterLocationSelection] ☁️ Fetching weather...');
+          try { 
+            draft.start_weather = await fetchWeather(draft.selected_location_lat, draft.selected_location_lng);
+            console.log('[continueStartTripAfterLocationSelection] ✅ Weather fetched:', draft.start_weather);
+          } catch(e){ 
+            console.error('[continueStartTripAfterLocationSelection] ❌ fetchWeather error:', e); 
+          }
+          
+          // 潮汐（開始時の概況）
+          console.log('[continueStartTripAfterLocationSelection] 🌊 Fetching tide...');
+          try{
+            const tide = await fetchTideForStart(draft.selected_location_lat, draft.selected_location_lng, draft.startedAt);
             draft.start_tide = tide || null;
+            console.log('[continueStartTripAfterLocationSelection] ✅ Tide fetched:', { harbor: tide?.harbor?.hn, tideName: tide?.tideName });
             if (tide?.chart && tide?.chartDateKey){
               draft.tide_daily_cache = draft.tide_daily_cache || {};
               draft.tide_daily_cache[tide.chartDateKey] = {
@@ -5790,58 +5871,176 @@
                 chart: tide.chart
               };
             }
+          }catch(e){ 
+            console.warn("[continueStartTripAfterLocationSelection] ❌ Tide fetch failed:", e?.message||e); 
           }
-        }catch(e){ console.warn("[Tide] startTrip fetch failed:", e?.message||e); }
 
-        // ★追加：当日の水温（開始位置に最も近い地点コードをマッチングして取得）
-        try{
-          if (typeof draft.lat === 'number' && typeof draft.lng === 'number'){
-            if (DEBUG_WATER) LOG.wt("startTrip: fetch water temp", { lat: draft.lat, lng: draft.lng });
-            draft.start_water_temp = await fetchTodayWaterTempByNearest(draft.lat, draft.lng);
-            if (DEBUG_WATER) LOG.wt("startTrip: water temp result", draft.start_water_temp);
+          // 水温（選択位置に最も近い地点コードをマッチング）
+          console.log('[continueStartTripAfterLocationSelection] 🌡️ Fetching water temp...');
+          try{
+            if (DEBUG_WATER) LOG.wt("continueStartTripAfterLocationSelection: fetch water temp", { lat: draft.selected_location_lat, lng: draft.selected_location_lng });
+            draft.start_water_temp = await fetchTodayWaterTempByNearest(draft.selected_location_lat, draft.selected_location_lng);
+            console.log('[continueStartTripAfterLocationSelection] ✅ Water temp fetched:', { temp_c: draft.start_water_temp?.temperature_c, pointName: draft.start_water_temp?.point_name });
+            if (DEBUG_WATER) LOG.wt("continueStartTripAfterLocationSelection: water temp result", draft.start_water_temp);
+          }catch(e){
+            console.warn("[continueStartTripAfterLocationSelection] ❌ Water temp fetch failed:", e?.message||e);
           }
-        }catch(e){
-          console.warn("[WaterTemp] startTrip failed:", e?.message||e);
-        }
-        
-        // ★追加：Phase 3 - 潮流画像取得対象かどうかをGASで判定
-        try {
-          if (typeof draft.lat === 'number' && typeof draft.lng === 'number') {
-            console.log('[StartTrip:TideFlag] ★ Checking tide image eligibility for position:', { lat: draft.lat, lng: draft.lng });
-            // 既存の findNearestHarbor() を使用して GAS から港情報を取得
-            console.log('[StartTrip:TideFlag] Calling findNearestHarbor() to get harbor info...');
-            const gasResponse = await findNearestHarbor(draft.lat, draft.lng);
-            console.log('[StartTrip:TideFlag] GAS response received:', gasResponse);
+          
+          // 潮流画像取得対象かどうかをGASで判定
+          console.log('[continueStartTripAfterLocationSelection] 🌀 Checking tide image eligibility...');
+          try {
+            const gasResponse = await findNearestHarbor(draft.selected_location_lat, draft.selected_location_lng);
+            console.log('[continueStartTripAfterLocationSelection] ℹ️ GAS response received:', gasResponse);
             draft.shouldFetchTideImages = isTideImageEligible(gasResponse);
-            console.log('[StartTrip:TideFlag] ✅ Flag set: shouldFetchTideImages =', draft.shouldFetchTideImages);
-            console.log('[StartTrip:TideFlag] Decision:', draft.shouldFetchTideImages ? '✅ WILL_FETCH_TIDE_IMAGES' : '❌ SKIP_TIDE_IMAGES');
-          } else {
-            console.log('[StartTrip:TideFlag] ⚠️ Position not available (lat or lng not number) - setting flag to false');
+            console.log('[continueStartTripAfterLocationSelection] ✅ Tide image flag set:', draft.shouldFetchTideImages ? 'WILL_FETCH' : 'SKIP');
+          } catch (e) {
+            console.warn('[continueStartTripAfterLocationSelection] ❌ Tide image check failed:', e.message);
             draft.shouldFetchTideImages = false;
           }
-        } catch (e) {
-          console.warn('[StartTrip:TideFlag] ❌ Tide image eligibility check failed:', e.message);
-          console.error('[StartTrip:TideFlag] Error stack:', e.stack);
-          draft.shouldFetchTideImages = false;
         }
 
+        await saveDraft(draft);
+        console.log('[continueStartTripAfterLocationSelection] 💾 Draft saved');
+        render();
+        console.log('[continueStartTripAfterLocationSelection] ✅ Trip start completed successfully');
+        LOG.app('[continueStartTripAfterLocationSelection] Trip started with location', {
+          name: draft.selected_location_name,
+          lat: draft.selected_location_lat,
+          lng: draft.selected_location_lng,
+          weather: !!draft.start_weather,
+          tide: !!draft.start_tide,
+          waterTemp: draft.start_water_temp?.temperature_c
+        });
+        
       }catch(e){
-        console.warn("[startTrip] unexpected error:", e?.message || e);
+        console.error("[continueStartTripAfterLocationSelection] ❌ Error:", e?.message || e, e);
+        LOG.app('[continueStartTripAfterLocationSelection] Error', { message: e?.message || e });
       } finally {
-        try {
-          if (startedThisCall){
-            await saveDraft(draft);
-            render();
-          }
-        } catch (finalErr) {
-          console.error('[startTrip] finalize error:', finalErr);
-        } finally {
-          hideUploadingOverlay();
-        }
+        hideUploadingOverlay();
       }
     }
 
+    // ★追加：位置選択用グローバル変数
+    let currentLocationCandidates = []; // 利用可能な位置候補
+    let pendingLocationConfirmation = false; // モーダルでの選択確認待機中
+    let selectedLocationCandidate = null; // ユーザーが選択した位置
+
+    // ★追加：位置選択モーダルを表示
+    async function showLocationSelectionModal(lat, lng) {
+      hideUploadingOverlay();
+      console.log('[LocationModal] 🟦 START showLocationSelectionModal', { lat, lng });
+      
+      try {
+        // 位置候補を取得（水温APIの結果を利用）
+        console.log('[LocationModal] 📍 Fetching location candidates via water temp API:', { lat, lng });
+        let candidates = [];
+        
+        try {
+          const waterTempResult = await fetchTodayWaterTempByNearest(lat, lng);
+          console.log('[LocationModal] ✅ Water temp API result:', { 
+            temperature_c: waterTempResult?.temperature_c,
+            point_name: waterTempResult?.point_name,
+            candidates_count: waterTempResult?.location_candidates?.length || 0
+          });
+          
+          // GASが返した位置候補を取得
+          if (Array.isArray(waterTempResult?.location_candidates)) {
+            candidates = waterTempResult.location_candidates.map((c, idx) => ({
+              name: c.point_name || c.name || '位置' + (idx + 1),
+              lat: c.latitude,
+              lng: c.longitude,
+              code: c.point_code || c.code || null
+            }));
+            console.log('[LocationModal] ✅ Candidates extracted:', { count: candidates.length, candidates: candidates });
+          }
+        } catch (apiErr) {
+          console.warn('[LocationModal] ⚠️ Water temp API failed:', apiErr?.message);
+        }
+        
+        if (!candidates || candidates.length === 0) {
+          console.warn('[LocationModal] ⚠️ No candidates found, using GPS location as default');
+          alert('水温地点が見つかりません。デフォルト位置を使用します。');
+          selectedLocationCandidate = {
+            name: '現在地',
+            lat: lat,
+            lng: lng
+          };
+          pendingLocationConfirmation = false;
+          console.log('[LocationModal] ℹ️ Default candidate set:', selectedLocationCandidate);
+          return; // モーダル表示を中止
+        }
+
+        currentLocationCandidates = candidates; // グローバル変数に保存
+
+        // モーダルUIを構築（シンプルなドロップダウンリスト）
+        const content = document.getElementById('locationSelectionContent');
+        content.innerHTML = '';
+
+        // ドロップダウン選択を作成
+        const select = document.createElement('select');
+        select.className = 'w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 font-medium transition hover:bg-slate-700';
+        select.style.appearance = 'none'; // カスタムスタイル用
+        
+        // 各候補地点をオプションとして追加
+        candidates.forEach((candidate, idx) => {
+          const option = document.createElement('option');
+          option.value = idx.toString();
+          option.textContent = `${candidate.name}${idx === 0 ? ' (推奨)' : ''}`;
+          select.appendChild(option);
+        });
+
+        // デフォルトは最初の候補を選択
+        select.value = '0';
+        selectedLocationCandidate = candidates[0];
+        console.log('[LocationModal] 🎯 Default (nearest) candidate set:', { name: candidates[0].name, lat: candidates[0].lat, lng: candidates[0].lng });
+
+        // 選択変更時のイベントハンドラ
+        select.addEventListener('change', () => {
+          const idx = parseInt(select.value, 10);
+          selectedLocationCandidate = candidates[idx];
+          console.log('[LocationModal] 🖱️ Candidate selected from dropdown:', {
+            index: idx,
+            name: selectedLocationCandidate.name,
+            lat: selectedLocationCandidate.lat,
+            lng: selectedLocationCandidate.lng
+          });
+        });
+
+        content.appendChild(select);
+
+        // モーダルを表示
+        const modal = document.getElementById('locationSelectionModal');
+        document.body.style.overflow = 'hidden';
+        modal.classList.remove('hidden');
+        pendingLocationConfirmation = true;
+        console.log('[LocationModal] 📋 Modal displayed, waiting for user selection...');
+        console.log('[locationSelectionModal] 🔐 Body overflow locked (showLocationSelectionModal)');
+        // ★修正：ユーザーが操作できるようにオーバーレイを解除
+        hideUploadingOverlay();
+        console.log('[LocationModal] ✅ Overlay hidden - user can now select location');
+
+      } catch (e) {
+        console.error('[LocationModal] ❌ Error:', e.message, e);
+        alert('位置選択に失敗しました: ' + e.message);
+        selectedLocationCandidate = null;
+        LOG.app('[LocationModal] Error in showLocationSelectionModal', { message: e.message });
+      }
+    }
+
+    // ★追加：位置選択モーダルを閉じる
+    // ★追加：closeLocationSelectionModalを話閜の開閉でbody overflowを複初
+    function closeLocationSelectionModal() {
+      const modal = document.getElementById('locationSelectionModal');
+      modal.classList.add('hidden');
+      document.body.style.overflow = 'auto';
+      console.log('[locationSelectionModal] 🔓 Body overflow unlocked');
+      
+      pendingLocationConfirmation = false;
+      selectedLocationCandidate = null;
+    }
+
     // ★追加：既存釣果（配列形式）をオブジェクト形式に正規化する関数
+
     function normalizeCatch(catchRow, colMap) {
       // 既存釣果は配列形式 [value1, value2, ...] で、colMap はカラムインデックスマップ
       // オブジェクト形式に変換して返す
@@ -5890,11 +6089,12 @@
 
       // ★修正：通常釣行も手動釣行も timestamp は null で統一
       // submitCatch() で EXIF/ユーザー入力/現時刻で決定されるため、ここでの初期化は不要
-      if (draft.manualStarted || manualCatchMode) {
-        catchForm={ id:uuid(), timestamp:null, species:'', size_cm:null, weight_g:null, method:'', photoPreviewUrl:undefined, exif_date:null, exif_date_formatted:null, exif_lat:null, exif_lng:null, location_name:null, location_source:null, water_temp:null, location_candidates: [] };
+      const isManualMode = draft.manualStarted || manualCatchMode;
+      if (isManualMode) {
+        catchForm={ id:uuid(), timestamp:null, species:'', size_cm:null, weight_g:null, method:'', photoPreviewUrl:undefined, exif_date:null, exif_date_formatted:null, exif_lat:null, exif_lng:null, location_name:null, location_source:null, location_lat:null, location_lng:null, water_temp:null, location_candidates: [], userSelectedLocation: false };
       } else {
         // ★修正：timestamp=null で統一（submitCatch で決定される）
-        catchForm={ id:uuid(), timestamp:null, species:'', size_cm:null, weight_g:null, method:'', photoPreviewUrl:undefined, exif_date:null, exif_date_formatted:null, exif_lat:null, exif_lng:null, location_name:null, location_source:null, water_temp:null, location_candidates: [] };
+        catchForm={ id:uuid(), timestamp:null, species:'', size_cm:null, weight_g:null, method:'', photoPreviewUrl:undefined, exif_date:null, exif_date_formatted:null, exif_lat:null, exif_lng:null, location_name:null, location_source:null, location_lat:null, location_lng:null, water_temp:null, location_candidates: [], userSelectedLocation: false };
       }
       // UI 入力欄は常に空
       try{ inpCatchTime.value=''; }catch{ inpCatchTime.value=''; }
@@ -5917,19 +6117,43 @@
       updateLocationSelector([], true);
       updateLocationSelector([], false);
 
-      // ★追加：位置情報がある場合、候補地を取得して表示
-      if (typeof draft.lat === 'number' && typeof draft.lng === 'number') {
+      // ★修正：通常釣行時は選択位置から候補地点を取得、手動釣行時は写真待ち
+      if (!isManualMode && typeof draft.selected_location_lat === 'number' && typeof draft.selected_location_lng === 'number') {
+        // 通常釣行：釣行開始時に選択した位置を優先
+        console.log('[openAddCatch] 🎯 NORMAL MODE: Fetching location candidates from selected location:', {
+          lat: draft.selected_location_lat,
+          lng: draft.selected_location_lng,
+          name: draft.selected_location_name
+        });
         (async () => {
           try {
-            const candidates = await getLocationCandidates(draft.lat, draft.lng);
+            // 水温APIを使用して位置候補を取得
+            const waterTempResult = await fetchTodayWaterTempByNearest(draft.selected_location_lat, draft.selected_location_lng);
+            const candidates = Array.isArray(waterTempResult?.location_candidates) 
+              ? waterTempResult.location_candidates.map(c => ({
+                  name: c.point_name || c.name || '位置' + (waterTempResult.location_candidates.indexOf(c) + 1),
+                  lat: c.latitude,
+                  lng: c.longitude,
+                  code: c.point_code || c.code || null
+                }))
+              : [];
+            console.log('[openAddCatch] ✅ Location candidates fetched (normal mode):', { count: candidates?.length || 0, candidates: candidates });
             updateLocationSelector(candidates || [], false);  // catchModal用
           } catch (err) {
-            console.warn('[openAddCatch] Failed to fetch location candidates:', err?.message || err);
+            console.error('[openAddCatch] ❌ Failed to fetch location candidates:', err?.message || err);
             updateLocationSelector([], false);
           }
         })();
+      } else if (isManualMode) {
+        console.log('[openAddCatch] 📸 MANUAL MODE: Waiting for photo upload (EXIF priority)');
+      } else {
+        console.log('[openAddCatch] ℹ️ No selected location available');
       }
 
+      // ★修正：モーダル表示時にbodyのスクロールを禁止
+      document.body.style.overflow = 'hidden';
+      console.log('[openAddCatch] 🔒 Body overflow locked');
+      
       catchModal.classList.remove('hidden');
       console.log('[openAddCatch] catchModal display state:', {
         classList: catchModal.className,
@@ -5984,6 +6208,9 @@
     function closeCatchModal(){
       console.log('[CloseCatchModal] closeCatchModal called, flag:', window._returnToTripEditAfterCatch);
       catchModal.classList.add('hidden');
+      // ★修正：モーダル非表示時にbodyのスクロールを有効に戻す
+      document.body.style.overflow = 'auto';
+      console.log('[CloseCatchModal] 🔓 Body overflow unlocked');
       
       // ★追加：編集モーダルから釣果を追加した場合、編集モーダルに戻す
       if (window._returnToTripEditAfterCatch) {
@@ -6171,7 +6398,15 @@
         };
         reader.readAsDataURL(file);
 
-        await refreshLocationCandidates(isEditModal);
+        // ★修正：手動釣行時のみEXIF座標で候補地点を再取得、通常釣行時は選択位置を優先
+        const isManualMode = draft.manualStarted || manualCatchMode;
+        if (isManualMode) {
+          console.log('[handlePhotoSelect] 📸 Manual mode: Refreshing candidates from EXIF GPS');
+          await refreshLocationCandidates(isEditModal);
+        } else {
+          console.log('[handlePhotoSelect] 🎯 Normal mode: EXIF extracted but keeping selected location priority');
+          // 通常釣行時は選択位置を優先するため、refreshLocationCandidatesは呼ばない
+        }
       } catch (err) {
         console.warn('[Photo] EXIF parse failed:', err);
       }
@@ -6250,12 +6485,23 @@
       console.log('[applyLocationCandidateSelection] Before:', {
         location_name: catchForm.location_name,
         location_source: catchForm.location_source,
+        userSelectedLocation: catchForm.userSelectedLocation,
         water_temp: catchForm.water_temp,
         targetDate
       });
       
       catchForm.location_name = candidate.name || catchForm.location_name;
       catchForm.location_source = 'selected';
+      
+      // ★追加：候補から座標を保存
+      if (typeof candidate.latitude === 'number' && typeof candidate.longitude === 'number') {
+        catchForm.location_lat = candidate.latitude;
+        catchForm.location_lng = candidate.longitude;
+        console.log('[applyLocationCandidateSelection] Location coordinates saved:', {
+          lat: catchForm.location_lat,
+          lng: catchForm.location_lng
+        });
+      }
       
       // ★修正：MUR SST の場合は「地点名[SST-MUR]」という形式で表示
       const base = catchForm.water_temp || {};
@@ -6277,6 +6523,9 @@
       console.log('[applyLocationCandidateSelection] After:', {
         location_name: catchForm.location_name,
         location_source: catchForm.location_source,
+        userSelectedLocation: catchForm.userSelectedLocation,
+        location_lat: catchForm.location_lat,
+        location_lng: catchForm.location_lng,
         water_temp: catchForm.water_temp,
         isMurSST
       });
@@ -6344,10 +6593,13 @@
           if (!this.value) return;
           const candidate = catchForm.location_candidates?.find(c => getLocationCandidateId(c) === this.value);
           if (candidate) {
+            console.log('[editFormLocationSelect] User selected location:', candidate.name);
+            catchForm.userSelectedLocation = true;
             applyLocationCandidateSelection(candidate);
           } else {
             catchForm.location_name = this.dataset.name || this.value;
             catchForm.location_source = 'selected';
+            catchForm.userSelectedLocation = true;
           }
         });
       }
@@ -6362,6 +6614,10 @@
           const candidate = catchForm.location_candidates?.find(c => getLocationCandidateId(c) === this.value);
           console.log('[catchLocationSelect change] found candidate:', candidate);
           if (candidate) {
+            // ★追加：ユーザーが選択したことをマーク
+            catchForm.userSelectedLocation = true;
+            console.log('[catchLocationSelect change] User selected location:', candidate.name);
+            
             // ★修正：釣行開始日時を優先的に使用
             const targetDate = catchForm.timestamp || draft.startedAt || nowIsoLocal();
             // ★修正：applyLocationCandidateSelection に targetDate を渡す
@@ -6610,8 +6866,47 @@
       // 天気
       let wx = null;
       const weatherTargetDate = catchForm.timestamp || whenLocal || null;
-      if (typeof draft.lat === 'number' && typeof draft.lng === 'number'){
-        try { wx = await fetchWeather(draft.lat, draft.lng, weatherTargetDate); } catch(e){ console.error('[3940] fetchWeather error:', e); }
+      
+      // ★修正：位置情報の優先順位を統一
+      // 1. ユーザー選択 > 2. 通常釣行の選択位置 > 3. 手動釣行時のEXIF > 4. GPS
+      const isManualMode = draft.manualStarted || manualCatchMode;
+      let primaryLat, primaryLng, locationSource;
+      
+      if (catchForm.userSelectedLocation && typeof catchForm.location_lat === 'number' && typeof catchForm.location_lng === 'number') {
+        primaryLat = catchForm.location_lat;
+        primaryLng = catchForm.location_lng;
+        locationSource = 'user-selected';
+      } else if (!isManualMode && typeof draft.selected_location_lat === 'number' && typeof draft.selected_location_lng === 'number') {
+        primaryLat = draft.selected_location_lat;
+        primaryLng = draft.selected_location_lng;
+        locationSource = 'selected-trip-location';
+      } else if (typeof catchForm.exif_lat === 'number' && typeof catchForm.exif_lng === 'number') {
+        primaryLat = catchForm.exif_lat;
+        primaryLng = catchForm.exif_lng;
+        locationSource = 'EXIF';
+      } else {
+        primaryLat = draft.lat;
+        primaryLng = draft.lng;
+        locationSource = 'GPS';
+      }
+      
+      console.log('[submitCatch] 📍 Location priority decision:', {
+        source: locationSource,
+        lat: primaryLat,
+        lng: primaryLng,
+        mode: isManualMode ? 'MANUAL' : 'NORMAL',
+        userSelectedLocation: catchForm.userSelectedLocation,
+        hasSelectedLocation: !!(draft.selected_location_lat && draft.selected_location_lng),
+        hasExif: !!(catchForm.exif_lat && catchForm.exif_lng)
+      });
+      
+      if (typeof primaryLat === 'number' && typeof primaryLng === 'number'){
+        try { 
+          wx = await fetchWeather(primaryLat, primaryLng, weatherTargetDate);
+          console.log('[submitCatch] ✅ Weather fetched:', wx?.main);
+        } catch(e){ 
+          console.error('[submitCatch] ❌ fetchWeather error:', e); 
+        }
       }
       catchForm.weather = wx;
 
@@ -6625,9 +6920,16 @@
       catchForm.tide_low_times   = null;
 
       // ★修正：EXIFから座標が抽出されている場合は、その座標を優先的に使用
-      const tideCalcLat = typeof catchForm.exif_lat === 'number' ? catchForm.exif_lat : draft.lat;
-      const tideCalcLng = typeof catchForm.exif_lng === 'number' ? catchForm.exif_lng : draft.lng;
-      LOG.app("[Tide] using position for calc", { tideCalcLat, tideCalcLng, hasExif: !!(catchForm.exif_lat && catchForm.exif_lng), hasDraft: !!(draft.lat && draft.lng) });
+      // 優先順位：ユーザー選択 > 通常釣行の選択位置 > 手動釣行時のEXIF > GPS
+      // primaryLat/Lngは上で既に決定されている
+      const tideCalcLat = primaryLat;
+      const tideCalcLng = primaryLng;
+      console.log('[submitCatch] 📍 Tide location priority:', {
+        source: locationSource,
+        lat: tideCalcLat,
+        lng: tideCalcLng
+      });
+      LOG.app("[submitCatch] Tide location selected", { tideCalcLat, tideCalcLng, source: locationSource, userSelectedLocation: catchForm.userSelectedLocation });
 
       if (whenLocal && typeof tideCalcLat === 'number' && typeof tideCalcLng === 'number'){
         const dkey = dateKeyFromIso(whenLocal);
@@ -7057,6 +7359,7 @@
         inpTripStart.value = '';
         inpTripLat.value = '';
         inpTripLng.value = '';
+        document.body.style.overflow = 'auto';
         tripModal && tripModal.classList.add('hidden');
         render();
       } else {
@@ -7065,9 +7368,11 @@
         inpTripLat.value = '';
         inpTripLng.value = '';
         resetDraft();
+        document.body.style.overflow = 'auto';
         tripModal && tripModal.classList.add('hidden');
         showView('home');
       }
+      console.log('[tripModal] 🔓 Body overflow unlocked (btnCloseTripModal)');
     };
     
     // ★追加：釣行モーダルのキャンセルボタン（モーダル下部）
@@ -7078,6 +7383,7 @@
         inpTripStart.value = '';
         inpTripLat.value = '';
         inpTripLng.value = '';
+        document.body.style.overflow = 'auto';
         tripModal && tripModal.classList.add('hidden');
         render();
       } else {
@@ -7088,9 +7394,11 @@
         draft = { tripId: uuid(), status: 'idle', catches: [], tide_daily_cache: {}, start_water_temp: null, memo: null };
         manualCatchMode = false;
         saveDraft(draft);
+        document.body.style.overflow = 'auto';
         tripModal && tripModal.classList.add('hidden');
         showView('home');
       }
+      console.log('[tripModal] 🔓 Body overflow unlocked (btnCancelTripModal)');
     };
     
     // ★追加：recordView 下部バーのキャンセルボタン（釣行中のキャンセル）
@@ -7101,9 +7409,16 @@
     
     if (btnSaveTrip)   btnSaveTrip.onclick   = submitManualTrip;
 
-    btnCloseUploadReview.onclick = () => { pendingEnd=null; uploadReviewModal.classList.add('hidden'); };
+    btnCloseUploadReview.onclick = () => { 
+      document.body.style.overflow = 'auto';
+      console.log('[uploadReviewModal] 🔓 Body overflow unlocked (btnCloseUploadReview)');
+      pendingEnd=null; 
+      uploadReviewModal.classList.add('hidden'); 
+    };
     btnCancelUpload.onclick      = () => { 
       isUploading = false;
+      document.body.style.overflow = 'auto';
+      console.log('[uploadReviewModal] 🔓 Body overflow unlocked (btnCancelUpload)');
       pendingEnd=null; 
       uploadReviewModal.classList.add('hidden'); 
     };
@@ -7175,6 +7490,8 @@
       const clearDraftAndUI = ()=>{
         captureUploadReviewBackup();
         hideUploadingOverlay();
+        document.body.style.overflow = 'auto';
+        console.log('[uploadReviewModal] 🔓 Body overflow unlocked (clearDraftAndUI)');
         uploadReviewModal.classList.add('hidden');
         pendingEnd = null;
         resetDraft();
@@ -7427,7 +7744,9 @@
         tripMemoInput.value = draft.memo || '';
       }
       
+      document.body.style.overflow = 'hidden';
       uploadReviewModal.classList.remove('hidden');
+      console.log('[uploadReviewModal] 🔐 Body overflow locked (openUploadReview)');
     }
 
     // ★追加: 不足情報の保管（最小実装）
@@ -7736,7 +8055,9 @@
         sum_manual.appendChild(list_manual);
 
         uploadReviewBody.innerHTML=''; uploadReviewBody.appendChild(sum_manual);
+        document.body.style.overflow = 'hidden';
         uploadReviewModal.classList.remove('hidden');
+        console.log('[uploadReviewModal] 🔐 Body overflow locked (endTripWithSkip)');
 
         pendingEnd = null;
         // ★修正：共通関数でオーバーレイを消す
@@ -8158,6 +8479,10 @@
       // ★追加: 要素未挿入時の安全対策
       if (!tripModal) { alert('釣行入力モーダルのHTML（id="tripModal"）が見つかりません。HTMLを確認してください。'); return; }
 
+      // ★修正：モーダル表示時にbodyのスクロールを禁止
+      document.body.style.overflow = 'hidden';
+      console.log('[tripModal] 🔐 Body overflow locked');
+      
       tripModal.classList.remove('hidden');
       if (focusEnd && inpTripEnd) {
         setTimeout(() => inpTripEnd.focus(), 0);
@@ -8176,6 +8501,9 @@
     }
 
     function openManualPhotoUploadModal(){
+      document.body.style.overflow = 'hidden';
+      console.log('[photoUploadModal] 🔐 Body overflow locked (manual mode)');
+      
       manualCatchMode = true;
       manualCatchPhotoMetadata = null;
       resetManualPhotoPreview();
@@ -8185,6 +8513,8 @@
     }
 
     function cancelManualPhotoFlow(){
+      document.body.style.overflow = 'auto';
+      console.log('[photoUploadModal] 🔓 Body overflow unlocked (cancel)');
       manualCatchMode = false;
       manualCatchPhotoMetadata = null;
       manualCatchSuppressRecordView = false;
@@ -8200,6 +8530,9 @@
     }
 
     function closeManualPhotoUploadModal(){
+      document.body.style.overflow = 'auto';
+      console.log('[photoUploadModal] 🔓 Body overflow unlocked');
+      
       if (photoUploadModal) photoUploadModal.classList.add('hidden');
     }
 
@@ -8453,10 +8786,12 @@
         hasWater: !!(draft.start_water_temp && draft.start_water_temp.temperature_c!=null)
       });
 
+      document.body.style.overflow = 'auto';
       tripModal && tripModal.classList.add('hidden');
       
       // ★修正①: openTripReview() → _complementTripDataOnly() に変更（モーダル表示なし）
       await _complementTripDataOnly();
+      console.log('[tripModal] 🔓 Body overflow unlocked (submitTripEditForm)');
     }
 
     // ★追加：オーバーレイメッセージを設定して表示する共通関数
@@ -8496,12 +8831,71 @@
     catchModal.addEventListener('click', (e)=>{ if (e.target === catchModal) cancelAndReturnHome(); });
 
     if (manualPhotoInput) manualPhotoInput.addEventListener('change', handleManualPhotoInputChange);
+    if (btnSkipManualPhoto) btnSkipManualPhoto.onclick = ()=>{
+      // スキップ処理：写真なしで釣果情報入力に進む
+      manualCatchPhotoMetadata = null;
+      resetManualPhotoPreview();
+      if (photoUploadModal) photoUploadModal.classList.add('hidden');
+      if (photoFieldWrapper) photoFieldWrapper.classList.add('hidden');
+      if (inpCatchTime) inpCatchTime.readOnly = false;
+      alert('写真をスキップしました。釣果情報を入力してください。');
+      openCatchModal('manual');
+    };
     if (btnUploadManualPhoto) btnUploadManualPhoto.onclick = handleManualPhotoUpload;
     if (btnCancelManualPhoto) btnCancelManualPhoto.onclick = cancelManualPhotoFlow;
     if (btnClosePhotoUpload) btnClosePhotoUpload.onclick = cancelManualPhotoFlow;
     if (photoUploadModal) {
       photoUploadModal.addEventListener('click', (e)=>{
-        if (e.target === photoUploadModal) cancelManualPhotoFlow();
+        if (e.target === photoUploadModal) {
+          cancelManualPhotoFlow();
+        }
+      });
+    }
+
+    // ★追加：位置選択モーダルのイベントリスナー
+    const locationSelectionModal = document.getElementById('locationSelectionModal');
+    const btnCloseLocationModal = document.getElementById('btnCloseLocationModal');
+    const btnConfirmLocation = document.getElementById('btnConfirmLocation');
+
+    if (btnCloseLocationModal) {
+      btnCloseLocationModal.onclick = closeLocationSelectionModal;
+    }
+
+    if (btnConfirmLocation) {
+      btnConfirmLocation.onclick = async () => {
+        if (!selectedLocationCandidate) {
+          console.warn('[LocationModal] ⚠️ No candidate selected when confirm clicked');
+          alert('位置を選択してください');
+          return;
+        }
+        // draft に選択位置を保存
+        draft.selected_location_name = selectedLocationCandidate.name;
+        draft.selected_location_lat = selectedLocationCandidate.lat;
+        draft.selected_location_lng = selectedLocationCandidate.lng;
+        console.log('[LocationModal] ✅ Location confirmed:', {
+          name: draft.selected_location_name,
+          lat: draft.selected_location_lat,
+          lng: draft.selected_location_lng
+        });
+        LOG.app('[LocationModal] Location selection confirmed', {
+          name: draft.selected_location_name,
+          lat: draft.selected_location_lat,
+          lng: draft.selected_location_lng
+        });
+        
+        closeLocationSelectionModal();
+        pendingLocationConfirmation = false;
+        
+        // ★追加：処理中のオーバーレイを表示
+        console.log('[LocationModal] 🔄 Continuing startTrip with selected location...');
+        showUploadingOverlay('海況情報を取得中...');
+        await continueStartTripAfterLocationSelection();
+      };
+    }
+
+    if (locationSelectionModal) {
+      locationSelectionModal.addEventListener('click', (e) => {
+        if (e.target === locationSelectionModal) closeLocationSelectionModal();
       });
     }
 
@@ -8561,7 +8955,10 @@
 
       // モーダルを表示
       uploadReviewModal.classList.add('hidden');
+      document.body.style.overflow = 'hidden';
       tripEditModal.classList.remove('hidden');
+      console.log('[uploadReviewModal] 🔓 Body overflow state managed (openTripEditModal hide)');
+      console.log('[tripEditModal] 🔐 Body overflow locked (openTripEditModal)');
 
       LOG.app('[TripEdit] opened', { catchCount: draft.catches?.length || 0 });
     }
@@ -8670,12 +9067,18 @@
     if (btnCloseTripEdit) {
       btnCloseTripEdit.onclick = () => {
         console.log('[ModalButton] Close button clicked');
+        document.body.style.overflow = 'auto';
         tripEditModal.style.display = 'none';
         tripEditModal.classList.add('hidden');
+        console.log('[tripEditModal] 🔓 Body overflow unlocked');
       };
     }
     if (btnCancelTripEdit) {
       btnCancelTripEdit.onclick = async () => {
+        // ★追加：Body overflowを複初
+        document.body.style.overflow = 'auto';
+        console.log('[tripEditModal] 🔓 Body overflow unlocked (cancel)');
+        
         // ★追加：アップロード中はキャンセルできない
         if (isUploading) return;
         
@@ -9679,13 +10082,10 @@
 
   <!-- ★修正：バージョン情報フッター（ホーム画面でのみ表示） -->
   <footer id="versionFooter" class="fixed bottom-0 left-0 right-0 z-0 bg-slate-950/95 border-t border-slate-800 text-xs text-slate-400 text-center py-2 pb-safe">
-    <span id="versionInfo">Fishing_Log_dev | v1.1.1</span>
+    <span id="versionInfo">Fishing_Log_dev | v1.2.0</span>
   </footer>
 </body>
 </html>
-
-
-
 
 
 
