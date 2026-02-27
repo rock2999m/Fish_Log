@@ -12,7 +12,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Fishing Log">
-  <title>Fishing Log（PWAフロント / コンパクトUI）</title>
+  <title>釣行記録_dev（PWAフロント / コンパクトUI）</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* ★追加：入力フォーム自動ズーム抑制 */
@@ -50,7 +50,7 @@
   <header class="sticky top-0 z-10 backdrop-blur bg-slate-950/70 border-b border-slate-800 pt-[var(--pwa-header-pt)]">
     <div class="max-w-4xl mx-auto px-4 py-3">
       <div class="mb-3 text-center">
-        <h1 class="text-3xl font-bold">Fishing Log</h1>
+        <h1 class="text-3xl font-bold">Fishing_Log</h1>
       </div>
       <nav class="flex gap-2 text-sm items-center justify-between">
         <div class="flex gap-2">
@@ -325,11 +325,16 @@
     <!-- 釣行の確認（Trips / GViz） -->
     <section id="tripsView" class="hidden">
       <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4 mb-4">
-        <h2 class="text-base font-semibold">釣行の確認</h2>
-        <div id="tripStatus" class="text-sm text-slate-300 mt-2"></div>
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-semibold">釣行の確認</h2>
+            <div id="tripStatus" class="text-sm text-slate-300 mt-2"></div>
+          </div>
+          <button id="btnShowTripsFilter" class="px-3 py-2 rounded-xl border border-slate-700 hover:bg-slate-800 text-sm font-semibold">🔍 フィルター</button>
+        </div>
         <div class="mt-3 flex gap-2">
-          <button id="btnLoadTrips" class="px-3 py-2 rounded-xl bg-amber-700 hover:bg-amber-600 font-semibold text-sm">読込</button>
-          <button id="btnClearTrips" class="px-3 py-2 rounded-xl border border-slate-700 hover:bg-slate-800 text-sm">クリア</button>
+          <button id="btnLoadTrips" class="hidden px-3 py-2 rounded-xl bg-amber-700 hover:bg-amber-600 font-semibold text-sm">読込</button>
+          <button id="btnClearTrips" class="hidden px-3 py-2 rounded-xl border border-slate-700 hover:bg-slate-800 text-sm">クリア</button>
         </div>
       </div>
 
@@ -347,21 +352,68 @@
       </div>
     </section>
 
+    <!-- ★追加：釣行用フィルターモーダル -->
+    <div id="tripsFilterModal" class="fixed inset-0 bg-black/70 hidden z-50 flex items-center justify-center">
+      <div class="bg-slate-900 rounded-2xl border border-slate-800 w-[90%] max-w-lg max-h-[90vh] overflow-y-auto p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold">釣行一覧 - フィルター</h2>
+          <button id="btnCloseTripsFilter" class="text-2xl hover:text-slate-400 transition">✕</button>
+        </div>
+        
+        <div class="space-y-4">
+          <!-- 日時範囲フィルター -->
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">開始日</label>
+              <input type="date" id="tripsFilterDateStart" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-sky-500">
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">終了日</label>
+              <input type="date" id="tripsFilterDateEnd" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-sky-500">
+            </div>
+          </div>
+
+          <!-- ソート設定 -->
+          <div>
+            <label class="text-xs text-slate-400 block mb-2">ソート</label>
+            <div class="space-y-1">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="tripsSortOption" value="newest" checked class="w-4 h-4">
+                <span class="text-sm">新しい順（デフォルト）</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="tripsSortOption" value="oldest" class="w-4 h-4">
+                <span class="text-sm">古い順</span>
+              </label>
+            </div>
+          </div>
+        </div>
+        
+        <div class="flex gap-2 mt-6">
+          <button id="btnResetTripsFilter" class="flex-1 px-4 py-2 rounded-lg border border-slate-700 hover:bg-slate-800 font-semibold text-sm transition">リセット</button>
+          <button id="btnApplyTripsFilter" class="flex-1 px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-semibold text-sm transition">適応</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 釣果の確認（GViz） -->
     <section id="catchesView" class="hidden">
       <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4 mb-4">
-        <h2 class="text-base font-semibold">釣果の確認</h2>
-        <div id="catchesStatus" class="text-sm text-slate-300 mt-2"></div>
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-semibold">釣果の確認</h2>
+            <div id="catchesStatus" class="text-sm text-slate-300 mt-2"></div>
+          </div>
+          <button id="btnShowFilter" class="px-3 py-2 rounded-xl border border-slate-700 hover:bg-slate-800 text-sm font-semibold">🔍 フィルター</button>
+        </div>
         <div class="mt-3 flex gap-2">
-          <button id="btnLoadSheet" class="px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 font-semibold text-sm">読込</button>
-          <button id="btnClearSheet" class="px-3 py-2 rounded-xl border border-slate-700 hover:bg-slate-800 text-sm">クリア</button>
+          <button id="btnLoadSheet" class="hidden px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 font-semibold text-sm">読込</button>
+          <button id="btnClearSheet" class="hidden px-3 py-2 rounded-xl border border-slate-700 hover:bg-slate-800 text-sm">クリア</button>
         </div>
       </div>
 
-      </div>
-
-        <!-- 一覧 -->
-        <div class="grid grid-cols-1 gap-3" id="remoteCatchList"></div>
+      <!-- 一覧 -->
+      <div class="grid grid-cols-1 gap-3" id="remoteCatchList"></div>
 
         <!-- 詳細パネル -->
         <div id="remoteCatchDetail" class="hidden mt-4 rounded-2xl bg-slate-900 border border-slate-800 p-4">
@@ -373,7 +425,101 @@
         </div>
       </section>
 
-      <!-- 釣行の記録 -->
+      <!-- ★追加：フィルターモーダル -->
+      <div id="filterModal" class="fixed inset-0 bg-black/70 hidden z-50 flex items-center justify-center">
+        <div class="bg-slate-900 rounded-2xl border border-slate-800 w-[90%] max-w-lg max-h-[90vh] overflow-y-auto p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold">フィルター・ソート</h2>
+            <button id="btnCloseFilter" class="text-2xl hover:text-slate-400 transition">✕</button>
+          </div>
+          
+          <div class="space-y-4">
+            <!-- 魚種フィルター -->
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">魚種（完全一致）</label>
+              <input type="text" id="filterSpecies" placeholder="例：マゴチ、トラフグ" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-sky-500">
+            </div>
+
+            <!-- 日時範囲フィルター -->
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-xs text-slate-400 block mb-1">開始日</label>
+                <input type="date" id="filterDateStart" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-sky-500">
+              </div>
+              <div>
+                <label class="text-xs text-slate-400 block mb-1">終了日</label>
+                <input type="date" id="filterDateEnd" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-sky-500">
+              </div>
+            </div>
+
+            <!-- 潮名フィルター（5種チェックボックス） -->
+            <div>
+              <label class="text-xs text-slate-400 block mb-2">潮名</label>
+              <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" id="filterTideOomori" value="大潮" class="w-4 h-4">
+                  <span class="text-sm">大潮</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" id="filterTideChusio" value="中潮" class="w-4 h-4">
+                  <span class="text-sm">中潮</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" id="filterTideKosio" value="小潮" class="w-4 h-4">
+                  <span class="text-sm">小潮</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" id="filterTideNagatide" value="長潮" class="w-4 h-4">
+                  <span class="text-sm">長潮</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" id="filterTideWakatide" value="若潮" class="w-4 h-4">
+                  <span class="text-sm">若潮</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- 潮位傾向フィルター -->
+            <div>
+              <label class="text-xs text-slate-400 block mb-2">潮位傾向</label>
+              <div class="flex gap-4">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" id="filterTrendUp" value="上げ" class="w-4 h-4">
+                  <span class="text-sm">上げ</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" id="filterTrendDown" value="下げ" class="w-4 h-4">
+                  <span class="text-sm">下げ</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- ソート設定 -->
+            <div>
+              <label class="text-xs text-slate-400 block mb-2">ソート</label>
+              <div class="space-y-1">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="sortOption" value="newest" checked class="w-4 h-4">
+                  <span class="text-sm">新しい順（デフォルト）</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="sortOption" value="oldest" class="w-4 h-4">
+                  <span class="text-sm">古い順</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="sortOption" value="sizeLarge" class="w-4 h-4">
+                  <span class="text-sm">サイズ降順</span>
+                </label>
+              </div>
+            </div>
+          </div>
+          
+          <div class="flex gap-2 mt-6">
+            <button id="btnResetFilter" class="flex-1 px-4 py-2 rounded-lg border border-slate-700 hover:bg-slate-800 font-semibold text-sm transition">リセット</button>
+            <button id="btnApplyFilter" class="flex-1 px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-semibold text-sm transition">適応</button>
+          </div>
+        </div>
+      </div>
     <section id="recordView" class="hidden">
       <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4 flex flex-col gap-2 mb-4">
         <div class="flex items-center justify-between">
@@ -1060,6 +1206,16 @@
       catchesView.classList.toggle('hidden', name !== 'catches');
       settingsView.classList.toggle('hidden', name !== 'settings'); // ★追加
       
+      // ★追加：catches画面に切り替わるときフィルター条件を復元
+      if (name === 'catches') {
+        loadFilterConditions();
+      }
+
+      // ★追加：trips画面に切り替わるときフィルター条件を復元
+      if (name === 'trips') {
+        loadTripsFilterConditions();
+      }
+      
       // ★追加：バージョン情報フッターはホーム画面でのみ表示
       const versionFooter = document.getElementById('versionFooter');
       if (versionFooter) {
@@ -1654,6 +1810,28 @@
     const detailWrap = document.getElementById('remoteCatchDetail');
     const btnCloseDetail = document.getElementById('btnCloseDetail');
 
+    // ★追加：フィルター関連の要素と変数
+    const btnApplyFilter = document.getElementById('btnApplyFilter');
+    
+    const filterSpecies = document.getElementById('filterSpecies');
+    const filterDateStart = document.getElementById('filterDateStart');
+    const filterDateEnd = document.getElementById('filterDateEnd');
+    const filterTrendUp = document.getElementById('filterTrendUp');
+    const filterTrendDown = document.getElementById('filterTrendDown');
+    
+    // フィルター条件オブジェクト
+    let currentFilterConditions = {
+      species: '',
+      dateStart: null,
+      dateEnd: null,
+      tideNames: [],
+      trends: [],
+      sortBy: 'newest'
+    };
+    
+    // 全釣果データ（フィルター前）
+    let allCatchItems = [];
+
     function gvizPayloadToRows(payload){
       const cols = (payload?.table?.cols || []).map(c => c.label || c.id || '');
       const rows = (payload?.table?.rows || []).map(r => {
@@ -1817,37 +1995,17 @@
         if (!rows || rows.length < 2){ sheetStatus.textContent='データが見つかりません（ヘッダ+1行以上が必要）'; hasLoadedOnce=true; return; }
         lastRows = rows; lastHeaders = rows[0];
         setupMapping(lastHeaders);
-        renderRemoteList(applyCatchesFilter(mapRowsToItems(rows))); // tripId 経由で月情報を付与して描画
-        sheetStatus.textContent = `読み込み完了：${rows.length-1}件`;
+        
+        // ★修正：フィルター前のすべてのアイテムを保存
+        const catchItems = mapRowsToItems(rows);
+        allCatchItems = catchItems;
+        
+        // ★追加：初期読み込み時もデフォルトソート（newest）を適用
+        const sortedItems = filterAndSortCatches(allCatchItems);
+        
+        renderRemoteList(sortedItems); // tripId 経由で月情報を付与して描画
+        updateCatchCount(catchItems.length, catchItems.length); // 初期表示時は全件
         hasLoadedOnce = true;
-                // ★追記: Catches フィルタ UI（簡易）
-        (function injectCatchesFilterUI(){
-          if (!sheetStatus) return;
-          const host = sheetStatus.parentElement; if (!host) return;
-          if (document.getElementById('catchesFilterBar')) return;
-          const bar = document.createElement('div');
-          bar.id = 'catchesFilterBar';
-          bar.className = 'mt-2 flex flex-wrap gap-2 text-sm';
-          bar.innerHTML = `
-            <input id="cfSpecies" placeholder="魚種を含む" class="px-2 py-1 rounded bg-slate-800 border border-slate-700" />
-            <input id="cfMin" type="number" placeholder="サイズ最小" class="w-28 px-2 py-1 rounded bg-slate-800 border border-slate-700" />
-            <input id="cfMax" type="number" placeholder="サイズ最大" class="w-28 px-2 py-1 rounded bg-slate-800 border border-slate-700" />
-            <select id="cfSort" class="px-2 py-1 rounded bg-slate-800 border border-slate-700">
-              <option value="time_desc">新しい順</option>
-            </select>
-            <button id="cfApply" class="px-2 py-1 rounded border border-slate-700 hover:bg-slate-800">適用</button>
-          `;
-          host.appendChild(bar);
-          const apply = ()=>{
-            uiFilter.catches.species = document.getElementById('cfSpecies').value.trim();
-            uiFilter.catches.sizeMin = document.getElementById('cfMin').value ? Number(document.getElementById('cfMin').value) : null;
-            uiFilter.catches.sizeMax = document.getElementById('cfMax').value ? Number(document.getElementById('cfMax').value) : null;
-            uiFilter.catches.sort    = document.getElementById('cfSort').value;
-            const items = mapRowsToItems(lastRows);
-            renderRemoteList(applyCatchesFilter(items));
-          };
-          document.getElementById('cfApply').onclick = apply;
-        })();
 
       }catch(e){
         console.error('[btnLoadSheet] Error:', e);
@@ -1858,6 +2016,104 @@
     };
     btnClearSheet && (btnClearSheet.onclick = ()=>{ remoteCatchList.innerHTML=''; detailWrap.classList.add('hidden'); sheetStatus.textContent=''; lastRows=null; lastHeaders=[]; hasLoadedOnce=false; tripsById={}; });
     btnCloseDetail.onclick = ()=> detailWrap.classList.add('hidden');
+
+    // ★追加：フィルターモーダル開閉制御
+    const btnShowFilter = document.getElementById('btnShowFilter');
+    const btnCloseFilter = document.getElementById('btnCloseFilter');
+    const btnResetFilter = document.getElementById('btnResetFilter');
+    const filterModal = document.getElementById('filterModal');
+
+    // モーダルを開く
+    if (btnShowFilter) {
+      btnShowFilter.onclick = (e) => {
+        e.preventDefault();
+        filterModal.classList.remove('hidden');
+        filterModal.style.display = 'flex';
+      };
+    }
+
+    // モーダルを閉じる（クローズボタン）
+    if (btnCloseFilter) {
+      btnCloseFilter.onclick = (e) => {
+        e.preventDefault();
+        filterModal.classList.add('hidden');
+        filterModal.style.display = 'none';
+      };
+    }
+
+    // モーダル背景クリックで閉じる
+    if (filterModal) {
+      filterModal.onclick = (e) => {
+        if (e.target === filterModal) {
+          filterModal.classList.add('hidden');
+          filterModal.style.display = 'none';
+        }
+      };
+    }
+
+    // リセットボタン：条件クリア + 全件表示 + モーダル閉じる
+    if (btnResetFilter) {
+      btnResetFilter.onclick = (e) => {
+        e.preventDefault();
+        console.log('[Filter] Reset button clicked');
+
+        // 【B案】フォームをクリア
+        filterSpecies.value = '';
+        filterDateStart.value = '';
+        filterDateEnd.value = '';
+        document.getElementById('filterTideOomori').checked = false;
+        document.getElementById('filterTideChusio').checked = false;
+        document.getElementById('filterTideKosio').checked = false;
+        document.getElementById('filterTideNagatide').checked = false;
+        document.getElementById('filterTideWakatide').checked = false;
+        filterTrendUp.checked = false;
+        filterTrendDown.checked = false;
+        document.querySelector('input[name="sortOption"][value="newest"]').checked = true;
+
+        // 全件表示
+        const filtered = filterAndSortCatches(allCatchItems);
+        updateCatchCount(allCatchItems.length, allCatchItems.length);
+        renderRemoteList(allCatchItems);
+        
+        // localStorage をクリア
+        try {
+          localStorage.removeItem('catchFilterConditions');
+        } catch (e) {
+          console.warn('[Filter] Failed to clear localStorage:', e);
+        }
+
+        // モーダルを自動閉じる
+        filterModal.classList.add('hidden');
+        filterModal.style.display = 'none';
+        
+        console.log('[Filter] Reset complete');
+      };
+    }
+
+    // ★追加：適応ボタン
+    if (btnApplyFilter) {
+      btnApplyFilter.onclick = (e) => {
+        e.preventDefault();
+        console.log('[Filter] Apply button clicked');
+        
+        // フィルター・ソート条件を保存
+        saveFilterConditions();
+        
+        // フィルター・ソート実行
+        const filtered = filterAndSortCatches(allCatchItems);
+        
+        // 件数更新
+        updateCatchCount(allCatchItems.length, filtered.length);
+        
+        // UIで表示
+        renderRemoteList(filtered);
+        console.log('[Filter] Applied:', filtered.length, 'items displayed');
+        
+        // モーダルを自動閉じる
+        filterModal.classList.add('hidden');
+        filterModal.style.display = 'none';
+      };
+    }
 
     function populateSelect(sel, headers){ sel.innerHTML=''; headers.forEach((h,i)=>{ const o=document.createElement('option'); o.value=String(i); o.textContent=h||`列${i+1}`; sel.appendChild(o); }); }
 
@@ -2128,6 +2384,13 @@
         const summary = document.createElement('summary');
         summary.className = 'list-none p-3 flex gap-3 items-start cursor-pointer rounded-2xl hover:bg-slate-800/60';
 
+        // サムネ
+        const img = document.createElement('img');
+        img.className = 'w-24 h-24 object-cover rounded-xl bg-slate-950';
+        img.alt = 'photo';
+        img.src = resolvePhotoUrl(it.photo) || '';
+        summary.appendChild(img);
+
         const info = document.createElement('div');
         info.className = 'flex-1 min-w-0';
 
@@ -2275,7 +2538,187 @@
       });
     }
 
-    function showDetail(it){
+    // ★追加：フィルター条件をUIから読み込む
+    function getFilterConditionsFromUI() {
+      const species = (filterSpecies.value || '').trim();
+      const dateStart = filterDateStart.value ? new Date(filterDateStart.value) : null;
+      const dateEnd = filterDateEnd.value ? new Date(filterDateEnd.value) : null;
+      
+      // 潮名チェックボックス
+      const tideNames = [];
+      if (document.getElementById('filterTideOomori').checked) tideNames.push('大潮');
+      if (document.getElementById('filterTideChusio').checked) tideNames.push('中潮');
+      if (document.getElementById('filterTideKosio').checked) tideNames.push('小潮');
+      if (document.getElementById('filterTideNagatide').checked) tideNames.push('長潮');
+      if (document.getElementById('filterTideWakatide').checked) tideNames.push('若潮');
+      
+      // 潮位傾向
+      const trends = [];
+      if (filterTrendUp.checked) trends.push('上げ');
+      if (filterTrendDown.checked) trends.push('下げ');
+      
+      // ソート設定
+      const sortBy = document.querySelector('input[name="sortOption"]:checked').value || 'newest';
+      
+      return {
+        species,
+        dateStart,
+        dateEnd,
+        tideNames,
+        trends,
+        sortBy
+      };
+    }
+
+    // ★追加：フィルター条件をローカルストレージに保存
+    function saveFilterConditions() {
+      try {
+        const conditions = getFilterConditionsFromUI();
+        localStorage.setItem('catchFilterConditions', JSON.stringify(conditions));
+        console.log('[Filter] Conditions saved:', conditions);
+      } catch (e) {
+        console.warn('[Filter] Failed to save conditions:', e);
+      }
+    }
+
+    // ★追加：フィルター条件をローカルストレージから読み込み
+    function loadFilterConditions() {
+      try {
+        const saved = localStorage.getItem('catchFilterConditions');
+        if (saved) {
+          const conditions = JSON.parse(saved);
+          
+          // UIに反映
+          filterSpecies.value = conditions.species || '';
+          if (conditions.dateStart) filterDateStart.value = conditions.dateStart.split('T')[0];
+          if (conditions.dateEnd) filterDateEnd.value = conditions.dateEnd.split('T')[0];
+          
+          // 潮名チェックボックス
+          (conditions.tideNames || []).forEach(name => {
+            const idMap = {
+              '大潮': 'filterTideOomori',
+              '中潮': 'filterTideChusio',
+              '小潮': 'filterTideKosio',
+              '長潮': 'filterTideNagatide',
+              '若潮': 'filterTideWakatide'
+            };
+            const id = idMap[name];
+            if (id && document.getElementById(id)) {
+              document.getElementById(id).checked = true;
+            }
+          });
+          
+          // 潮位傾向
+          if ((conditions.trends || []).includes('上げ')) filterTrendUp.checked = true;
+          if ((conditions.trends || []).includes('下げ')) filterTrendDown.checked = true;
+          
+          // ソート
+          const sortRadio = document.querySelector(`input[name="sortOption"][value="${conditions.sortBy}"]`);
+          if (sortRadio) sortRadio.checked = true;
+          
+          console.log('[Filter] Conditions loaded:', conditions);
+        }
+      } catch (e) {
+        console.warn('[Filter] Failed to load conditions:', e);
+      }
+    }
+
+    // ★追加：フィルター・ソート実行
+    function filterAndSortCatches(items) {
+      const conditions = getFilterConditionsFromUI();
+      currentFilterConditions = conditions;
+      
+      console.log('[Filter] Applying conditions:', conditions);
+      
+      // フィルター処理
+      let filtered = items.filter(item => {
+        // 魚種フィルター（完全一致）
+        if (conditions.species && (item.species || '') !== conditions.species) {
+          return false;
+        }
+        
+        // 日時範囲フィルター
+        if (conditions.dateStart || conditions.dateEnd) {
+          const itemDate = parseSheetDate(item.date);
+          if (itemDate) {
+            if (conditions.dateStart && itemDate < conditions.dateStart) return false;
+            if (conditions.dateEnd) {
+              const endOfDay = new Date(conditions.dateEnd);
+              endOfDay.setHours(23, 59, 59, 999);
+              if (itemDate > endOfDay) return false;
+            }
+          }
+        }
+        
+        // 潮名フィルター
+        if (conditions.tideNames.length > 0 && !conditions.tideNames.includes(item.tideName)) {
+          return false;
+        }
+        
+        // 潮位傾向フィルター
+        if (conditions.trends.length > 0 && !conditions.trends.includes(item.tideTrend)) {
+          return false;
+        }
+        
+        return true;
+      });
+      
+      console.log('[Filter] After filter:', filtered.length, 'items');
+      
+      // ソート処理
+      filtered.sort((a, b) => {
+        switch (conditions.sortBy) {
+          case 'newest':
+            {
+              const dateA = parseSheetDate(a.date) || new Date(0);
+              const dateB = parseSheetDate(b.date) || new Date(0);
+              return dateB - dateA;
+            }
+          case 'oldest':
+            {
+              const dateA = parseSheetDate(a.date) || new Date(0);
+              const dateB = parseSheetDate(b.date) || new Date(0);
+              return dateA - dateB;
+            }
+          case 'sizeLarge':
+            {
+              const sizeA = parseFloat(a.size) || 0;
+              const sizeB = parseFloat(b.size) || 0;
+              return sizeB - sizeA;
+            }
+          default:
+            return 0;
+        }
+      });
+      
+      console.log('[Filter] After sort:', filtered.length, 'items');
+      return filtered;
+    }
+
+    // ★追加：日付文字列をDateオブジェクトに変換
+    function parseSheetDate(dateStr) {
+      if (!dateStr) return null;
+      // 形式：YYYY-MM-DD、YYYY/MM/DD など対応
+      try {
+        const date = new Date(dateStr);
+        if (!isNaN(date.getTime())) return date;
+      } catch (e) {}
+      return null;
+    }
+
+    // ★追加：件数表示を更新
+    function updateCatchCount(total, filtered) {
+      const status = document.getElementById('catchesStatus');
+      if (status) {
+        if (filtered < total) {
+          status.textContent = `読み込み完了: ${filtered} / ${total} 件（フィルター適用中）`;
+        } else {
+          status.textContent = `読み込み完了: ${total} 件`;
+        }
+      }
+    }
+
+    function showDetail(it) {
       const wrap = document.getElementById('remoteCatchDetail');
       const body = document.getElementById('detailBody');
 
@@ -2363,7 +2806,7 @@
         ${cond}
         <div class="grid sm:grid-cols-2 gap-4 mt-2">
           <div>${img}</div>
-          <div class="space-y-3">          <input id="inpTripStart" type="datetime-local" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" maxlength="16" />          <input id="inpTripStart" type="datetime-local" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" maxlength="16" />          <input id="inpTripStart" type="datetime-local" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" maxlength="16" />          <input id="inpTripStart" type="datetime-local" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" maxlength="16" />          <input id="inpTripStart" type="datetime-local" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" maxlength="16" />          <input id="inpTripStart" type="datetime-local" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" maxlength="16" />          <input id="inpTripStart" type="datetime-local" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" maxlength="16" />          <input id="inpTripStart" type="datetime-local" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" maxlength="16" />          <input id="inpTripStart" type="datetime-local" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" maxlength="16" />          <input id="inpTripStart" type="datetime-local" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" maxlength="16" />          <input id="inpTripStart" type="datetime-local" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" maxlength="16" />          <input id="inpTripStart" type="datetime-local" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" maxlength="16" />          <input id="inpTripStart" type="datetime-local" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" maxlength="16" />          <input id="inpTripStart" type="datetime-local" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" maxlength="16" />          <input id="inpTripStart" type="datetime-local" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" maxlength="16" />          <input id="inpTripStart" type="datetime-local" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" maxlength="16" />          <input id="inpTripStart" type="datetime-local" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" maxlength="16" />          <input id="inpTripStart" type="datetime-local" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" maxlength="16" />          <input id="inpTripStart" type="datetime-local" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" maxlength="16" />          <input id="inpTripStart" type="datetime-local" class="mt
+          <div class="space-y-3">
             ${basicCard}
             ${posCard}
             ${tideCard}
@@ -3397,32 +3840,7 @@
       catches: { species:'', sizeMin:null, sizeMax:null, tideName:'', sort:'time_desc' },
       trips:   { tideName:'', dateFrom:'', dateTo:'', sort:'start_desc' }
     };
-    function applyCatchesFilter(items){
-      let out = items.slice();
-      const f = uiFilter.catches;
-      if (f.species) out = out.filter(x => String(x.species||'').includes(f.species));
-      if (f.tideName) out = out.filter(x => String(x.tideName||'') === f.tideName);
-      if (f.sizeMin!=null) out = out.filter(x => (x.size!=null && +x.size >= +f.sizeMin));
-      if (f.sizeMax!=null) out = out.filter(x => (x.size!=null && +x.size <= +f.sizeMax));
-      if (f.sort === 'time_desc') out.sort((a,b)=> (new Date(b.time||b.date||0)) - (new Date(a.time||a.date||0)));
-      return out;
-    }
-    function applyTripsFilter(rows){
-      const headers = rows[0].map(h=>String(h||'').trim());
-      const col = {
-        tideName: headers.indexOf('tideName'),
-        startedAt: headers.indexOf('startedAt')
-      };
-      const f = uiFilter.trips;
-      const body = rows.slice(1).filter(r=>{
-        if (f.tideName && String(r[col.tideName]||'') !== f.tideName) return false;
-        if (f.dateFrom && new Date(r[col.startedAt]||0) < new Date(f.dateFrom)) return false;
-        if (f.dateTo   && new Date(r[col.startedAt]||0) > new Date(f.dateTo))   return false;
-        return true;
-      });
-      if (f.sort === 'start_desc') body.sort((a,b)=> new Date(b[col.startedAt]||0) - new Date(a[col.startedAt]||0));
-      return [headers, ...body];
-    }
+
 
     // ===== 潮汐：Worker プロキシ =====
 
@@ -4920,6 +5338,185 @@
     // 読込ボタンのハンドラ
     document.getElementById('btnLoadTrips').onclick = () => { autoLoadTrips(); };
     
+    // ★追加：釣行用フィルターモーダル制御
+    const btnShowTripsFilter = document.getElementById('btnShowTripsFilter');
+    const btnCloseTripsFilter = document.getElementById('btnCloseTripsFilter');
+    const btnResetTripsFilter = document.getElementById('btnResetTripsFilter');
+    const btnApplyTripsFilter = document.getElementById('btnApplyTripsFilter');
+    const tripsFilterModal = document.getElementById('tripsFilterModal');
+    const tripsFilterDateStart = document.getElementById('tripsFilterDateStart');
+    const tripsFilterDateEnd = document.getElementById('tripsFilterDateEnd');
+
+    let allTripsItems = [];
+
+    // モーダルを開く
+    if (btnShowTripsFilter) {
+      btnShowTripsFilter.onclick = (e) => {
+        e.preventDefault();
+        tripsFilterModal.classList.remove('hidden');
+        tripsFilterModal.style.display = 'flex';
+      };
+    }
+
+    // モーダルを閉じる（クローズボタン）
+    if (btnCloseTripsFilter) {
+      btnCloseTripsFilter.onclick = (e) => {
+        e.preventDefault();
+        tripsFilterModal.classList.add('hidden');
+        tripsFilterModal.style.display = 'none';
+      };
+    }
+
+    // モーダル背景クリックで閉じる
+    if (tripsFilterModal) {
+      tripsFilterModal.onclick = (e) => {
+        if (e.target === tripsFilterModal) {
+          tripsFilterModal.classList.add('hidden');
+          tripsFilterModal.style.display = 'none';
+        }
+      };
+    }
+
+    // リセットボタン：条件クリア + 全件表示 + モーダル閉じる
+    if (btnResetTripsFilter) {
+      btnResetTripsFilter.onclick = (e) => {
+        e.preventDefault();
+        console.log('[Trips Filter] Reset button clicked');
+
+        // フォームをクリア
+        tripsFilterDateStart.value = '';
+        tripsFilterDateEnd.value = '';
+        document.querySelector('input[name="tripsSortOption"][value="newest"]').checked = true;
+
+        // 全件表示
+        renderTripsList(allTripsItems);
+        
+        // localStorage をクリア
+        try {
+          localStorage.removeItem('tripsFilterConditions');
+        } catch (e) {
+          console.warn('[Trips Filter] Failed to clear localStorage:', e);
+        }
+
+        // モーダルを自動閉じる
+        tripsFilterModal.classList.add('hidden');
+        tripsFilterModal.style.display = 'none';
+        
+        console.log('[Trips Filter] Reset complete');
+      };
+    }
+
+    // ★追加：釣行フィルター・ソート関数
+    function saveTripsFilterConditions() {
+      try {
+        const conditions = {
+          dateStart: tripsFilterDateStart.value,
+          dateEnd: tripsFilterDateEnd.value,
+          sortBy: document.querySelector('input[name="tripsSortOption"]:checked').value || 'newest'
+        };
+        localStorage.setItem('tripsFilterConditions', JSON.stringify(conditions));
+        console.log('[Trips Filter] Conditions saved:', conditions);
+      } catch (e) {
+        console.warn('[Trips Filter] Failed to save conditions:', e);
+      }
+    }
+
+    function loadTripsFilterConditions() {
+      try {
+        const saved = localStorage.getItem('tripsFilterConditions');
+        if (saved) {
+          const conditions = JSON.parse(saved);
+          if (conditions.dateStart) tripsFilterDateStart.value = conditions.dateStart;
+          if (conditions.dateEnd) tripsFilterDateEnd.value = conditions.dateEnd;
+          const sortRadio = document.querySelector(`input[name="tripsSortOption"][value="${conditions.sortBy}"]`);
+          if (sortRadio) sortRadio.checked = true;
+          console.log('[Trips Filter] Conditions loaded:', conditions);
+        }
+      } catch (e) {
+        console.warn('[Trips Filter] Failed to load conditions:', e);
+      }
+    }
+
+    function filterAndSortTrips(items) {
+      const dateStart = tripsFilterDateStart.value ? new Date(tripsFilterDateStart.value) : null;
+      const dateEnd = tripsFilterDateEnd.value ? new Date(tripsFilterDateEnd.value) : null;
+      const sortBy = document.querySelector('input[name="tripsSortOption"]:checked').value || 'newest';
+      
+      console.log('[Trips Filter] Applying conditions:', { dateStart, dateEnd, sortBy });
+      
+      // ★修正：headerからstartedAtカラムのインデックスを取得
+      const headers = tripsCache[0];
+      const startedAtIdx = headers.findIndex(h => String(h||'').trim() === 'startedAt');
+      const columnIdx = startedAtIdx >= 0 ? startedAtIdx : 1; // デフォルトは1列目
+      
+      // フィルター処理
+      let filtered = items.filter(item => {
+        const itemDate = parseTripsDate(item[columnIdx]);
+        if (itemDate) {
+          if (dateStart && itemDate < dateStart) return false;
+          if (dateEnd) {
+            const endOfDay = new Date(dateEnd);
+            endOfDay.setHours(23, 59, 59, 999);
+            if (itemDate > endOfDay) return false;
+          }
+        }
+        return true;
+      });
+      
+      console.log('[Trips Filter] After filter:', filtered.length, 'items');
+      
+      // ソート処理
+      filtered.sort((a, b) => {
+        const dateA = parseTripsDate(a[columnIdx]) || new Date(0);
+        const dateB = parseTripsDate(b[columnIdx]) || new Date(0);
+        switch (sortBy) {
+          case 'newest':
+            return dateB.getTime() - dateA.getTime();
+          case 'oldest':
+            return dateA.getTime() - dateB.getTime();
+          default:
+            return 0;
+        }
+      });
+      
+      console.log('[Trips Filter] After sort:', filtered.length, 'items');
+      return filtered;
+    }
+
+    function parseTripsDate(dateStr) {
+      if (!dateStr) return null;
+      try {
+        const date = new Date(dateStr);
+        if (!isNaN(date.getTime())) return date;
+      } catch (e) {}
+      return null;
+    }
+
+    // 適応ボタン
+    if (btnApplyTripsFilter) {
+      btnApplyTripsFilter.onclick = (e) => {
+        e.preventDefault();
+        console.log('[Trips Filter] Apply button clicked');
+        
+        // フィルター・ソート条件を保存
+        saveTripsFilterConditions();
+        
+        // フィルター・ソート実行
+        const filtered = filterAndSortTrips(allTripsItems);
+        
+        // ★修正：renderTripsListはheader+body形式を期待している
+        const tripsWithHeader = [tripsCache[0], ...filtered];
+        
+        // UIで表示
+        renderTripsList(tripsWithHeader);
+        console.log('[Trips Filter] Applied:', filtered.length, 'items displayed');
+        
+        // モーダルを自動閉じる
+        tripsFilterModal.classList.add('hidden');
+        tripsFilterModal.style.display = 'none';
+      };
+    }
+    
     // クリアボタンのハンドラ
     document.getElementById('btnClearTrips').onclick = () => { 
       tripsCache = null; 
@@ -4943,32 +5540,26 @@
           tripStatus.textContent = 'Trips にデータが見つかりません';
           return;
         }
-        renderTripsList(tripsCache);
-        // ★追記: Trips フィルタ UI
-        (function injectTripsFilterUI(){
-          if (!tripStatus) return;
-          const host = tripStatus.parentElement; if (!host) return;
-          if (document.getElementById('tripsFilterBar')) return;
-          const bar = document.createElement('div');
-          bar.id = 'tripsFilterBar';
-          bar.className = 'mt-2 flex flex-wrap gap-2 text-sm';
-          bar.innerHTML = `
-            <input id="tfFrom" type="date" class="px-2 py-1 rounded bg-slate-800 border border-slate-700" />
-            <input id="tfTo"   type="date" class="px-2 py-1 rounded bg-slate-800 border border-slate-700" />
-            <select id="tfSort" class="px-2 py-1 rounded bg-slate-800 border border-slate-700">
-              <option value="start_desc">開始が新しい順</option>
-            </select>
-            <button id="tfApply" class="px-2 py-1 rounded border border-slate-700 hover:bg-slate-800">適用</button>
-          `;
-          host.appendChild(bar);
-          document.getElementById('tfApply').onclick = ()=>{
-            uiFilter.trips.dateFrom = document.getElementById('tfFrom').value || '';
-            uiFilter.trips.dateTo   = document.getElementById('tfTo').value   || '';
-            uiFilter.trips.sort     = document.getElementById('tfSort').value;
-            const filtered = applyTripsFilter(tripsCache);
-            renderTripsList(filtered);
-          };
-        })();
+        
+        // ★追加：フィルター前のすべての釣行を保存とデフォルトソート適用
+        const tripsDataRows = tripsCache.slice(1); // ヘッダー除外
+        allTripsItems = tripsDataRows;
+        
+        // ★追加：初期読み込み時用のシンプルなソート（デフォルト：newest）
+        // ヘッダーからstartedAtカラムのインデックスを取得
+        const headers = tripsCache[0];
+        const startedAtIdx = headers.findIndex(h => String(h||'').trim() === 'startedAt');
+        const columnIdx = startedAtIdx >= 0 ? startedAtIdx : 1; // デフォルトは1列目
+        
+        const sortedDataRows = tripsDataRows.slice().sort((a, b) => {
+          const dateA = parseTripsDate(a[columnIdx]) || new Date(0);
+          const dateB = parseTripsDate(b[columnIdx]) || new Date(0);
+          return dateB.getTime() - dateA.getTime(); // newest: 新しい順
+        });
+        
+        const sortedTripsCache = [tripsCache[0], ...sortedDataRows];
+        
+        renderTripsList(sortedTripsCache);
         tripStatus.textContent = `読み込み完了：${tripsCache.length-1}件`;
       }catch(e){
         console.error('[loadTrips] Error:', e);
@@ -10082,11 +10673,10 @@
 
   <!-- ★修正：バージョン情報フッター（ホーム画面でのみ表示） -->
   <footer id="versionFooter" class="fixed bottom-0 left-0 right-0 z-0 bg-slate-950/95 border-t border-slate-800 text-xs text-slate-400 text-center py-2 pb-safe">
-    <span id="versionInfo">Fishing_Log_dev | v1.2.0</span>
+    <span id="versionInfo">Fishing_Log_dev | v1.3.0</span>
   </footer>
 </body>
 </html>
-
 
 
 
