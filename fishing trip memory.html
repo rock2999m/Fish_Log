@@ -2983,8 +2983,8 @@
     // ===== PWA: Service Worker 登録 =====
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/dev_Fish_Log/sw.js', {
-          scope: '/dev_Fish_Log/'
+        navigator.serviceWorker.register('/Fish_Log/sw.js', {
+          scope: '/Fish_Log/'
         })
           .then(registration => {
           })
@@ -11541,7 +11541,7 @@
 
   <!-- ★修正：バージョン情報フッター（ホーム画面でのみ表示） -->
   <footer id="versionFooter" class="fixed bottom-0 left-0 right-0 z-0 bg-slate-950/95 border-t border-slate-800 text-xs text-slate-400 text-center py-2 pb-safe">
-    <span id="versionInfo">Fishing_Log_dev | v1.2.0</span>
+    <span id="versionInfo">Fishing_Log_dev | v1.3.0</span>
   </footer>
 
   <!-- ★追加：エラー・通知表示エリア -->
@@ -11618,6 +11618,3 @@
 
 </body>
 </html>
-
-
-
