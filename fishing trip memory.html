@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#0f172a" />
   <meta name="description" content="釣行の記録、釣果の管理、潮汐情報の自動取得ができるPWAアプリケーション" />
-  <link rel="manifest" href="/Fish_Log/manifest.json">
-  <link rel="apple-touch-icon" href="/Fish_Log/icon-192.png">
-  <link rel="icon" type="image/png" href="/Fish_Log/icon-192.png" sizes="192x192">
-  <link rel="icon" type="image/png" href="/Fish_Log/icon-512.png" sizes="512x512">
+  <link rel="manifest" href="/dev_Fish_Log/manifest.json">
+  <link rel="apple-touch-icon" href="/dev_Fish_Log/icon-192.png">
+  <link rel="icon" type="image/png" href="/dev_Fish_Log/icon-192.png" sizes="192x192">
+  <link rel="icon" type="image/png" href="/dev_Fish_Log/icon-512.png" sizes="512x512">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Fishing Log">
@@ -44,6 +44,51 @@
       visibility: hidden;
       opacity: 0;
       pointer-events: none;
+    }
+
+    /* ===== エラー・通知表示スタイル ===== */
+    .notification {
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      animation: slideIn 0.3s ease-in-out;
+      max-height: 150px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .notification.error {
+      background-color: #ef4444;
+      color: white;
+      border-left: 4px solid #dc2626;
+    }
+
+    .notification.success {
+      background-color: #10b981;
+      color: white;
+      border-left: 4px solid #059669;
+    }
+
+    .notification.info {
+      background-color: #3b82f6;
+      color: white;
+      border-left: 4px solid #1d4ed8;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(400px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    @keyframes slideOut {
+      from { transform: translateX(0); opacity: 1; }
+      to { transform: translateX(400px); opacity: 0; }
+    }
+
+    .notification.removing {
+      animation: slideOut 0.3s ease-in-out;
     }
   </style>
 <body class="min-h-screen bg-slate-950 text-slate-50">
@@ -330,10 +375,12 @@
             <h2 class="text-base font-semibold">釣行の確認</h2>
             <div id="tripStatus" class="text-sm text-slate-300 mt-2"></div>
           </div>
-          <button id="btnShowTripsFilter" class="px-3 py-2 rounded-xl border border-slate-700 hover:bg-slate-800 text-sm font-semibold">🔍 フィルター</button>
+          <div class="flex gap-2">
+            <button id="btnShowTripsFilter" class="px-3 py-2 rounded-xl border border-slate-700 hover:bg-slate-800 text-sm font-semibold">🔍 フィルター</button>
+            <button id="btnLoadTrips" class="px-3 py-2 rounded-xl bg-amber-700 hover:bg-amber-600 font-semibold text-sm">読込</button>
+          </div>
         </div>
         <div class="mt-3 flex gap-2">
-          <button id="btnLoadTrips" class="hidden px-3 py-2 rounded-xl bg-amber-700 hover:bg-amber-600 font-semibold text-sm">読込</button>
           <button id="btnClearTrips" class="hidden px-3 py-2 rounded-xl border border-slate-700 hover:bg-slate-800 text-sm">クリア</button>
         </div>
       </div>
@@ -404,10 +451,12 @@
             <h2 class="text-base font-semibold">釣果の確認</h2>
             <div id="catchesStatus" class="text-sm text-slate-300 mt-2"></div>
           </div>
-          <button id="btnShowFilter" class="px-3 py-2 rounded-xl border border-slate-700 hover:bg-slate-800 text-sm font-semibold">🔍 フィルター</button>
+          <div class="flex gap-2">
+            <button id="btnShowFilter" class="px-3 py-2 rounded-xl border border-slate-700 hover:bg-slate-800 text-sm font-semibold">🔍 フィルター</button>
+            <button id="btnLoadSheet" class="px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 font-semibold text-sm">読込</button>
+          </div>
         </div>
         <div class="mt-3 flex gap-2">
-          <button id="btnLoadSheet" class="hidden px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 font-semibold text-sm">読込</button>
           <button id="btnClearSheet" class="hidden px-3 py-2 rounded-xl border border-slate-700 hover:bg-slate-800 text-sm">クリア</button>
         </div>
       </div>
@@ -693,6 +742,10 @@
           </label>
         </div>
         <p class="text-xs text-slate-400">※ 緯度・経度があると、開始天気・開始潮汐・水温を自動取得します。</p>
+        <!-- ★追加：マップから港選択ボタン -->
+        <button type="button" onclick="(async () => { await openMapModalForManualTrip(parseFloat(inpTripLat.value) || 34.6165, parseFloat(inpTripLng.value) || 135.0224, (port) => { inpTripLat.value = port.lat; inpTripLng.value = port.lon; }); })()" class="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-semibold transition flex items-center justify-center gap-2">
+          📍 マップから港を選択
+        </button>
       </div>
       <div class="flex gap-2 mt-4">
         <button id="btnCancelTripModal" class="flex-1 py-2 rounded-2xl bg-slate-700 hover:bg-slate-600 font-semibold">キャンセル</button>
@@ -737,6 +790,32 @@
   </div>
 
   <script>
+    // ===== シンプルな通知表示関数 =====
+    function showNotification(message, type = 'error', duration = 5000) {
+      const container = document.getElementById('notificationArea');
+      if (!container) return;
+
+      const notif = document.createElement('div');
+      notif.className = `notification ${type}`;
+      notif.textContent = message;
+
+      container.appendChild(notif);
+
+      // 自動削除
+      setTimeout(() => {
+        notif.classList.add('removing');
+        setTimeout(() => notif.remove(), 300);
+      }, duration);
+
+      // コンソールにも出力
+      console.log(`[${type.toUpperCase()}] ${message}`);
+    }
+
+    // エイリアス関数
+    function showError(message) { showNotification(message, 'error'); }
+    function showSuccess(message) { showNotification(message, 'success'); }
+    function showInfo(message) { showNotification(message, 'info'); }
+
     // ===== Development: Initialize localStorage for testing =====
     // ★修正：秘密情報（トークン、キー）をハードコードから削除
     const devConfig = {
@@ -1451,6 +1530,8 @@
         
         return mapWeather(j, lat, lng);
       } catch (err) {
+        const msg = `天気取得失敗: ${err.message}`;
+        showError(msg);
         console.error("[fetchWeather] Error:", err);
         throw err;
       } finally { clearTimeout(t); }
@@ -1558,6 +1639,8 @@
         LOG.app("[WaterTemp] past API response status", { status: res.status, ok: res.ok });
         
         if (!res.ok) {
+          const msg = `水温取得失敗: ${res.status}`;
+          showError(msg);
           console.warn(`[WaterTemp] API returned ${res.status}`);
           LOG.app("[WaterTemp] past API returned error status", { status: res.status });
           return null;
@@ -1728,6 +1811,15 @@
     // ★修正：シートID を GAS から動的に取得する
     let SHEET_ID = ""; // GAS から起動時に取得
     
+    // ============================================
+    // ★追加：Map Modal Variables 
+    // ============================================
+    let harborModalPortData = [];              // マップモーダル用港データ
+    let mapModalInstance = null;               // Google Maps インスタンス
+    let mapModalMarkers = [];                  // モーダル内のマーカー配列
+    let selectedModalPort = null;              // モーダルで選択中のポイント
+    let mapModalCallback = null;               // モーダル確定時のコールバック
+    
     const sheetIdEl = document.getElementById('sheetId');
     const btnSaveSheetConfig = document.getElementById('btnSaveSheetConfig');
     const sheetConfigStatus = document.getElementById('sheetConfigStatus');
@@ -1873,6 +1965,8 @@
         if (!json.ok) throw new Error(json.error || 'Unknown error');
         return json.data; // [[header...], [row1...], [row2...], ...]
       } catch (err) {
+        const msg = `シート読込み失敗 (${sheetName}): ${err.message}`;
+        showError(msg);
         throw new Error(`Sheet load error (${sheetName}): ${err.message}`);
       }
     }
@@ -2014,7 +2108,7 @@
         hasLoadedOnce = true;
       }
     };
-    btnClearSheet && (btnClearSheet.onclick = ()=>{ remoteCatchList.innerHTML=''; detailWrap.classList.add('hidden'); sheetStatus.textContent=''; lastRows=null; lastHeaders=[]; hasLoadedOnce=false; tripsById={}; });
+    btnClearSheet && (btnClearSheet.onclick = ()=>{ remoteCatchList.innerHTML=''; detailWrap.classList.add('hidden'); sheetStatus.textContent=''; lastRows=null; lastHeaders=[]; hasLoadedOnce=false; tripsById={}; allCatchItems=[]; });
     btnCloseDetail.onclick = ()=> detailWrap.classList.add('hidden');
 
     // ★追加：フィルターモーダル開閉制御
@@ -2199,15 +2293,30 @@
     // 追加: Trips から月情報を読み込む
     async function loadTripsMoonMap(){
       try{
-        // SHEET_ID が未設定の場合は待機
+        // ★追加：SheetID未設定の場合は最大5秒待機（無限ループ回避）
         if (!SHEET_ID) {
+          let waited = 0;
           await new Promise(resolve => {
             const check = () => {
-              if (SHEET_ID) resolve();
-              else setTimeout(check, 100);
+              if (SHEET_ID) {
+                console.log('[loadTripsMoonMap] ✅ SHEET_ID 取得完了');
+                resolve();
+              } else if (waited > 5000) {
+                console.warn('[loadTripsMoonMap] ⚠️ SHEET_ID を 5 秒間待機しても取得できないため、中断');
+                resolve(); // 設定されない人を接受けして &連後の処理に読み出す
+              } else {
+                waited += 100;
+                setTimeout(check, 100);
+              }
             };
             setTimeout(check, 100);
           });
+        }
+        
+        // ★追加：SheetID が依然空の場合は空昔を返す
+        if (!SHEET_ID) {
+          console.warn('[loadTripsMoonMap] SHEET_ID 取得失敗、空昔を返す');
+          return {};
         }
         
         const rows = await loadSheetViaGAS(TRIPS_SHEET_NAME, SHEET_ID);
@@ -2370,10 +2479,60 @@
     // 画像URL正規化（一覧で使っているものを流用）
     const resolvePhotoUrlDetail = (raw) => resolvePhotoUrl(raw, 'detail');
 
+    // ★追加：リモート一覧のイベント委譲初期化フラグ
+    let remoteCatchListDelegateSetup = false;
+
+    // ★追加：イベント委譲の初期化
+    function setupRemoteCatchListDelegates() {
+      if (remoteCatchListDelegateSetup) return; // 既に設定済み
+      remoteCatchListDelegateSetup = true;
+
+      // toggle イベント委譲（details の開閉制御）
+      remoteCatchList.addEventListener('toggle', (e) => {
+        if (e.target.tagName === 'DETAILS') {
+          const wrap = e.target;
+          const summary = wrap.querySelector('summary');
+          const idx = Array.from(remoteCatchList.querySelectorAll('details')).indexOf(wrap);
+
+          if (wrap.open) {
+            summary?.classList.remove('hover:bg-slate-800/60');
+            // 潮汐グラフ描画
+            setTimeout(() => {
+              if (remoteListItems && idx >= 0 && idx < remoteListItems.length) {
+                renderCatchTideGraph(idx, remoteListItems[idx]);
+              }
+            }, 100);
+          } else {
+            summary?.classList.add('hover:bg-slate-800/60');
+          }
+        }
+      }, true);
+
+      // 「閉じる」ボタンクリック委譲
+      remoteCatchList.addEventListener('click', (e) => {
+        if (e.target.closest('[data-role="catch-detail-close"]')) {
+          e.stopPropagation();
+          const details = e.target.closest('details');
+          if (details) details.open = false;
+        }
+      }, true);
+
+      console.log('[Setup] Remote catch list delegates initialized (1 time only)');
+    }
+
+    // ★追加：リモート一覧複䔺用
+    let remoteListItems = [];
+
     function renderRemoteList(items){
       // 一覧を折りたたみ(details)にし、展開中はhover無効・枠線は外枠のみ・閉じるボタン付き
       remoteCatchList.innerHTML = '';
       detailWrap.classList.add('hidden'); // 既存の独立詳細パネルは使わない
+
+      // ★追加：イベント委譲初期化（最初の叏見時のみ）
+      setupRemoteCatchListDelegates();
+
+      // ★追加：renderCatchTideGraph 用に一時保存
+      remoteListItems = items;
 
       items.forEach((it, idx)=>{
         // ===== 外枠（折りたたみ） =====
@@ -2514,25 +2673,9 @@
         `;
         wrap.appendChild(detail);
 
-        // 「閉じる」ボタンでこの details を閉じる
-        detail.querySelector('[data-role="catch-detail-close"]').onclick = (e)=>{
-          e.stopPropagation();
-          wrap.open = false;
-        };
-
-        // 開閉で hover を制御（開いている間は hover 無効）
-        wrap.addEventListener('toggle', () => {
-          if (wrap.open) {
-            summary.classList.remove('hover:bg-slate-800/60');
-            
-            // ★追加：details が開いたら潮汐グラフを描画
-            setTimeout(() => {
-              renderCatchTideGraph(idx, it);
-            }, 100);
-          } else {
-            summary.classList.add('hover:bg-slate-800/60');
-          }
-        });
+        // ★削除：individual addEventListener を削除（イベント委譲を使用するため）
+        // 恭々の detail.querySelector('[data-role="catch-detail-close"]').onclick 削除
+        // 恭々の wrap.addEventListener('toggle') 削除
 
         remoteCatchList.appendChild(wrap);
       });
@@ -3412,7 +3555,11 @@
       });
       let j={}; try{ j = await res.json(); }catch{}
       setProgress('');
-      if (!res.ok || !j?.ok) throw new Error(j?.error || `HTTP ${res.status}`);
+      if (!res.ok || !j?.ok) {
+        const msg = `画像アップロード失敗: ${j?.error || `HTTP ${res.status}`}`;
+        showError(msg);
+        throw new Error(j?.error || `HTTP ${res.status}`);
+      }
       return j; // { ok:true, fileId, viewUrl, thumbUrl }
     }
 
@@ -3495,12 +3642,275 @@
     }
     
     /**
+     * ★追加：マップモーダルを開く（手動釣行用）
+     * @param {number} centerLat - マップ中心緯度
+     * @param {number} centerLng - マップ中心経度
+     * @param {function} callback - ポイント選択時のコールバック
+     */
+    async function openMapModalForManualTrip(centerLat, centerLng, callback) {
+      console.log('[Map Modal] Opening for manual trip with center:', centerLat, centerLng);
+      
+      mapModalCallback = callback;
+      selectedModalPort = null;
+
+      // 港データを確保（localStorage or シート）
+      try {
+        const harborCache = await ensureHarborCache();
+        if (!harborCache || !harborCache.mapped || harborCache.mapped.length === 0) {
+          throw new Error('Harbor data is empty');
+        }
+        harborModalPortData = harborCache.mapped;
+        console.log('[Map Modal] ✅ Harbor data loaded:', harborModalPortData.length, 'ports');
+      } catch (err) {
+        console.error('[Map Modal] ❌ Failed to load harbor data:', err?.message || err);
+        alert('港データの読み込みに失敗しました: ' + (err?.message || '不明なエラー'));
+        return;
+      }
+
+      // Google Maps API の読み込み完了を待機
+      try {
+        await waitForGoogleMapsAPI();
+        console.log('[Map Modal] ✅ Google Maps API is ready');
+      } catch (err) {
+        console.error('[Map Modal] ❌ Google Maps API not available:', err?.message || err);
+        alert('Google Maps API が利用できません');
+        return;
+      }
+
+      // モーダルを表示
+      const modal = document.getElementById('mapModal');
+      if (modal) {
+        modal.classList.remove('hidden');
+      }
+
+      // オーバーレイを表示
+      const overlay = document.getElementById('mapModalOverlay');
+      if (overlay) {
+        overlay.classList.remove('hidden');
+        overlay.onclick = closeMapModal;
+      }
+
+      // Google Maps を初期化
+      const mapContainer = document.getElementById('mapView');
+      if (!mapContainer) {
+        console.error('[Map Modal] mapView container not found');
+        return;
+      }
+
+      // 既存マップを破棄
+      if (mapModalInstance) {
+        mapModalMarkers.forEach(m => m.setMap(null));
+        mapModalMarkers = [];
+        google.maps.event.clearListeners(mapModalInstance, 'click');
+      }
+
+      mapModalInstance = new google.maps.Map(mapContainer, {
+        zoom: 10,
+        center: { lat: centerLat, lng: centerLng },
+        mapTypeId: 'roadmap'
+      });
+
+      // マップクリックリスナー
+      mapModalInstance.addListener('click', (e) => {
+        onMapModalClick(e.latLng.lat(), e.latLng.lng());
+      });
+
+      // ピンを表示
+      displayMapModalPins();
+
+      console.log('[Map Modal] Opened successfully');
+    }
+
+    /**
+     * マップモーダルを閉じる
+     */
+    function closeMapModal() {
+      console.log('[Map Modal] Closing');
+      
+      const modal = document.getElementById('mapModal');
+      if (modal) {
+        modal.classList.add('hidden');
+      }
+
+      // オーバーレイを非表示
+      const overlay = document.getElementById('mapModalOverlay');
+      if (overlay) {
+        overlay.classList.add('hidden');
+        overlay.onclick = null;
+      }
+
+      // マーカーをクリア
+      mapModalMarkers.forEach(m => m.setMap(null));
+      mapModalMarkers = [];
+
+      // Maps インスタンスを破棄
+      if (mapModalInstance) {
+        google.maps.event.clearListeners(mapModalInstance, 'click');
+        mapModalInstance = null;
+      }
+
+      selectedModalPort = null;
+      mapModalCallback = null;
+
+      console.log('[Map Modal] Closed');
+    }
+
+    /**
+     * モーダル内のマップにピンを表示
+     */
+    function displayMapModalPins() {
+      if (!mapModalInstance || !harborModalPortData || harborModalPortData.length === 0) {
+        console.warn('[Display Pins] No data to display');
+        return;
+      }
+
+      // 既存マーカーをクリア
+      mapModalMarkers.forEach(m => m.setMap(null));
+      mapModalMarkers = [];
+
+      console.log('[Display Pins] Displaying', harborModalPortData.length, 'pins');
+
+      // ポイント毎にマーカーを作成
+      harborModalPortData.forEach((port, idx) => {
+        const marker = new google.maps.Marker({
+          position: { lat: port.lat, lng: port.lon },
+          map: mapModalInstance,
+          title: port.hn,
+          icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+        });
+
+        marker.addListener('click', () => {
+          console.log('[Map Modal] Marker clicked:', port.hn);
+          selectPortForModal(port);
+        });
+
+        mapModalMarkers.push(marker);
+      });
+    }
+
+    /**
+     * モーダル右側のポイントリストを更新
+     */
+    function updateMapModalPortList() {
+      const listContainer = document.getElementById('portListView');
+      if (!listContainer) return;
+
+      listContainer.innerHTML = '';
+
+      if (!harborModalPortData || harborModalPortData.length === 0) {
+        listContainer.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">利用可能なポイントがありません</div>';
+        return;
+      }
+
+      harborModalPortData.forEach((port, idx) => {
+        const item = document.createElement('div');
+        item.className = 'port-item-modal' + (selectedModalPort?.lon === port.lon && selectedModalPort?.lat === port.lat ? ' selected' : '');
+        item.innerHTML = `
+          <strong>${port.hn}</strong><br/>
+          <small>${port.pn}<br/>📍 ${port.lat.toFixed(4)}, ${port.lon.toFixed(4)}</small>
+        `;
+        item.style.cursor = 'pointer';
+        item.onclick = () => selectPortForModal(port);
+        
+        listContainer.appendChild(item);
+      });
+    }
+
+    /**
+     * モーダル内でポイントを選択
+     */
+    function selectPortForModal(port) {
+      if (!port) return;
+
+      selectedModalPort = port;
+      console.log('[Select Port] Selected:', port.hn);
+
+      // マップを選択ポイント中心にズーム
+      if (mapModalInstance) {
+        mapModalInstance.setCenter({ lat: port.lat, lng: port.lon });
+        mapModalInstance.setZoom(14);
+      }
+
+      // マーカーを更新（選択状態の色変更）
+      mapModalMarkers.forEach(m => {
+        const pos = m.getPosition();
+        const isSelected = pos.lat() === port.lat && pos.lng() === port.lon;
+        m.setIcon(isSelected 
+          ? 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
+          : 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+        );
+      });
+    }
+
+    /**
+     * 「確定」ボタンクリック時
+     */
+    function confirmMapSelection() {
+      if (!selectedModalPort) {
+        alert('ポイントを選択してください');
+        return;
+      }
+
+      console.log('[Confirm] Selected port:', selectedModalPort.hn);
+
+      // コールバック関数を実行
+      if (mapModalCallback) {
+        mapModalCallback(selectedModalPort);
+      }
+
+      // モーダルを閉じる
+      closeMapModal();
+    }
+
+    /**
+     * モーダル内マップのクリック時
+     */
+    function onMapModalClick(lat, lng) {
+      console.log('[Map Click] Clicked at:', lat, lng);
+
+      // クリック座標から最近接ポイント を探索
+      let nearest = null;
+      let minDist = Infinity;
+
+      harborModalPortData.forEach(port => {
+        const dist = calculateDistanceMeters(lat, lng, port.lat, port.lon);
+        if (dist < minDist) {
+          minDist = dist;
+          nearest = port;
+        }
+      });
+
+      // 5km以内なら自動選択
+      if (nearest && minDist < 5000) {
+        console.log('[Map Click] Auto-selected nearest:', nearest.hn, 'distance:', (minDist/1000).toFixed(1), 'km');
+        selectPortForModal(nearest);
+      } else {
+        console.log('[Map Click] No port within 5km');
+      }
+    }
+
+    /**
+     * 2点間の距離を計算（メートル単位）
+     */
+    function calculateDistanceMeters(lat1, lon1, lat2, lon2) {
+      const R = 6371000; // 地球半径（メートル）
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = 
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    /**
      * アプリ起動時：ホワイトリスト初期化
      * 
-     * ★改版【解決策 1 & 3】
-     * - 既存の loadHarborsFromSheet() の結果を利用
-     * - フロント側で既に 各港の lat/lon が取得済み
-     * - localStorage キャッシュから復元、なければ loadHarborsFromSheet() から取得
+     * ★修正版【localStorage 優先使用】
+     * - 【新】localStorage から港データを直接取得
+     * - localStorage がない場合のみシートから取得
+     * - フロント側で距離計算実行
      */
     async function initializeTideWhitelist() {
       console.log('[TideWhitelist:Init] ★★★ Starting initialization ★★★');
@@ -3523,10 +3933,27 @@
           return;
         }
         
-        // Step 2: 既存の loadHarborsFromSheet() から港データを取得
-        console.log('[TideWhitelist:Init] Step 2: Loading harbor data from sheet...');
+        // ★修正：Step 2: localStorage から港データを直接取得（シート経由ではなく）
+        console.log('[TideWhitelist:Init] Step 2: Loading harbor data from localStorage...');
         console.time('[TideWhitelist:Init] Load harbor data');
-        const harborData = await loadHarborsFromSheet();
+        
+        let harborData = null;
+        const storedHarborCache = getHarborCacheFromStorage();
+        
+        if (storedHarborCache && storedHarborCache.mapped) {
+          console.log('[TideWhitelist:Init] ✅ Harbor cache found in localStorage');
+          harborData = storedHarborCache;
+        } else {
+          // フォールバック：localStorage にない場合のみシートから取得
+          console.log('[TideWhitelist:Init] ⚠️ Harbor cache not found, fetching from sheet as fallback...');
+          try {
+            harborData = await loadHarborsFromSheet();
+          } catch (fallbackErr) {
+            console.error('[TideWhitelist:Init] ❌ Fallback failed:', fallbackErr.message);
+            harborData = null;
+          }
+        }
+        
         console.timeEnd('[TideWhitelist:Init] Load harbor data');
         
         if (!harborData || !harborData.mapped || harborData.mapped.length === 0) {
@@ -3536,10 +3963,10 @@
           return;
         }
         
-        console.log('[TideWhitelist:Init] ✅ Step 2 Result: Loaded', harborData.mapped.length, 'harbors from sheet');
+        console.log('[TideWhitelist:Init] ✅ Step 2 Result: Loaded', harborData.mapped.length, 'harbors from localStorage/sheet');
         
         // DEBUG: 最初の 3 件の港データを確認（カラムマッピング検証用）
-        console.log('[TideWhitelist:Init] [DEBUG] First 3 harbors from loadHarborsFromSheet():', 
+        console.log('[TideWhitelist:Init] [DEBUG] First 3 harbors:', 
           harborData.mapped.slice(0, 3).map(h => ({
             pc: h.pc,
             hc: h.hc,
@@ -3550,10 +3977,10 @@
           }))
         );
         
-        // Step 3: 明石中心 25km 圏内の港をフィルタ
+        // Step 3: 明石中心 25km 圏内の港をフィルタ（フロント処理）
         console.log('[TideWhitelist:Init] Step 3: Filtering for Akashi area (25km)...');
         const akashiCenter = { lat: 34.616539, lng: 135.022438 };
-        const radiusKm =17;
+        const radiusKm = 17;
         const R = 6371; // 地球半径 km
         
         const filteredHarbors = harborData.mapped.filter(harbor => {
@@ -3612,7 +4039,7 @@
         akashiTidePointsCache = whitelist;
         
         console.timeEnd('[TideWhitelist:Init] Total time');
-        console.log('[TideWhitelist:Init] ✅✅✅ Initialization complete (from harbor sheet)', {
+        console.log('[TideWhitelist:Init] ✅✅✅ Initialization complete (from localStorage)', {
           codes: akashiTidePointsCache.codes.length,
           names: akashiTidePointsCache.names.length,
           timestamp: new Date().toISOString(),
@@ -3629,53 +4056,90 @@
     }
     
     // ============================================
-    // ★追加：Phase 2 - 判定関数
+    // ★修正：Phase 2 - 判定関数（座標ベースに変更）
     // ============================================
     
     /**
-     * GAS の位置判定結果から港コード/港名を取得して
-     * ホワイトリストと照合
+     * ★修正版：座標ベースで潮位画像取得対象判定
      * 
-     * @param {Object} gasResponse - GAS からの戻り値
-     *   形式: {hc: "港コード", hn: "港名", lat: ..., lng: ..., ...}
-     * @returns {boolean} true = 対象範囲 / false = 対象外
+     * GAS 依存を廃止し、フロント側で距離計算実行
+     * localStorage から港データを直接取得して判定
+     * 
+     * @param {Object} params - 判定パラメータ
+     *   形式: {lat: 緯度, lng: 経度} または {hc: 港コード, hn: 港名, lat, lng}
+     * @returns {boolean} true = 対象範囲（明石25km以内） / false = 対象外
      */
-    function isTideImageEligible(gasResponse) {
-      console.log('[TideImage:Eligible] ★ Checking eligibility...');
+    function isTideImageEligible(params) {
+      console.log('[TideImage:Eligible] ★ Checking eligibility (coordinate-based)...');
       
-      // キャッシュが未初期化なら false
-      if (!akashiTidePointsCache || 
-          (akashiTidePointsCache.codes.length === 0 && akashiTidePointsCache.names.length === 0)) {
-        console.warn('[TideImage:Eligible] ⚠️ Whitelist cache not initialized - returning false');
-        console.log('[TideImage:Eligible] Cache status:', akashiTidePointsCache);
+      // 座標の抽出
+      const { lat: userLat, lng: userLng } = params || {};
+      
+      if (!isFinite(userLat) || !isFinite(userLng)) {
+        console.warn('[TideImage:Eligible] ⚠️ Invalid coordinates:', { userLat, userLng });
         return false;
       }
       
-      // GAS からの港コード / 港名を取得
-      const { hc: harborCode, hn: harborName } = gasResponse || {};
+      console.log('[TideImage:Eligible] Input coordinates:', { userLat, userLng });
       
-      console.log('[TideImage:Eligible] Input from GAS:', {
-        harborCode: harborCode,
-        harborName: harborName,
-        gasResponse: gasResponse
+      // ★修正：localStorage から港データを直接取得
+      const storedHarborCache = getHarborCacheFromStorage();
+      if (!storedHarborCache || !storedHarborCache.mapped || storedHarborCache.mapped.length === 0) {
+        console.warn('[TideImage:Eligible] ⚠️ Harbor data not available in localStorage');
+        return false;
+      }
+      
+      // 明石中心から25km圏内に港があるか判定
+      const akashiCenter = { lat: 34.616539, lng: 135.022438 };
+      const radiusKm = 25;
+      const R = 6371; // 地球半径 km
+      const toRad = deg => (deg * Math.PI) / 180;
+      
+      // ユーザー座標から最近接港を検出
+      let nearestHarbor = null;
+      let minDistance = Infinity;
+      
+      storedHarborCache.mapped.forEach(harbor => {
+        // ユーザー座標と港の距離を計算
+        const dLat = toRad(harbor.lat - userLat);
+        const dLon = toRad(harbor.lon - userLng);
+        const a = Math.sin(dLat / 2) ** 2 +
+                  Math.cos(toRad(userLat)) * Math.cos(toRad(harbor.lat)) * Math.sin(dLon / 2) ** 2;
+        const distance = R * 2 * Math.asin(Math.sqrt(a));
+        
+        if (distance < minDistance) {
+          minDistance = distance;
+          nearestHarbor = harbor;
+        }
       });
       
-      // 港コード OR 港名 がホワイトリストに含まれるかチェック
-      const codeMatch = harborCode && akashiTidePointsCache.codes.includes(harborCode);
-      const nameMatch = harborName && akashiTidePointsCache.names.includes(harborName);
+      // 最近接港が明石25km以内か判定
+      if (nearestHarbor) {
+        const dLat = toRad(nearestHarbor.lat - akashiCenter.lat);
+        const dLon = toRad(nearestHarbor.lon - akashiCenter.lng);
+        const a = Math.sin(dLat / 2) ** 2 +
+                  Math.cos(toRad(akashiCenter.lat)) * Math.cos(toRad(nearestHarbor.lat)) * Math.sin(dLon / 2) ** 2;
+        const distanceFromAkashi = R * 2 * Math.asin(Math.sqrt(a));
+        
+        const eligible = distanceFromAkashi <= radiusKm;
+        
+        console.log('[TideImage:Eligible] ✅ Result:', {
+          nearestHarbor: {
+            name: nearestHarbor.hn,
+            code: nearestHarbor.hc,
+            distance: minDistance.toFixed(2) + ' km'
+          },
+          distanceFromAkashi: distanceFromAkashi.toFixed(2) + ' km',
+          radiusKm: radiusKm,
+          eligible: eligible,
+          decision: eligible ? '✅ TARGET' : '❌ NOT_TARGET'
+        });
+        
+        return eligible;
+      }
       
-      const eligible = codeMatch || nameMatch;
-      
-      console.log('[TideImage:Eligible] ✅ Result:', {
-        codeMatch: codeMatch,
-        nameMatch: nameMatch,
-        eligible: eligible,
-        whitelistCodeCount: akashiTidePointsCache.codes.length,
-        whitelistNameCount: akashiTidePointsCache.names.length,
-        decision: eligible ? '✅ TARGET' : '❌ NOT_TARGET'
-      });
-      
-      return eligible;
+      console.warn('[TideImage:Eligible] ⚠️ No harbor found');
+      return false;
     }
 
     // ★追加：潮汐チャート画像取得・アップロード関数（GASプロキシ経由）
@@ -3846,12 +4310,132 @@
 
     // 港コード一覧（GViz）読み込みキャッシュ
     let harborCache = null;
+    
+    // ★追加：Google Maps API を動的に読み込み
+    function loadGoogleMapsAPI() {
+      if (window.google && window.google.maps) {
+        console.log('[Google Maps API] Already loaded');
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyB-oNQ_58LKoraiZuSHjCffMzfp99Hp0yc&v=3.60';
+      script.async = true;
+      script.defer = true;
+      script.onerror = () => {
+        console.error('[Google Maps API] ❌ Failed to load. Check your API key.');
+      };
+      script.onload = () => {
+        console.log('[Google Maps API] ✅ Loaded successfully');
+      };
+      document.head.appendChild(script);
+    }
+
+    // ページロード時に Google Maps API を読み込み
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', loadGoogleMapsAPI);
+    } else {
+      loadGoogleMapsAPI();
+    }
+    
+    // ★追加：Google Maps API の読み込み完了を待機
+    function waitForGoogleMapsAPI(timeoutMs = 5000) {
+      return new Promise((resolve, reject) => {
+        if (window.google && window.google.maps) {
+          console.log('[waitForGoogleMapsAPI] ✅ Google Maps API already available');
+          resolve();
+          return;
+        }
+        
+        console.log('[waitForGoogleMapsAPI] ⏳ Waiting for Google Maps API...');
+        const startTime = Date.now();
+        const interval = setInterval(() => {
+          if (window.google && window.google.maps) {
+            clearInterval(interval);
+            console.log('[waitForGoogleMapsAPI] ✅ Google Maps API loaded');
+            resolve();
+          } else if (Date.now() - startTime > timeoutMs) {
+            clearInterval(interval);
+            console.error('[waitForGoogleMapsAPI] ❌ Timeout: Google Maps API not loaded');
+            reject(new Error('Google Maps API not loaded within timeout'));
+          }
+        }, 100);
+      });
+    }
+    
+    // ★追加：localStorage キャッシュ定義
+    const HARBOR_CACHE_KEY = 'harborData_fishing_trip';
+    const HARBOR_CACHE_TTL = 24 * 60 * 60 * 1000; // 24時間（ミリ秒）
+
+    /**
+     * ★追加：localStorage から港データキャッシュを読み込む
+     */
+    function getHarborCacheFromStorage() {
+      try {
+        const stored = localStorage.getItem(HARBOR_CACHE_KEY);
+        if (!stored) {
+          console.log('[🔍 Harbor Cache] No cache in localStorage');
+          return null;
+        }
+        
+        const parsed = JSON.parse(stored);
+        const timestamp = parsed.timestamp || 0;
+        const age = Date.now() - timestamp;
+        
+        // 24時間以内かつデータがあるか確認
+        if (age < HARBOR_CACHE_TTL && parsed.data) {
+          console.log('[✅ Harbor Cache] Loaded from localStorage, age:', Math.round(age / 1000 / 60), 'min, data count:', parsed.data.mapped ? parsed.data.mapped.length : '?');
+          LOG.tide('[Harbor Cache] Loaded from localStorage, age:', Math.round(age / 1000 / 60), 'min');
+          return parsed.data;
+        }
+        console.log('[⏰ Harbor Cache] Cache expired or invalid, age:', Math.round(age / 1000 / 60), 'min');
+        LOG.tide('[Harbor Cache] Cache expired or invalid, age:', Math.round(age / 1000 / 60), 'min');
+        return null;
+      } catch (err) {
+        console.warn('[❌ Harbor Cache] Failed to parse localStorage:', err.message);
+        LOG.tide('[Harbor Cache] Failed to parse localStorage:', err.message);
+        return null;
+      }
+    }
+
+    /**
+     * ★追加：港データを localStorage に保存
+     */
+    function saveHarborCacheToStorage(data) {
+      try {
+        const cacheData = {
+          version: 1,
+          timestamp: Date.now(),
+          data: data
+        };
+        localStorage.setItem(HARBOR_CACHE_KEY, JSON.stringify(cacheData));
+        console.log('[💾 Harbor Cache] Saved to localStorage, data count:', data.mapped ? data.mapped.length : '?');
+        LOG.tide('[Harbor Cache] Saved to localStorage');
+      } catch (err) {
+        console.warn('[❌ Harbor Cache] Failed to save:', err.message);
+        LOG.tide('[Harbor Cache] Failed to save:', err.message);
+      }
+    }
 
     async function loadHarborsFromSheet(){
-      if (harborCache) return harborCache;
+      // ★修正：メモリキャッシュがあれば即返す
+      if (harborCache) {
+        console.log('[⚡ Harbor Cache] Using in-memory cache, data count:', harborCache.mapped ? harborCache.mapped.length : '?');
+        return harborCache;
+      }
+      
+      // ★追加：localStorage キャッシュを確認
+      const storedCache = getHarborCacheFromStorage();
+      if (storedCache) {
+        console.log('[🚀 Harbor Cache] Using cache from localStorage, data count:', storedCache.mapped ? storedCache.mapped.length : '?');
+        LOG.tide('[Harbor Cache] Using cache from localStorage');
+        harborCache = storedCache;
+        return harborCache;
+      }
       
       // ★修正：SHEET_ID が取得されるまで待機（タイムアウト付き）
       if (!SHEET_ID) {
+        console.log('[⏳ Harbor Cache] Waiting for SHEET_ID...');
         const timeout = 5000; // 5秒
         const startTime = Date.now();
         await new Promise(resolve => {
@@ -3859,6 +4443,7 @@
             if (SHEET_ID) {
               resolve();
             } else if (Date.now() - startTime > timeout) {
+              console.warn('[⚠️ Harbor Cache] SHEET_ID timeout');
               LOG.tide('[loadHarborsFromSheet] SHEET_ID timeout');
               resolve(); // タイムアウト時も続行
             } else {
@@ -3869,6 +4454,8 @@
         });
       }
       
+      // ★修正：シートから新規取得
+      console.log('[📥 Harbor Cache] Fetching from GoogleSheets...');
       const rows = await loadSheetViaGAS(HARBOR_SHEET_NAME, SHEET_ID);
       if (!rows || rows.length < 2) throw new Error("港コード一覧のデータが見つかりません");
       const headers = rows[0].map(h=>String(h||'').trim());
@@ -3893,6 +4480,11 @@
         mapped.push({ pc, hc, pn, hn, lat, lon });
       }
       harborCache = { headers, rows, mapped };
+      
+      // ★追加：新規取得したデータを localStorage に保存
+      saveHarborCacheToStorage(harborCache);
+      
+      console.log('[✅ Harbor Cache] harbors loaded:', mapped.length);
       LOG.tide("harbors loaded:", mapped.length);
       return harborCache;
     }
@@ -3908,37 +4500,89 @@
       return R * 2 * Math.asin(Math.sqrt(a));
     }
 
-    // ★追加：Harbor キャッシュを確保（同期・キャッシュ待機保証）
+    // ★修正：Harbor キャッシュを確保（localStorage 優先）
     async function ensureHarborCache() {
       try {
-        await loadHarborsFromSheet();
-        if (!harborCache || !harborCache.mapped || harborCache.mapped.length === 0) {
+        console.log('[ensureHarborCache] ★ Ensuring harbor cache...');
+        
+        // ★修正：localStorage から直接取得
+        let cache = getHarborCacheFromStorage();
+        
+        if (cache && cache.mapped && cache.mapped.length > 0) {
+          console.log('[ensureHarborCache] ✅ Harbor cache loaded from localStorage:', cache.mapped.length, 'ports');
+          return cache;
+        }
+        
+        // フォールバック：localStorage にない場合のみシート取得
+        console.log('[ensureHarborCache] ⚠️ Harbor cache not in localStorage, loading from sheet...');
+        cache = await loadHarborsFromSheet();
+        
+        if (!cache || !cache.mapped || cache.mapped.length === 0) {
           throw new Error('Harbor cache is empty');
         }
-        return harborCache;
+        
+        console.log('[ensureHarborCache] ✅ Harbor cache loaded from sheet:', cache.mapped.length, 'ports');
+        return cache;
       } catch (e) {
+        console.error('[ensureHarborCache] ❌ Error:', e?.message || e);
         LOG.tide('[ensureHarborCache] Error:', e?.message || e);
         throw e;
       }
     }
 
+    /**
+     * ★修正版：localStorage から港データを直接取得して最近接港を検出
+     * 
+     * GAS経由のシート取得を廃止し、localStorage キャッシュを使用
+     * フロント側で距離計算実行
+     */
     async function findNearestHarbor(lat, lon, radiusKm = 10){
-      const hc = await loadHarborsFromSheet();
-
-      // まずは要求の半径（既定10km）で探索
-      const scan = (rkm) => hc.mapped
+      console.log('[findNearestHarbor] ★ Searching nearest harbor for coordinates:', { lat, lon, radiusKm });
+      
+      // ★修正：localStorage から港データを直接取得
+      const storedHarborCache = getHarborCacheFromStorage();
+      
+      if (!storedHarborCache || !storedHarborCache.mapped || storedHarborCache.mapped.length === 0) {
+        console.warn('[findNearestHarbor] ⚠️ Harbor data not found in localStorage, attempting to load from sheet...');
+        try {
+          const hc = await loadHarborsFromSheet();
+          if (!hc || !hc.mapped) {
+            console.error('[findNearestHarbor] ❌ Failed to load harbor data');
+            return null;
+          }
+          storedHarborCache = hc;
+        } catch (err) {
+          console.error('[findNearestHarbor] ❌ Error:', err.message);
+          return null;
+        }
+      }
+      
+      // 距離計算関数
+      const scan = (rkm) => storedHarborCache.mapped
         .map(h => ({ ...h, dist: haversineDistance(lat, lon, h.lat, h.lon) }))
         .filter(h => h.dist <= rkm)
-        .sort((a,b)=> a.dist - b.dist);
+        .sort((a, b) => a.dist - b.dist);
 
+      // 要求の半径で探索
       let candidates = scan(radiusKm);
-      if (candidates.length > 0) return candidates[0];
-
-      // ★追加: 見つからなければ 30km に拡張して再試行
-      if (radiusKm < 30){
-        candidates = scan(30);
-        if (candidates.length > 0) return candidates[0];
+      if (candidates.length > 0) {
+        console.log('[findNearestHarbor] ✅ Found', candidates.length, 'harbor(s) within', radiusKm, 'km');
+        console.log('[findNearestHarbor] Nearest harbor:', candidates[0]);
+        return candidates[0];
       }
+
+      // ★修正：見つからなければ 30km に拡張して再試行
+      if (radiusKm < 30) {
+        console.log('[findNearestHarbor] ℹ️ No harbor within', radiusKm, 'km, expanding search to 30km...');
+        candidates = scan(30);
+        if (candidates.length > 0) {
+          console.log('[findNearestHarbor] ✅ Found', candidates.length, 'harbor(s) within 30km');
+          console.log('[findNearestHarbor] Nearest harbor:', candidates[0]);
+          return candidates[0];
+        }
+      }
+      
+      console.warn('[findNearestHarbor] ❌ No harbor found within range');
       return null;
     }
 
@@ -4304,11 +4948,18 @@
       let tideJson = null;
       try{
         const res = await fetch(url);
-        if (!res.ok){ LOG.tide("tide http error", res.status); return null; }
+        if (!res.ok){
+          const msg = `潮汐情報取得失敗: ${res.status}`;
+          showError(msg);
+          LOG.tide("tide http error", res.status);
+          return null;
+        }
         tideJson = await res.json();
         console.log('[fetchTideForStart] ✅ API Response received:', tideJson);
         console.log('[fetchTideForStart] Chart keys:', Object.keys(tideJson?.tide?.chart || {}));
       }catch(e){
+        const msg = `潮汐情報取得失敗: ${e?.message}`;
+        showError(msg);
         LOG.tide("tide fetch failed", e?.message);
         return null;
       }
@@ -5389,7 +6040,7 @@
         document.querySelector('input[name="tripsSortOption"][value="newest"]').checked = true;
 
         // 全件表示
-        renderTripsList(allTripsItems);
+        renderTripsList([tripsCache[0], ...allTripsItems]);
         
         // localStorage をクリア
         try {
@@ -5520,6 +6171,7 @@
     // クリアボタンのハンドラ
     document.getElementById('btnClearTrips').onclick = () => { 
       tripsCache = null; 
+      allTripsItems = []; 
       tripListEl.innerHTML = ''; 
       tripDetailWrap.classList.add('hidden'); 
       tripStatus.textContent = '';
@@ -5774,7 +6426,8 @@
           </div>
           <div class="text-sm text-slate-400" data-role="trip-catches-loading">読み込み中...</div>
           <div class="grid md:grid-cols-2 gap-3 mt-2" data-role="trip-catches-list"></div>
-          <div class="flex justify-end mt-3">
+          <div class="flex justify-end gap-2 mt-3">
+            <button type="button" data-role="trip-delete" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 rounded text-white text-xs font-medium">🗑️ 削除</button>
             <button type="button" data-role="trip-edit" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-white text-xs font-medium">✎ 編集</button>
           </div>
         `;
@@ -6222,6 +6875,86 @@
           }
         };
 
+        // 「削除」ボタンの処理
+        detail.querySelector('[data-role="trip-delete"]').onclick = async (e)=>{
+          e.stopPropagation();
+          console.log('[TripCard] delete button clicked, tripId:', thisTripId);
+          
+          const confirmed = confirm(
+            `⚠️ 警告：この釣行（ID: ${thisTripId.slice(0, 8)}）を削除します。\n\n` +
+            `以下が削除されます：\n` +
+            `• 釣行レコード\n` +
+            `• すべての釣果データ\n\n` +
+            `本当に削除しますか？`
+          );
+          
+          if (confirmed) {
+            const doubleConfirm = confirm('本当に削除してもよろしいですか？\n（この操作は取り消せません）');
+            if (doubleConfirm) {
+              try {
+                showUploadingOverlay('削除中...');
+                
+                const workerUrl = (CONFIG.API.FISHING_TRIP_API_WORKER || '').replace(/\/$/, '') + '/api/deleteTrip';
+                if (!workerUrl || !CONFIG.API.FISHING_TRIP_API_WORKER) {
+                  hideUploadingOverlay();
+                  showError('Worker エンドポイントが設定されていません');
+                  return;
+                }
+
+                const payload = {
+                  action: 'deleteTrip',
+                  tripId: thisTripId
+                };
+
+                const response = await fetch(workerUrl, {
+                  method: 'POST',
+                  headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Auth-Token': CONFIG.API.WORKERS_AUTH_TOKEN || ''
+                  },
+                  body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                  const errorText = await response.text();
+                  hideUploadingOverlay();
+                  console.error('[TripCard] delete API error:', errorText);
+                  showError(`削除に失敗しました（HTTP ${response.status}）`);
+                  return;
+                }
+
+                const result = await response.json();
+                hideUploadingOverlay();
+
+                if (result.ok) {
+                  showSuccess(
+                    `✅ 釣行を削除しました\n` +
+                    `削除: 釣行 ${result.deleted?.trips || 0} / 釣果 ${result.deleted?.catches || 0}`
+                  );
+                  
+                  LOG.app('[TripCard] delete success', {
+                    tripId: thisTripId,
+                    deleted: result.deleted
+                  });
+
+                  // 詳細を閉じて、リストを再読込
+                  wrap.open = false;
+                  tripsCache = null;
+                  autoLoadTrips();
+                } else {
+                  showError(`削除に失敗しました: ${result.error || '不明なエラー'}`);
+                  LOG.app('[TripCard] delete API error', result);
+                }
+              } catch (err) {
+                hideUploadingOverlay();
+                console.error('[TripCard] delete error:', err);
+                showError(`削除エラー: ${err.message}`);
+                LOG.app('[TripCard] delete exception', err);
+              }
+            }
+          }
+        };
+
         // 開閉に合わせて hover を無効/有効化
         wrap.addEventListener('toggle', () => {
           if (wrap.open) summary.classList.remove('hover:bg-slate-800/60');
@@ -6377,6 +7110,15 @@
       console.log('[startTrip] 🟦 START startTrip');
       // ★修正：CONFIG初期化完了を待機（API呼び出し前の必須処理）
       await configInitPromise;
+      
+      // ★追加：SheetID空チェック（初回起動時の保護）
+      if (!SHEET_ID) {
+        const msg = 'シートIDが設定されていません。';
+        showError(msg);
+        console.error('[startTrip] ❌ SHEET_ID is not set');
+        return;
+      }
+      
       showUploadingOverlay('釣行を開始しています...');
 
       let startedThisCall = false;
@@ -6477,12 +7219,14 @@
             console.warn("[continueStartTripAfterLocationSelection] ❌ Water temp fetch failed:", e?.message||e);
           }
           
-          // 潮流画像取得対象かどうかをGASで判定
+          // 潮流画像取得対象かどうかをフロント側で判定（座標ベース）
           console.log('[continueStartTripAfterLocationSelection] 🌀 Checking tide image eligibility...');
           try {
-            const gasResponse = await findNearestHarbor(draft.selected_location_lat, draft.selected_location_lng);
-            console.log('[continueStartTripAfterLocationSelection] ℹ️ GAS response received:', gasResponse);
-            draft.shouldFetchTideImages = isTideImageEligible(gasResponse);
+            // ★修正：座標を直接渡す（修正後のisTideImageEligibleは座標ベース）
+            draft.shouldFetchTideImages = isTideImageEligible({
+              lat: draft.selected_location_lat,
+              lng: draft.selected_location_lng
+            });
             console.log('[continueStartTripAfterLocationSelection] ✅ Tide image flag set:', draft.shouldFetchTideImages ? 'WILL_FETCH' : 'SKIP');
           } catch (e) {
             console.warn('[continueStartTripAfterLocationSelection] ❌ Tide image check failed:', e.message);
@@ -7351,6 +8095,20 @@
       catchForm.weight_g  = inpWeight.value ? Number(inpWeight.value) : null;
       catchForm.method    = inpMethod.value || '';
 
+      // ★追加：基本的なバリデーション
+      if (catchForm.size_cm !== null && catchForm.size_cm < 0) {
+        const msg = 'サイズは0以上を指定してください';
+        showError(msg);
+        hideUploadingOverlay();
+        return;
+      }
+      if (catchForm.weight_g !== null && catchForm.weight_g < 0) {
+        const msg = '重さは0以上を指定してください';
+        showError(msg);
+        hideUploadingOverlay();
+        return;
+      }
+
       // ★修正：潮汐ロジックは写真処理(EXIF)後に移動
 
       // 写真アップロード - EXIF 処理の後に timestamp を最終決定
@@ -7909,6 +8667,7 @@
     const btnCloseUploadReview = document.getElementById('btnCloseUploadReview');
     const btnCancelUpload = document.getElementById('btnCancelUpload');
     const btnConfirmUpload = document.getElementById('btnConfirmUpload');
+    const btnDeleteTrip = document.getElementById('btnDeleteTrip');
     
     // ★追加: 釣行編集モーダル要素
     const tripEditModal = document.getElementById('tripEditModal');
@@ -8013,6 +8772,13 @@
       pendingEnd=null; 
       uploadReviewModal.classList.add('hidden'); 
     };
+    
+    // ★追加：削除ボタンのイベントハンドラー
+    if (btnDeleteTrip) {
+      btnDeleteTrip.onclick = () => {
+        confirmAndDeleteTrip((uploadReviewDraftBackup || draft).tripId);
+      };
+    }
 
     btnConfirmUpload.onclick = async ()=>{
       // ★追加：多重アップロード防止
@@ -8225,6 +8991,108 @@
         // ★追加：潮汐チャート画像情報
         tide_chart_images: d.tide_chart_images || []
       };
+    }
+
+    /* ★追加：釣行削除関数 */
+    function confirmAndDeleteTrip(tripId) {
+      if (!tripId) {
+        showError('削除対象の釣行IDが不明です');
+        return;
+      }
+      
+      // 二段階確認ダイアログ
+      const confirmed = confirm(
+        `⚠️ 警告：この釣行（ID: ${tripId.slice(0, 8)}）を削除します。\n\n` +
+        `以下が削除されます：\n` +
+        `• 釣行レコード\n` +
+        `• すべての釣果データ\n` +
+        `• 関連する潮汐チャート\n\n` +
+        `本当に削除しますか？`
+      );
+      
+      if (confirmed) {
+        const doubleConfirm = confirm('本当に削除してもよろしいですか？\n（この操作は取り消せません）');
+        if (doubleConfirm) {
+          deleteTrip(tripId);
+        }
+      }
+    }
+
+    async function deleteTrip(tripId) {
+      try {
+        if (!tripId) {
+          showError('削除対象の釣行IDが不明です');
+          return;
+        }
+
+        showUploadingOverlay('削除中...');
+        
+        const workerUrl = (CONFIG.API.FISHING_TRIP_API_WORKER || '').replace(/\/$/, '') + '/api/deleteTrip';
+        if (!workerUrl || !CONFIG.API.FISHING_TRIP_API_WORKER) {
+          hideUploadingOverlay();
+          showError('Worker エンドポイントが設定されていません');
+          return;
+        }
+
+        const payload = {
+          action: 'deleteTrip',
+          tripId: tripId
+        };
+
+        const response = await fetch(workerUrl, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-Auth-Token': CONFIG.API.WORKERS_AUTH_TOKEN || ''
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          hideUploadingOverlay();
+          console.error('[deleteTrip] API error:', errorText);
+          showError(`削除に失敗しました（HTTP ${response.status}）`);
+          return;
+        }
+
+        const result = await response.json();
+        hideUploadingOverlay();
+
+        if (result.ok) {
+          showSuccess(
+            `✅ 釣行を削除しました\n` +
+            `削除: 釣行 ${result.deleted?.trips || 0} / 釣果 ${result.deleted?.catches || 0}`
+          );
+          
+          LOG.app('[deleteTrip] success', {
+            tripId,
+            deleted: result.deleted
+          });
+
+          // UIをクローズして、ホーム画面に戻る
+          document.body.style.overflow = 'auto';
+          uploadReviewModal.classList.add('hidden');
+          
+          // ドラフトをリセット
+          resetDraft();
+          pendingEnd = null;
+          uploadReviewDraftBackup = null;
+          
+          // ホーム画面に戻す
+          setTimeout(() => {
+            showView('home');
+          }, 500);
+        } else {
+          showError(`削除に失敗しました: ${result.error || '不明なエラー'}`);
+          LOG.app('[deleteTrip] API returned error', result);
+        }
+      } catch (err) {
+        hideUploadingOverlay();
+        console.error('[deleteTrip] error:', err);
+        showError(`削除エラー: ${err.message}`);
+        LOG.app('[deleteTrip] exception', err);
+      }
     }
 
     // 終了前レビュー
@@ -10673,8 +11541,81 @@
 
   <!-- ★修正：バージョン情報フッター（ホーム画面でのみ表示） -->
   <footer id="versionFooter" class="fixed bottom-0 left-0 right-0 z-0 bg-slate-950/95 border-t border-slate-800 text-xs text-slate-400 text-center py-2 pb-safe">
-    <span id="versionInfo">Fishing_Log_dev | v1.3.0</span>
+    <span id="versionInfo">Fishing_Log_dev | v1.2.0</span>
   </footer>
+
+  <!-- ★追加：エラー・通知表示エリア -->
+  <div id="notificationArea" class="fixed top-4 right-4 z-50 max-w-sm space-y-2"></div>
+
+  <!-- ★追加：港選択モーダルマップ -->
+  <div id="mapModalOverlay" class="hidden fixed inset-0 bg-black/50 z-40"></div>
+  <div id="mapModal" class="hidden fixed inset-4 bg-slate-900 border border-slate-800 rounded-lg z-50 flex flex-col overflow-hidden" onclick="event.stopPropagation()">
+    <!-- ヘッダー -->
+    <div class="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-950">
+      <h2 class="text-lg font-semibold text-slate-100">📍 港を選択</h2>
+      <button onclick="closeMapModal()" class="text-slate-400 hover:text-slate-200">✕</button>
+    </div>
+
+    <!-- メインコンテンツ（マップのみ） -->
+    <div class="flex flex-1 overflow-hidden">
+      <!-- マップ（全幅） -->
+      <div class="flex-1 min-w-0">
+        <div id="mapView" class="w-full h-full bg-slate-800"></div>
+      </div>
+    </div>
+
+    <!-- フッター（ボタン） -->
+    <div class="flex justify-end gap-2 p-4 border-t border-slate-800 bg-slate-950">
+      <button onclick="closeMapModal()" class="px-4 py-2 rounded bg-slate-700 text-slate-200 hover:bg-slate-600 transition">キャンセル</button>
+      <button onclick="confirmMapSelection()" class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition">決定</button>
+    </div>
+  </div>
+
+  <style>
+    #mapModal {
+      max-width: 90vw;
+      max-height: 90vh;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    .port-item-modal {
+      padding: 0.75rem;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 150ms;
+      font-size: 0.875rem;
+      color: #cbd5e1;
+      background-color: #1e293b;
+    }
+
+    .port-item-modal:hover {
+      background-color: #334155;
+      border-left: 3px solid #3b82f6;
+    }
+
+    .port-item-modal.selected {
+      background-color: #1e40af;
+      border-left: 3px solid #60a5fa;
+      color: #f0f9ff;
+      font-weight: 500;
+    }
+
+    .port-item-modal-name {
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+    }
+
+    .port-item-modal-coords {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      margin-top: 0.25rem;
+    }
+
+    .port-item-modal.selected .port-item-modal-coords {
+      color: #bfdbfe;
+    }
+  </style>
+
 </body>
 </html>
 
