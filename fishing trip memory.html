@@ -1094,12 +1094,34 @@
 
     // 非同期で設定値を読み込み
     const loadConfigFromStorage = async () => {
+      // ★修正：sessionStorage を優先、なければ configStorage から読み込み
+      let authToken = null;
+      try {
+        authToken = sessionStorage.getItem('WORKERS_AUTH_TOKEN');
+        if (authToken) {
+          console.log('[CONFIG] ✅ Token loaded from sessionStorage (secure)');
+        }
+      } catch (e) {
+        console.warn('[CONFIG] sessionStorage unavailable:', e.message);
+      }
+      
+      if (!authToken) {
+        authToken = await configStorage.getItem('WORKERS_AUTH_TOKEN');
+        if (authToken) {
+          console.log('[CONFIG] Token loaded from configStorage, syncing to sessionStorage');
+          try {
+            sessionStorage.setItem('WORKERS_AUTH_TOKEN', authToken);
+          } catch (e) {
+            console.warn('[CONFIG] Could not sync to sessionStorage:', e.message);
+          }
+        }
+      }
+      
+      CONFIG.API.WORKERS_AUTH_TOKEN = authToken || "";
+
       // ★デバッグ：各値を読み込んでログ出力
       const val_FISHING_TRIP_API_WORKER = await configStorage.getItem('FISHING_TRIP_API_WORKER');
       CONFIG.API.FISHING_TRIP_API_WORKER = val_FISHING_TRIP_API_WORKER || 'https://fishing-trip-api.yuji-fallline2999m.workers.dev';
-      
-      const val_WORKERS_AUTH_TOKEN = await configStorage.getItem('WORKERS_AUTH_TOKEN');
-      CONFIG.API.WORKERS_AUTH_TOKEN = val_WORKERS_AUTH_TOKEN || "";
 
       // ★Worker URL を storage から読み込む
       try {
@@ -1134,17 +1156,17 @@
       
       // ★追加：デバッグログ：読み込んだ値を表示
       
-      // デバッグ：localStorage と IndexedDB の値を比較（エラーハンドリング付き）
+      // デバッグ：sessionStorage と設定の値を比較（セキュリティチェック）
       try {
-        let lsToken = null;
+        let ssToken = null;
         try {
-          lsToken = localStorage.getItem('WORKERS_AUTH_TOKEN');
-        } catch (lsError) {
-          console.warn('[CONFIG] localStorage unavailable for debugging:', lsError.message);
+          ssToken = sessionStorage.getItem('WORKERS_AUTH_TOKEN');
+        } catch (ssError) {
+          console.warn('[CONFIG] sessionStorage unavailable for debugging:', ssError.message);
         }
         
-        if (lsToken && CONFIG.API.WORKERS_AUTH_TOKEN && lsToken !== CONFIG.API.WORKERS_AUTH_TOKEN) {
-          console.warn('[CONFIG] WARNING: localStorage and loaded token mismatch!');
+        if (ssToken && CONFIG.API.WORKERS_AUTH_TOKEN && ssToken !== CONFIG.API.WORKERS_AUTH_TOKEN) {
+          console.warn('[CONFIG] WARNING: sessionStorage and loaded token mismatch!');
         }
       } catch (e) {
         console.warn('[CONFIG] Could not compare tokens:', e.message);
@@ -1496,7 +1518,7 @@
             // ★追加：Worker からのエラー詳細情報を表示
             if (err?.error) msg += ` - ${err.error}`;
             if (err?.detail) msg += `: ${err.detail}`;
-            if (err?.message) msg += `: ${err.message}`;
+            if (err?.message) msg += ': エラーが発生しました';
             console.error("[fetchWeather] Worker error details:", err);
           } catch {}
           console.error("[fetchWeather] Worker returned error:", msg);
@@ -1530,7 +1552,7 @@
         
         return mapWeather(j, lat, lng);
       } catch (err) {
-        const msg = `天気取得失敗: ${err.message}`;
+        const msg = `天気取得失敗: エラーが発生しました`;
         showError(msg);
         console.error("[fetchWeather] Error:", err);
         throw err;
@@ -1849,7 +1871,7 @@
     const mappingStatus   = document.getElementById('mappingStatus');
 
     const LS_MAP_KEY_PREFIX = 'fishlog_mapping_v1';
-    const mappingKey = () => `${LS_MAP_KEY_PREFIX}:${SHEET_ID}:${SHEET_NAME}`;
+    const mappingKey = () => `${LS_MAP_KEY_PREFIX}:catches`;  // ★修正：SHEET_ID を除外して固定キー化
 
     async function readSavedMapping(){
       try { 
@@ -1965,9 +1987,9 @@
         if (!json.ok) throw new Error(json.error || 'Unknown error');
         return json.data; // [[header...], [row1...], [row2...], ...]
       } catch (err) {
-        const msg = `シート読込み失敗 (${sheetName}): ${err.message}`;
+        const msg = `シート読込み失敗: エラーが発生しました`;
         showError(msg);
-        throw new Error(`Sheet load error (${sheetName}): ${err.message}`);
+        throw new Error(`エラー: シート読込み失敗`);
       }
     }
 
@@ -2072,6 +2094,19 @@
         return [ymd, hm].filter(Boolean).join(' ');
       }
       return '';
+    }
+
+    // ★追加：XSS対策用エスケープ関数
+    function escapeHtml(text) {
+      if (typeof text !== 'string') text = String(text || '');
+      const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      };
+      return text.replace(/[&<>"']/g, m => map[m]);
     }
 
     document.getElementById('btnLoadSheet').onclick = async () => {
@@ -2470,9 +2505,11 @@
     // ラベル:値 の行
     function kv(label, value){
       if (!value && value !== 0) return '';
+      // ★修正：XSS対策でエスケープを追加
+      const escapedValue = escapeHtml(value);
       return `<div class="flex justify-between gap-3 text-sm">
         <div class="text-slate-400">${label}</div>
-        <div class="text-slate-200 text-right break-all">${value}</div>
+        <div class="text-slate-200 text-right break-all">${escapedValue}</div>
       </div>`;
     }
 
@@ -2622,38 +2659,38 @@
             <div class="space-y-3">
               <div class="rounded-xl bg-slate-800/30 p-3 space-y-1">
                 <div class="text-xs text-slate-400">基本情報</div>
-                ${kv('魚種', it.species || '')}
-                ${kv('サイズ', (it.size || it.size===0) ? `${it.size} cm` : '')}
-                ${kv('重量', (it.weight || it.weight===0) ? `${it.weight} g` : '')}
-                ${kv('方法', it.method || '')}
+                ${kv('魚種', escapeHtml(it.species || ''))}
+                ${kv('サイズ', (it.size || it.size===0) ? `${escapeHtml(it.size)} cm` : '')}
+                ${kv('重量', (it.weight || it.weight===0) ? `${escapeHtml(it.weight)} g` : '')}
+                ${kv('方法', escapeHtml(it.method || ''))}
               </div>
 
               ${(it.place || it.lat || it.lng) ? `
                 <div class="rounded-xl bg-slate-800/30 p-3 space-y-1">
                   <div class="text-xs text-slate-400">位置</div>
-                  ${kv('地点', it.place || '')}
-                  ${kv('緯度', it.lat || '')}
-                  ${kv('経度', it.lng || '')}
+                  ${kv('地点', escapeHtml(it.place || ''))}
+                  ${kv('緯度', escapeHtml(it.lat || ''))}
+                  ${kv('経度', escapeHtml(it.lng || ''))}
                 </div>` : ''}
 
               ${(it.tideName || it.tideTrend || (it.tideLevel || it.tideLevel===0) || it.tide_high_times || it.tide_low_times) ? `
                 <div class="rounded-xl bg-slate-800/30 p-3 space-y-1">
                   <div class="text-xs text-slate-400">潮</div>
                   <div class="flex flex-wrap items-center gap-2 mb-1">
-                    ${it.tideName  ? pill(it.tideName, 'sky') : ''}
-                    ${it.tideTrend ? pill(it.tideTrend, 'emerald') : ''}
-                    ${(it.tideLevel || it.tideLevel===0) ? pill(`${it.tideLevel} cm`, 'violet') : ''}
+                    ${it.tideName  ? pill(escapeHtml(it.tideName), 'sky') : ''}
+                    ${it.tideTrend ? pill(escapeHtml(it.tideTrend), 'emerald') : ''}
+                    ${(it.tideLevel || it.tideLevel===0) ? pill(`${escapeHtml(it.tideLevel)} cm`, 'violet') : ''}
                   </div>
-                  ${kv('満潮', it.tide_high_times || '')}
-                  ${kv('干潮', it.tide_low_times  || '')}
+                  ${kv('満潮', escapeHtml(it.tide_high_times || ''))}
+                  ${kv('干潮', escapeHtml(it.tide_low_times  || ''))}
                 </div>` : ''}
 
               <!-- ★追加: 水温（Trips由来を it.* に展開済み） -->
               ${(it.water_temp_c!=='' || it.water_temp_point || it.water_temp_time) ? `
                 <div class="rounded-xl bg-slate-800/30 p-3 space-y-1">
                   <div class="text-xs text-slate-400">水温</div>
-                  ${kv('水温', (it.water_temp_c!=='' ? `${it.water_temp_c} ℃` : ''))}
-                  ${kv('地点', it.water_temp_point || '')}
+                  ${kv('水温', (it.water_temp_c!=='' ? `${escapeHtml(it.water_temp_c)} ℃` : ''))}
+                  ${kv('地点', escapeHtml(it.water_temp_point || ''))}
                 </div>` : ''}
 
               <!-- ★追加：潮汐グラフ（水温とメモの間） -->
@@ -2937,10 +2974,11 @@
         </div>
       ` : '';
 
+      // ★修正：XSS対策でnotesをエスケープ
       const notesCard = it.notes ? `
         <div class="rounded-2xl bg-slate-900 border border-slate-800 p-3">
           <div class="text-xs text-slate-400 mb-1">メモ</div>
-          <div class="text-sm text-slate-200 whitespace-pre-line">${it.notes}</div>
+          <div class="text-sm text-slate-200 whitespace-pre-line">${escapeHtml(it.notes)}</div>
         </div>` : '';
 
       body.innerHTML = `
@@ -3304,7 +3342,7 @@
           // 送信後、入力値をクリア（フロント側には保持しない）
           if (sheetIdEl) sheetIdEl.value = '';
         } else {
-          if (sheetConfigStatus) sheetConfigStatus.textContent = 'エラー: ' + (json.message || '不明');
+          if (sheetConfigStatus) sheetConfigStatus.textContent = 'エラーが発生しました';
         }
       } catch (err) {
         console.error('[Settings] saveSheetConfigToGAS error:', err);
@@ -3326,30 +3364,36 @@
       }
       
       try {
-        // 古い値をクリア
+        // ★計薸：localStorage から頙也くを削除
         try {
           localStorage.removeItem('WORKERS_AUTH_TOKEN');
+          console.log('[Token] Removed old token from localStorage for security');
         } catch (e) {
-          console.warn('[Settings] Failed to clear old token:', e.message);
+          console.warn('[Token] Failed to clear old token from localStorage:', e.message);
         }
         
-        // 新しい値を保存
-        await configStorage.setItem('WORKERS_AUTH_TOKEN', token);
+        // ★計薸：sessionStorage に保存（セキュア）
+        try {
+          sessionStorage.setItem('WORKERS_AUTH_TOKEN', token);
+          console.log('[Token] ✅ Saved to sessionStorage (secure, deleted on browser restart)');
+        } catch (e) {
+          console.error('[Token] Failed to save to sessionStorage:', e.message);
+          if (status) status.textContent = 'sessionStorage を使用できません';
+          return;
+        }
         
-        // ★修正：storage に保存したら、すぐに CONFIG に反映
+        // CONFIG に反映
         CONFIG.API.WORKERS_AUTH_TOKEN = token;
         
-        // ★追加：Token 保存後に Worker URL を再取得
+        // Token 保存後に Worker URL を再取得
         await fetchAndSaveWorkerUrls();
         
-        // ★追加：Token 保存後に SHEET_ID を再取得
         if (status) {
           status.textContent = '✓ 保存しました（Worker URL と SHEET_IDを取得中...）';
         }
         
         await initializeSheetId();
         
-        // ★追加：Token を再読み込みして確認
         if (status) {
           if (SHEET_ID) {
             status.textContent = '✓ 保存しました（SHEET_ID取得完了）';
@@ -6948,7 +6992,7 @@
               } catch (err) {
                 hideUploadingOverlay();
                 console.error('[TripCard] delete error:', err);
-                showError(`削除エラー: ${err.message}`);
+                showError(`削除エラー: エラーが発生しました`);
                 LOG.app('[TripCard] delete exception', err);
               }
             }
@@ -9090,7 +9134,7 @@
       } catch (err) {
         hideUploadingOverlay();
         console.error('[deleteTrip] error:', err);
-        showError(`削除エラー: ${err.message}`);
+        showError(`削除エラー: エラーが発生しました`);
         LOG.app('[deleteTrip] exception', err);
       }
     }
@@ -11541,7 +11585,7 @@
 
   <!-- ★修正：バージョン情報フッター（ホーム画面でのみ表示） -->
   <footer id="versionFooter" class="fixed bottom-0 left-0 right-0 z-0 bg-slate-950/95 border-t border-slate-800 text-xs text-slate-400 text-center py-2 pb-safe">
-    <span id="versionInfo">Fishing_Log_dev | v1.3.0</span>
+    <span id="versionInfo">Fishing_Log_dev | v1.4.0</span>
   </footer>
 
   <!-- ★追加：エラー・通知表示エリア -->
@@ -11618,3 +11662,6 @@
 
 </body>
 </html>
+
+
+
