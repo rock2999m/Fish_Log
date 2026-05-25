@@ -12,7 +12,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Fishing Log">
-  <title>釣行記録_dev（PWAフロント / コンパクトUI）</title>
+  <!-- ★Version: 1.5.0 - 2026-05-25 -->
+  <!-- ★Updates: オーバーレイ実装完了, 水温取得ロジック統一実装 -->
+  <title>釣行記録 v1.5.0（PWAフロント / コンパクトUI）</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* ★追加：入力フォーム自動ズーム抑制 */
@@ -1733,41 +1735,372 @@
     async function getWaterTempForManualEntry(lat, lng, startedAtIso, isManual = false) {
       if (!isManual) return null;
       
-      const startDate = new Date(startedAtIso);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      startDate.setHours(0, 0, 0, 0);
+      // ★修正：新しい統一関数を使用（当日 → leisure-api → MUR）
+      const result = await getWaterTempForManualEntryUnified(lat, lng, startedAtIso);
       
-      LOG.app("[WaterTemp] getWaterTempForManualEntry check", {
-        startedAtIso,
-        startDateStr: startDate.toISOString().substring(0, 10),
-        todayStr: today.toISOString().substring(0, 10),
-        isToday: startDate.getTime() === today.getTime()
-      });
-      
-      // 開始日が今日以外なら、過去データから取得
-      if (startDate.getTime() !== today.getTime()) {
-        const dateStr = startedAtIso.substring(0, 10); // "YYYY-MM-DD"
-        LOG.app("[WaterTemp] requesting past data for date", { dateStr });
-        const pastData = await getWaterTempForDate(lat, lng, dateStr);
-        if (pastData) {
-          LOG.app("[WaterTemp] got past data successfully", pastData);
-          return pastData;
-        } else {
-          LOG.app("[WaterTemp] past data not found, will fallback to today");
-        }
-      } else {
-        LOG.app("[WaterTemp] start date is today, will use current temp");
+      if (result) {
+        LOG.app("[WaterTemp] got water temp successfully", {
+          temperature_c: result.temperature_c,
+          source: result.source
+        });
+        return result;
       }
       
-      // ★修正：当日の場合も null ではなく、startedAtIso の日付を含めたオブジェクトを返す
-      // これにより、catchForm.water_temp.date が常に適切な値を持つようになる
-      const dateStr = startedAtIso.substring(0, 10);  // "YYYY-MM-DD" 形式
+      // fallback: 日付情報だけ返す
+      const dateStr = startedAtIso.substring(0, 10);
+      LOG.app("[WaterTemp] No temp found, returning date only", { dateStr });
+      
       return {
-        temperature_c: null,  // 当日データは fetchWaterTempForPoint() などで別途取得
-        date: startedAtIso,   // ISO 形式で渡された日時をそのまま返す
+        temperature_c: null,
+        date: startedAtIso,
         isFromManualEntry: true
       };
+    }
+    
+    // ============================================================
+    // ★新規実装①：当日専用の水温取得
+    // ============================================================
+    /**
+     * 当日専用水温取得（シンプル版）
+     * 
+     * 用途: 新規釣行開始時
+     * 特徴: 当日データのみ、leisure-api (forecast) のみ使用
+     * フォールバック: なし（失敗すれば null）
+     */
+    async function getWaterTempForTodayOnly(lat, lon) {
+      try {
+        // Step 1: 最寄りポイント検索
+        const point = await findNearestWaterTempPoint(lat, lon, 30);
+        if (!point) {
+          LOG.app('[getWaterTempForTodayOnly] No nearest point found');
+          return null;
+        }
+        
+        // Step 2: Worker URL を取得
+        let waterWorkerUrl = CONFIG.API.WATER_WORKER_URL;
+        try {
+          const stored = await configStorage.getItem('WORKER_URLS');
+          if (stored) {
+            const data = typeof stored === 'string' ? JSON.parse(stored) : stored;
+            if (data.WATER_WORKER_URL) {
+              waterWorkerUrl = data.WATER_WORKER_URL;
+              CONFIG.API.WATER_WORKER_URL = waterWorkerUrl;
+            }
+          }
+        } catch (err) {
+          console.warn('[getWaterTempForTodayOnly] Failed to load Worker URL:', err);
+        }
+        
+        if (!waterWorkerUrl || /your[_-]?worker/i.test(waterWorkerUrl)) {
+          LOG.app('[getWaterTempForTodayOnly] Worker URL not configured');
+          return null;
+        }
+        
+        // Step 3: leisure-api (forecast型) で当日データ取得
+        const today = getTodayDateKeyJST();  // "YYYY-MM-DD" 形式
+        const base = `https://leisure-api-prod.n-kishou.co.jp/get-sea-water-temperature?code=${encodeURIComponent(point.code)}&type=forecast`;
+        const proxyUrl = `${waterWorkerUrl.replace(/\/$/, '')}/proxy?url=${encodeURIComponent(base)}`;
+        
+        LOG.app('[getWaterTempForTodayOnly] Fetching today data', {
+          point_code: point.code,
+          point_name: point.name,
+          today
+        });
+        
+        const res = await fetch(proxyUrl, { method: 'GET', timeout: 10000 });
+        
+        if (!res.ok) {
+          LOG.app('[getWaterTempForTodayOnly] API returned error', { status: res.status });
+          return null;
+        }
+        
+        const data = await res.json();
+        const list = data?.result_list?.data?.graph_data_main || [];
+        
+        if (list.length === 0) {
+          LOG.app('[getWaterTempForTodayOnly] No data in response');
+          return null;
+        }
+        
+        // Step 4: 当日のデータを検索
+        const matched = list.find(x => 
+          typeof x?.datetime === 'string' && x.datetime.startsWith(today)
+        );
+        
+        if (!matched) {
+          LOG.app('[getWaterTempForTodayOnly] No data for today', {
+            today,
+            available_dates_count: [...new Set(list.map(d => d.datetime?.substring(0, 10)))].length
+          });
+          return null;
+        }
+        
+        const temp = parseFloat(matched.temperature);
+        
+        LOG.app('[getWaterTempForTodayOnly] Success', {
+          temperature_c: temp,
+          date: today,
+          point_name: point.name
+        });
+        
+        return {
+          temperature_c: isFinite(temp) ? Math.round(temp * 10) / 10 : null,
+          date: today,
+          point_name: point.name,
+          point_code: point.code,
+          source: 'leisure-api-forecast'
+        };
+        
+      } catch (err) {
+        console.error('[getWaterTempForTodayOnly] Exception:', err);
+        LOG.app('[getWaterTempForTodayOnly] Exception', { error: err?.message || String(err) });
+        return null;
+      }
+    }
+    
+    // ============================================================
+    // ★新規実装②：統一水温取得（手動追加・編集用）
+    // ============================================================
+    /**
+     * 手動釣行・釣果追加、編集画面用統一水温取得
+     * 
+     * フォールバック順序: 当日 → leisure-api (90日) → MUR (2002年～)
+     * 
+     * 用途:
+     * - 手動釣行追加時
+     * - 手動釣果追加時
+     * - 編集画面での潮汐・水温再取得
+     */
+    async function getWaterTempForManualEntryUnified(lat, lon, targetDate) {
+      try {
+        const targetDateStr = extractDateString(targetDate);  // "YYYY-MM-DD"
+        const today = getTodayDateKeyJST();
+        const isToday = targetDateStr === today;
+        
+        LOG.app('[getWaterTempForManualEntryUnified] Start', {
+          lat: lat?.toFixed?.(4),
+          lon: lon?.toFixed?.(4),
+          targetDate: targetDateStr,
+          today,
+          isToday
+        });
+        
+        // ========================================
+        // Step 1: 当日用ロジック
+        // ========================================
+        if (isToday) {
+          console.log('[getWaterTempForManualEntryUnified] Attempting Step1 (today logic)...');
+          const result = await getWaterTempForTodayOnly(lat, lon);
+          
+          if (result) {
+            LOG.app('[getWaterTempForManualEntryUnified] ✅ Step1 succeeded', {
+              temperature_c: result.temperature_c,
+              source: result.source
+            });
+            return result;
+          }
+          
+          LOG.app('[getWaterTempForManualEntryUnified] Step1 failed, proceeding to Step2');
+        }
+        
+        // ========================================
+        // Step 2: leisure-api (past型, 90日対応)
+        // ========================================
+        console.log('[getWaterTempForManualEntryUnified] Attempting Step2 (leisure-api past)...');
+        
+        const leisureResult = await (async () => {
+          try {
+            // 最寄りポイント検索
+            const point = await findNearestWaterTempPoint(lat, lon, 30);
+            if (!point) {
+              LOG.app('[Step2-leisure] No nearest point found');
+              return null;
+            }
+            
+            // Worker URL 取得
+            let waterWorkerUrl = CONFIG.API.WATER_WORKER_URL;
+            try {
+              const stored = await configStorage.getItem('WORKER_URLS');
+              if (stored) {
+                const data = typeof stored === 'string' ? JSON.parse(stored) : stored;
+                if (data.WATER_WORKER_URL) {
+                  waterWorkerUrl = data.WATER_WORKER_URL;
+                  CONFIG.API.WATER_WORKER_URL = waterWorkerUrl;
+                }
+              }
+            } catch (err) {
+              // スキップ
+            }
+            
+            if (!waterWorkerUrl || /your[_-]?worker/i.test(waterWorkerUrl)) {
+              LOG.app('[Step2-leisure] Worker URL not configured');
+              return null;
+            }
+            
+            // leisure-api (past型) で過去データ取得
+            const base = `https://leisure-api-prod.n-kishou.co.jp/get-sea-water-temperature?code=${encodeURIComponent(point.code)}&type=past`;
+            const proxyUrl = `${waterWorkerUrl.replace(/\/$/, '')}/proxy?url=${encodeURIComponent(base)}`;
+            
+            LOG.app('[Step2-leisure] Requesting past data', {
+              point_code: point.code,
+              point_name: point.name,
+              target_date: targetDateStr
+            });
+            
+            const res = await fetch(proxyUrl, { method: 'GET', timeout: 10000 });
+            
+            if (!res.ok) {
+              LOG.app('[Step2-leisure] API error', { status: res.status });
+              return null;
+            }
+            
+            const data = await res.json();
+            const list = data?.result_list?.data?.graph_data_main || [];
+            
+            if (list.length === 0) {
+              LOG.app('[Step2-leisure] Empty response', { point_code: point.code });
+              return null;
+            }
+            
+            // 利用可能期間を検査
+            const firstDate = list[0]?.datetime?.substring(0, 10);
+            const lastDate = list[list.length - 1]?.datetime?.substring(0, 10);
+            
+            if (targetDateStr < firstDate || targetDateStr > lastDate) {
+              LOG.app('[Step2-leisure] Target date out of range', {
+                target_date: targetDateStr,
+                available_from: firstDate,
+                available_to: lastDate
+              });
+              return null;
+            }
+            
+            // 対象日付のデータを検索
+            const matched = list.find(x => 
+              typeof x?.datetime === 'string' && x.datetime.startsWith(targetDateStr)
+            );
+            
+            if (!matched) {
+              LOG.app('[Step2-leisure] Date not found in records', {
+                target_date: targetDateStr
+              });
+              return null;
+            }
+            
+            const temp = parseFloat(matched.temperature);
+            
+            LOG.app('[Step2-leisure] ✅ Found', {
+              temperature_c: temp,
+              date: targetDateStr,
+              point_name: point.name
+            });
+            
+            return {
+              temperature_c: isFinite(temp) ? Math.round(temp * 10) / 10 : null,
+              date: targetDateStr,
+              point_name: point.name,
+              point_code: point.code,
+              source: 'leisure-api-past'
+            };
+            
+          } catch (err) {
+            LOG.app('[Step2-leisure] Exception', { error: err?.message || String(err) });
+            return null;
+          }
+        })();
+        
+        if (leisureResult) {
+          LOG.app('[getWaterTempForManualEntryUnified] ✅ Step2 succeeded', {
+            temperature_c: leisureResult.temperature_c,
+            source: leisureResult.source
+          });
+          return leisureResult;
+        }
+        
+        LOG.app('[getWaterTempForManualEntryUnified] Step2 failed, proceeding to Step3');
+        
+        // ========================================
+        // Step 3: MUR-SST (超長期対応, 2002年～)
+        // ========================================
+        console.log('[getWaterTempForManualEntryUnified] Attempting Step3 (MUR via GAS)...');
+        
+        try {
+          const murResult = await fetchWaterTempViaGasMur(lat, lon, targetDate);
+          
+          if (murResult) {
+            LOG.app('[getWaterTempForManualEntryUnified] ✅ Step3 succeeded', {
+              temperature_c: murResult.temperature_c,
+              source: 'mur-sst'
+            });
+            return murResult;
+          }
+          
+          LOG.app('[getWaterTempForManualEntryUnified] Step3 returned null');
+          
+        } catch (err) {
+          LOG.app('[getWaterTempForManualEntryUnified] Step3 exception', {
+            error: err?.message || String(err)
+          });
+        }
+        
+        // ========================================
+        // すべて失敗
+        // ========================================
+        LOG.app('[getWaterTempForManualEntryUnified] ❌ All steps failed, returning null', {
+          target_date: targetDateStr
+        });
+        
+        return null;
+        
+      } catch (err) {
+        console.error('[getWaterTempForManualEntryUnified] Fatal exception:', err);
+        LOG.app('[getWaterTempForManualEntryUnified] Fatal error', {
+          error: err?.message || String(err),
+          stack: err?.stack?.substring?.(0, 200)
+        });
+        return null;
+      }
+    }
+    
+    // ============================================================
+    // ★ヘルパー関数
+    // ============================================================
+    
+    /**
+     * 日付文字列を "YYYY-MM-DD" 形式で抽出
+     */
+    function extractDateString(dateInput) {
+      if (!dateInput) {
+        return getTodayDateKeyJST();
+      }
+      
+      if (typeof dateInput === 'string') {
+        const trimmed = dateInput.trim();
+        if (trimmed.length === 10 && trimmed.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          return trimmed;
+        }
+        // ISO形式と見なす
+        const parsed = new Date(trimmed);
+        if (!isNaN(parsed)) {
+          return parsed.toISOString().substring(0, 10);
+        }
+      }
+      
+      if (dateInput instanceof Date && !isNaN(dateInput)) {
+        return dateInput.toISOString().substring(0, 10);
+      }
+      
+      // フォールバック: 今日
+      return getTodayDateKeyJST();
+    }
+    
+    /**
+     * 今日の日付を "YYYY-MM-DD" 形式で取得（JST）
+     */
+    function getTodayDateKeyJST() {
+      const now = new Date();
+      const jst = new Date(now.getTime() + (9 * 60 * 60 * 1000));  // UTC+9
+      return jst.toISOString().substring(0, 10);
     }
     
     // ★追加：水温取得の統一入口（getWaterTempForDate と getWaterTempForManualEntry を統合）
@@ -7256,7 +7589,8 @@
           console.log('[continueStartTripAfterLocationSelection] 🌡️ Fetching water temp...');
           try{
             if (DEBUG_WATER) LOG.wt("continueStartTripAfterLocationSelection: fetch water temp", { lat: draft.selected_location_lat, lng: draft.selected_location_lng });
-            draft.start_water_temp = await fetchTodayWaterTempByNearest(draft.selected_location_lat, draft.selected_location_lng);
+            // ★修正: 新規釣行開始は当日のみなので getWaterTempForTodayOnly() を使用
+            draft.start_water_temp = await getWaterTempForTodayOnly(draft.selected_location_lat, draft.selected_location_lng);
             console.log('[continueStartTripAfterLocationSelection] ✅ Water temp fetched:', { temp_c: draft.start_water_temp?.temperature_c, pointName: draft.start_water_temp?.point_name });
             if (DEBUG_WATER) LOG.wt("continueStartTripAfterLocationSelection: water temp result", draft.start_water_temp);
           }catch(e){
@@ -7306,7 +7640,8 @@
 
     // ★追加：位置選択モーダルを表示
     async function showLocationSelectionModal(lat, lng) {
-      hideUploadingOverlay();
+      // ★修正：最初の hideUploadingOverlay() を削除し、位置候補取得中もオーバーレイを表示
+      showUploadingOverlay('位置を確認中...');
       console.log('[LocationModal] 🟦 START showLocationSelectionModal', { lat, lng });
       
       try {
@@ -7346,6 +7681,7 @@
           };
           pendingLocationConfirmation = false;
           console.log('[LocationModal] ℹ️ Default candidate set:', selectedLocationCandidate);
+          hideUploadingOverlay();  // ★修正：エラー時もオーバーレイを隠す
           return; // モーダル表示を中止
         }
 
@@ -7403,6 +7739,7 @@
         alert('位置選択に失敗しました: ' + e.message);
         selectedLocationCandidate = null;
         LOG.app('[LocationModal] Error in showLocationSelectionModal', { message: e.message });
+        hideUploadingOverlay();  // ★修正：例外時もオーバーレイを隠す
       }
     }
 
@@ -7504,6 +7841,8 @@
           lng: draft.selected_location_lng,
           name: draft.selected_location_name
         });
+        // ★修正：オーバーレイを表示して位置候補取得を保護
+        showUploadingOverlay('位置を特定中...');
         (async () => {
           try {
             // 水温APIを使用して位置候補を取得
@@ -7518,14 +7857,18 @@
               : [];
             console.log('[openAddCatch] ✅ Location candidates fetched (normal mode):', { count: candidates?.length || 0, candidates: candidates });
             updateLocationSelector(candidates || [], false);  // catchModal用
+            hideUploadingOverlay();  // ★修正：位置特定完了後に隠す
           } catch (err) {
             console.error('[openAddCatch] ❌ Failed to fetch location candidates:', err?.message || err);
             updateLocationSelector([], false);
+            hideUploadingOverlay();  // ★修正：エラー時も隠す
           }
         })();
       } else if (isManualMode) {
+        hideUploadingOverlay();  // ★修正：手動モードではオーバーレイを隠す
         console.log('[openAddCatch] 📸 MANUAL MODE: Waiting for photo upload (EXIF priority)');
       } else {
+        hideUploadingOverlay();  // ★修正：位置情報がない場合も隠す
         console.log('[openAddCatch] ℹ️ No selected location available');
       }
 
@@ -9683,12 +10026,13 @@
 
         if (!timestamps.length) {
           LOG.app("[Complement] startedAt not decided (no valid timestamps)");
-        } else if (!draft.startedAt) {
+        } else if (!draft.startedAt && !draft.manualStarted) {
+          // ★修正: manualStarted フラグがある場合は上書きしない（ユーザー入力値を優先）
           const min = timestamps.reduce((a,b)=> a.t<b.t ? a : b);
           draft.startedAt = toOffsetIsoLocal(new Date(min.t));
           LOG.app("[Complement] decided startedAt (filled)", { startedAt: draft.startedAt, sample: timestamps[0]?.raw || null });
         } else {
-          LOG.app("[Complement] kept startedAt", { startedAt: draft.startedAt, manual: !!hasManualFlag });
+          LOG.app("[Complement] kept startedAt", { startedAt: draft.startedAt, manual: !!hasManualFlag, manualStartedFlag: draft.manualStarted });
         }
       }
       
@@ -11585,7 +11929,7 @@
 
   <!-- ★修正：バージョン情報フッター（ホーム画面でのみ表示） -->
   <footer id="versionFooter" class="fixed bottom-0 left-0 right-0 z-0 bg-slate-950/95 border-t border-slate-800 text-xs text-slate-400 text-center py-2 pb-safe">
-    <span id="versionInfo">Fishing_Log_dev | v1.4.1</span>
+    <span id="versionInfo">Fishing_Log_dev | v1.4.0</span>
   </footer>
 
   <!-- ★追加：エラー・通知表示エリア -->
