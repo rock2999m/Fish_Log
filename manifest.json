@@ -1,10 +1,10 @@
 {
-  "name": "Fishing Trip Memory",
-  "short_name": "FishTrip",
+  "name": "Fishing Log",
+  "short_name": "Fishing Log",
   "version": "1.5.0",
   "description": "釣行記録アプリ - 釣果、潮汐、天気を自動で記録",
-  "start_url": "/dev_Fish_Log/Untitled-1.html",
-  "scope": "/dev_Fish_Log/",
+  "start_url": "/Fish_Log/fishing trip memory",
+  "scope": "/Fish_Log/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#ffffff",
@@ -12,13 +12,13 @@
   "categories": ["productivity", "lifestyle"],
   "icons": [
     {
-      "src": "/dev_Fish_Log/icon-192.png",
+      "src": "/Fish_Log/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/dev_Fish_Log/icon-512.png",
+      "src": "/Fish_Log/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
