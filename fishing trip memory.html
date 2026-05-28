@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="Fishing Log">
   <!-- ★Version: 1.5.0 - 2026-05-25 -->
   <!-- ★Updates: オーバーレイ実装完了, 水温取得ロジック統一実装 -->
-  <title>釣行記録 v1.5.0（PWAフロント / コンパクトUI）</title>
+  <title>釣行記録 v1.5.1（PWAフロント / コンパクトUI）</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* ★追加：入力フォーム自動ズーム抑制 */
@@ -164,8 +164,11 @@
             </div>
           </div>
           
-          <!-- ★追加：データ再取得ボタン -->
-          <button id="btnRefetchCompData" class="mt-3 w-full py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm font-semibold">🔄 データ再取得（天気・潮汐）</button>
+          <!-- ★修正：データ再取得ボタン（分割） -->
+          <div class="grid grid-cols-2 gap-3 mt-3">
+            <button id="btnRefetchCompData" class="py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm font-semibold">🔄 天気・潮汐</button>
+            <button id="btnRefetchWaterTemp" class="py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm font-semibold">🌡️ 水温</button>
+          </div>
         </div>
 
         <!-- 釣果リスト -->
@@ -1877,6 +1880,14 @@
         const today = getTodayDateKeyJST();
         const isToday = targetDateStr === today;
         
+        console.log('[getWaterTempForManualEntryUnified] Input dates:', {
+          raw_targetDate: targetDate,
+          extracted_targetDateStr: targetDateStr,
+          today: today,
+          isToday,
+          targetDate_type: typeof targetDate
+        });
+        
         LOG.app('[getWaterTempForManualEntryUnified] Start', {
           lat: lat?.toFixed?.(4),
           lon: lon?.toFixed?.(4),
@@ -1913,9 +1924,16 @@
             // 最寄りポイント検索
             const point = await findNearestWaterTempPoint(lat, lon, 30);
             if (!point) {
+              console.warn('[Step2-leisure] No nearest point found');
               LOG.app('[Step2-leisure] No nearest point found');
               return null;
             }
+            
+            console.log('[Step2-leisure] Nearest point found:', { 
+              code: point.code, 
+              name: point.name,
+              dist_km: point.dist?.toFixed?.(2)  // ← point.dist に統一
+            });
             
             // Worker URL 取得
             let waterWorkerUrl = CONFIG.API.WATER_WORKER_URL;
@@ -1941,6 +1959,13 @@
             const base = `https://leisure-api-prod.n-kishou.co.jp/get-sea-water-temperature?code=${encodeURIComponent(point.code)}&type=past`;
             const proxyUrl = `${waterWorkerUrl.replace(/\/$/, '')}/proxy?url=${encodeURIComponent(base)}`;
             
+            console.log('[Step2-leisure] API call details:', {
+              point_code: point.code,
+              point_name: point.name,
+              target_date: targetDateStr,
+              proxyUrl: proxyUrl.substring(0, 100)
+            });
+            
             LOG.app('[Step2-leisure] Requesting past data', {
               point_code: point.code,
               point_name: point.name,
@@ -1949,15 +1974,24 @@
             
             const res = await fetch(proxyUrl, { method: 'GET', timeout: 10000 });
             
+            console.log('[Step2-leisure] Response:', { status: res.status, ok: res.ok });
+            
             if (!res.ok) {
+              console.warn('[Step2-leisure] API error status:', res.status);
               LOG.app('[Step2-leisure] API error', { status: res.status });
               return null;
             }
             
             const data = await res.json();
+            console.log('[Step2-leisure] Response data:', {
+              has_result_list: !!data?.result_list,
+              list_length: data?.result_list?.data?.graph_data_main?.length || 0
+            });
+            
             const list = data?.result_list?.data?.graph_data_main || [];
             
             if (list.length === 0) {
+              console.warn('[Step2-leisure] Empty response');
               LOG.app('[Step2-leisure] Empty response', { point_code: point.code });
               return null;
             }
@@ -1966,7 +2000,15 @@
             const firstDate = list[0]?.datetime?.substring(0, 10);
             const lastDate = list[list.length - 1]?.datetime?.substring(0, 10);
             
+            console.log('[Step2-leisure] Date range check:', {
+              target_date: targetDateStr,
+              available_from: firstDate,
+              available_to: lastDate,
+              in_range: targetDateStr >= firstDate && targetDateStr <= lastDate
+            });
+            
             if (targetDateStr < firstDate || targetDateStr > lastDate) {
+              console.warn('[Step2-leisure] Target date out of range');
               LOG.app('[Step2-leisure] Target date out of range', {
                 target_date: targetDateStr,
                 available_from: firstDate,
@@ -1980,7 +2022,10 @@
               typeof x?.datetime === 'string' && x.datetime.startsWith(targetDateStr)
             );
             
+            console.log('[Step2-leisure] Match result:', { found: !!matched });
+            
             if (!matched) {
+              console.warn('[Step2-leisure] Date not found in records');
               LOG.app('[Step2-leisure] Date not found in records', {
                 target_date: targetDateStr
               });
@@ -1988,6 +2033,12 @@
             }
             
             const temp = parseFloat(matched.temperature);
+            
+            console.log('[Step2-leisure] ✅ Found temperature:', {
+              temperature_c: temp,
+              date: targetDateStr,
+              point_name: point.name
+            });
             
             LOG.app('[Step2-leisure] ✅ Found', {
               temperature_c: temp,
@@ -2004,6 +2055,10 @@
             };
             
           } catch (err) {
+            console.error('[Step2-leisure] Exception caught:', {
+              message: err?.message || String(err),
+              stack: err?.stack?.substring?.(0, 200)
+            });
             LOG.app('[Step2-leisure] Exception', { error: err?.message || String(err) });
             return null;
           }
@@ -5815,7 +5870,7 @@
         method: 'mur',
         lat,
         lng: lon,
-        startedAt: isoTime
+        time: isoTime  // ← GAS_sst_proxy.gs が期待する 'time' キーに変更
       };
 
       if (DEBUG_WATER) LOG.wt('requesting GAS water temp', { workerUrl, payload });
@@ -5847,12 +5902,57 @@
         let json;
         try {
           json = JSON.parse(text);
+          console.log('[fetchWaterTempViaGasMur] JSON parsed successfully');
         } catch {
+          console.error('[fetchWaterTempViaGasMur] JSON parse error, raw response:', text?.substring(0, 500));
           throw new Error('GASから無効なJSONが返されました');
         }
 
-        if (!res.ok || !json?.ok) {
+        // ★修正：レスポンス構造のデバッグログ
+        console.log('[fetchWaterTempViaGasMur] Response structure:', {
+          ok: json?.ok,
+          error: json?.error,
+          bestValue: json?.bestValue,
+          bestPoint: json?.bestPoint,
+          attempts: json?.attempts,  // ← 失敗理由を見るため attempts を追加
+          keys: json ? Object.keys(json) : 'null'
+        });
+        
+        // ★追加：attempts の詳細をログ出力
+        if (Array.isArray(json?.attempts) && json.attempts.length > 0) {
+          console.log('[fetchWaterTempViaGasMur] Detailed attempts (count):', json.attempts.length);
+          json.attempts.forEach((a, idx) => {
+            console.log(`[fetchWaterTempViaGasMur] Attempt ${idx}:`, {
+              radiusDeg: a.radiusDeg,
+              error: a.error,
+              detail: a.detail?.substring?.(0, 300)  // 300文字まで
+            });
+          });
+        } else {
+          console.log('[fetchWaterTempViaGasMur] No attempts array or empty');
+        }
+
+        // ★修正：レスポンスをグローバルに保存（デバッグ用）
+        window._lastGasResponse = json;
+        
+        // ★詳細ログ：attempts の URL を個別に出力
+        if (Array.isArray(json?.attempts)) {
+          console.log('[fetchWaterTempViaGasMur] ★ Attempt URLs (complete):');
+          json.attempts.forEach((att, idx) => {
+            console.log(`Attempt ${idx} (radiusDeg=${att.radiusDeg}, error=${att.error}):`);
+            console.log(att.targetUrl);  // URL を単独で出力（行が長くても全部表示される）
+          });
+        }
+
+        // ★修正：HTTP 200 かつ何らかのデータが返されていれば OK
+        if (!res.ok) {
           throw new Error(json?.error || `HTTP ${res.status}`);
+        }
+
+        // データが返されていることを確認
+        if (!json || (typeof json.bestValue !== 'number' && !json?.bestPoint?.value)) {
+          console.warn('[fetchWaterTempViaGasMur] No temperature data in response');
+          throw new Error('MUR からデータが返されませんでした');
         }
 
         const tempRaw = json.bestValue ?? json.bestPoint?.value ?? null;
@@ -11077,6 +11177,82 @@
       };
     }
     
+    // ★追加：水温再取得ボタンのハンドラ
+    const btnRefetchWaterTemp = document.getElementById('btnRefetchWaterTemp');
+    if (btnRefetchWaterTemp) {
+      btnRefetchWaterTemp.onclick = async () => {
+        // ★修正：CONFIG初期化完了を待機（API呼び出し前の必須処理）
+        await configInitPromise;
+        
+        console.log('[btnRefetchWaterTemp] clicked');
+        
+        // ★修正：draft.startedAt を常に使用（手動釣行記録と同じパターン）
+        let targetDate = draft.startedAt;
+        if (!targetDate) {
+          alert('開始日時が設定されていません');
+          return;
+        }
+        
+        console.log('[btnRefetchWaterTemp] Using draft.startedAt:', targetDate);
+        
+        let lat = parseFloat(editTripLat.value);
+        let lng = parseFloat(editTripLng.value);
+        
+        if (!isFinite(lat) || !isFinite(lng)) {
+          // 入力がなければ draft から取得
+          lat = parseFloat(draft.lat);
+          lng = parseFloat(draft.lng);
+        }
+        
+        if (!isFinite(lat) || !isFinite(lng)) {
+          alert('位置情報が設定されていません');
+          return;
+        }
+        
+        // ★追加：位置情報と最寄り地点をログ出力
+        console.log('[btnRefetchWaterTemp] Position:', { lat, lng });
+        const nearestForDebug = await findNearestWaterTempPoint(lat, lng, 30);
+        console.log('[btnRefetchWaterTemp] Nearest point (for debug):', { 
+          code: nearestForDebug?.code, 
+          name: nearestForDebug?.name,
+          dist_km: nearestForDebug?.dist?.toFixed?.(2)
+        });
+        
+        if (!targetDate) {
+          alert('開始日時が設定されていません');
+          return;
+        }
+        
+        console.log('[btnRefetchWaterTemp] refetching with:', { lat, lng, targetDate });
+        
+        try {
+          // ボタンを無効化
+          btnRefetchWaterTemp.disabled = true;
+          btnRefetchWaterTemp.style.opacity = '0.5';
+          
+          // ★修正：手動釣行記録と完全に同じパターン（常に draft.lat, draft.lng を使用）
+          const waterTemp = await getWaterTempForManualEntry(draft.lat, draft.lng, targetDate, true);
+          draft.start_water_temp = waterTemp || null;
+          console.log('[btnRefetchWaterTemp] Water temp refetched:', waterTemp);
+          
+          // draft を保存
+          saveDraft(draft);
+          
+          // UI を更新（editTripWaterTemp を更新）
+          updateEditModalCompData();
+          
+          alert('水温を再取得しました');
+        } catch (e) {
+          console.error('[btnRefetchWaterTemp] error:', e);
+          alert('水温の再取得に失敗しました: ' + (e?.message || e));
+        } finally {
+          // ボタンを有効化
+          btnRefetchWaterTemp.disabled = false;
+          btnRefetchWaterTemp.style.opacity = '1';
+        }
+      };
+    }
+    
     // 写真プレビュー + EXIF から日時を補完
     const editFormCatchPhoto = document.getElementById('editFormCatchPhoto');
     if (editFormCatchPhoto) {
@@ -11743,12 +11919,10 @@
       // ★修正：有効な位置情報がある場合は補完データを再取得（最新の日時・位置を使用）
       const hasValidPosition = isFinite(draft.lat) && isFinite(draft.lng);
       if (hasValidPosition) {
-        // ★修正：水温を保持してからリセット
-        const preservedWaterTemp = draft.start_water_temp;
-        
         // 補完データをリセット
         draft.start_weather = null;
         draft.start_tide = null;
+        draft.start_water_temp = null;  // ★修正：水温もリセット
         draft.tide_daily_cache = {};
         
         try {
@@ -11784,8 +11958,17 @@
             }
           }
           
-          // ★修正：水温は再取得せず、保持した値を復元
-          draft.start_water_temp = preservedWaterTemp;
+          // ★修正：水温も再取得（3段階フォールバック対応）
+          if (draft.startedAt) {
+            try {
+              const waterTemp = await getWaterTempForManualEntryUnified(draft.lat, draft.lng, draft.startedAt);
+              draft.start_water_temp = waterTemp || null;
+              LOG.app('[submitTripEditData] Water temp refetched successfully:', { temperature_c: waterTemp?.temperature_c, source: waterTemp?.source });
+            } catch (waterErr) {
+              LOG.app('[submitTripEditData] Water temp refetch error:', waterErr?.message || waterErr);
+              draft.start_water_temp = null;
+            }
+          }
         } catch (e) {
           LOG.app('[submitTripEditData] Data refetch error:', e?.message || e);
           // Refetch error - continue with whatever data is available
@@ -11929,7 +12112,7 @@
 
   <!-- ★修正：バージョン情報フッター（ホーム画面でのみ表示） -->
   <footer id="versionFooter" class="fixed bottom-0 left-0 right-0 z-0 bg-slate-950/95 border-t border-slate-800 text-xs text-slate-400 text-center py-2 pb-safe">
-    <span id="versionInfo">Fishing_Log_dev | v1.4.0</span>
+    <span id="versionInfo">Fishing_Log_dev | v1.5.1</span>
   </footer>
 
   <!-- ★追加：エラー・通知表示エリア -->
