@@ -12,9 +12,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Fishing Log">
-  <!-- ★Version: 1.5.0 - 2026-05-25 -->
-  <!-- ★Updates: オーバーレイ実装完了, 水温取得ロジック統一実装 -->
-  <title>釣行記録 v1.5.2（PWAフロント / コンパクトUI）</title>
+  <!-- ★Version: 1.5.4 - 2026-06-10 -->
+  <!-- ★Updates: 通常釣行のモーダル表示ロジック統一 / 手動釣行との一貫性向上 -->
+  <title>釣行記録 v1.5.4（PWAフロント / コンパクトUI）</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* ★追加：入力フォーム自動ズーム抑制 */
@@ -1339,7 +1339,7 @@
       const da = pad(d.getDate());
       const hh = pad(d.getHours());
       const mi = pad(d.getMinutes());
-      const ss = pad(d.getSeconds());
+      const ss = '00';  // ★修正（v1.5.2b）：秒は常に 00 に統一
       const offMin = -d.getTimezoneOffset();
       const sign = offMin >= 0 ? '+' : '-';
       const abs = Math.abs(offMin);
@@ -1352,6 +1352,19 @@
       if (!d || isNaN(d.getTime())) return '';
       const pad = n => String(n).padStart(2,'0');
       return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    // ★追加（v1.5.2b）：ISO タイムスタンプ文字列の秒を 00 に正規化
+    function normalizeTimestampSeconds(timestamp) {
+      if (!timestamp || typeof timestamp !== 'string') return timestamp;
+      // ISO 8601 形式: "2026-06-01T10:30:45+09:00" を "2026-06-01T10:30:00+09:00" に変換
+      const isoPattern = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}):\d{2}([+-]\d{2}:\d{2})$/;
+      const match = timestamp.match(isoPattern);
+      if (match) {
+        return `${match[1]}:00${match[2]}`;
+      }
+      // パターンに一致しない場合はそのまま返す
+      return timestamp;
     }
 
     function formatDigitsForNumericDatetime(digits){
@@ -1408,6 +1421,7 @@
         if (day < 1 || day > 31) return null;
         if (hour < 0 || hour > 23) return null;
         if (minute < 0 || minute > 59) return null;
+        // ★修正（v1.5.2b）：秒は常に 00 に統一
         const dt = new Date(year, month - 1, day, hour, minute, 0, 0);
         if (!isNaN(dt.getTime())) return dt;
       }
@@ -1416,9 +1430,9 @@
         const now = new Date();
         const hour = parseInt(timeOnlyMatch[1], 10);
         const minute = parseInt(timeOnlyMatch[2], 10);
-        const second = parseInt(timeOnlyMatch[3] || '0', 10);
-        if ([hour, minute, second].some(v => Number.isNaN(v))) return null;
-        const dt = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minute, second);
+        // ★修正（v1.5.2b）：秒は常に 00 に統一
+        if ([hour, minute].some(v => Number.isNaN(v))) return null;
+        const dt = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minute, 0);
         if (!isNaN(dt.getTime())) return dt;
       }
       return null;
@@ -2778,7 +2792,8 @@
             rec.water_temp_c    = (iWtC>=0 ? r[iWtC] : '');
             const rawPoint = (iWtP>=0 ? r[iWtP] : '');
             rec.water_temp_point= (iWtP>=0 ? String(r[iWtP]) : '');
-            rec.water_temp_time = (iWtT>=0 ? r[iWtT] : '');
+            // ★修正（v1.5.2b）：水温時刻も正規化
+            rec.water_temp_time = (iWtT>=0 ? normalizeTimestampSeconds(r[iWtT]) : '');
           } else if (iRaw>=0 && r[iRaw]) {
             // フォールバック：raw_json.start_water_temp を見る
             try{
@@ -2787,7 +2802,8 @@
               if (wt){
                 rec.water_temp_c     = (wt.temperature_c ?? '');
                 rec.water_temp_point = (String(wt.point_name ?? ''));
-                rec.water_temp_time  = (wt.date ?? '');
+                // ★修正（v1.5.2b）：raw_json の date も正規化
+                rec.water_temp_time  = (normalizeTimestampSeconds(wt.date) ?? '');
               }
             }catch{}
           }
@@ -3577,7 +3593,8 @@
         }
       }
     };
-    const fmtLocal = iso => { try{return new Date(iso).toLocaleString();}catch{return '—'}; };
+    // ★修正（v1.5.2b）：秒を表示しない（分までとする）
+    const fmtLocal = iso => { try{return new Date(iso).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });}catch{return '—'}; };
 
     let draft = loadDraft();
     
@@ -4797,7 +4814,7 @@
     
     // ★追加：localStorage キャッシュ定義
     const HARBOR_CACHE_KEY = 'harborData_fishing_trip';
-    const HARBOR_CACHE_TTL = 24 * 60 * 60 * 1000; // 24時間（ミリ秒）
+    // ★修正：TTL を削除 - キャッシュは削除されるまで有効（港一覧はほぼ更新されないため）
 
     /**
      * ★追加：localStorage から港データキャッシュを読み込む
@@ -4811,17 +4828,15 @@
         }
         
         const parsed = JSON.parse(stored);
-        const timestamp = parsed.timestamp || 0;
-        const age = Date.now() - timestamp;
         
-        // 24時間以内かつデータがあるか確認
-        if (age < HARBOR_CACHE_TTL && parsed.data) {
-          console.log('[✅ Harbor Cache] Loaded from localStorage, age:', Math.round(age / 1000 / 60), 'min, data count:', parsed.data.mapped ? parsed.data.mapped.length : '?');
-          LOG.tide('[Harbor Cache] Loaded from localStorage, age:', Math.round(age / 1000 / 60), 'min');
+        // ★修正：TTL チェックを削除 - キャッシュが存在すれば常に使用
+        if (parsed.data) {
+          console.log('[✅ Harbor Cache] Loaded from localStorage, data count:', parsed.data.mapped ? parsed.data.mapped.length : '?');
+          LOG.tide('[Harbor Cache] Loaded from localStorage');
           return parsed.data;
         }
-        console.log('[⏰ Harbor Cache] Cache expired or invalid, age:', Math.round(age / 1000 / 60), 'min');
-        LOG.tide('[Harbor Cache] Cache expired or invalid, age:', Math.round(age / 1000 / 60), 'min');
+        console.log('[⏰ Harbor Cache] Cache data is invalid');
+        LOG.tide('[Harbor Cache] Cache data is invalid');
         return null;
       } catch (err) {
         console.warn('[❌ Harbor Cache] Failed to parse localStorage:', err.message);
@@ -5339,6 +5354,10 @@
 
     // ===== 開始時の潮 =====
     async function fetchTideForStart(lat, lon, startedAtIso){
+      // ★追加：デバッグ用のログ
+      console.log('[fetchTideForStart] 🔍 DEBUG called with startedAtIso:', startedAtIso);
+      console.log('[fetchTideForStart] 🔍 DEBUG parsed date:', new Date(startedAtIso));
+      
       // ★修正：CONFIG初期化完了を待機（API呼び出し前の必須処理）
       await configInitPromise;
       
@@ -5355,10 +5374,16 @@
       
       if (!CONFIG.API.TIDE_WORKER_URL || CONFIG.API.TIDE_WORKER_URL.includes("your-worker")) {
         LOG.tide("TIDE_WORKER_URL が未設定のためスキップ");
+        console.log('[fetchTideForStart] 🔍 DEBUG TIDE_WORKER_URL is not set:', CONFIG.API.TIDE_WORKER_URL);
         return null;
       }
       const harbor = await findNearestHarbor(lat, lon, 10);
-      if (!harbor) { LOG.tide("近傍港が見つかりません"); return null; }
+      if (!harbor) { 
+        LOG.tide("近傍港が見つかりません"); 
+        console.log('[fetchTideForStart] 🔍 DEBUG No harbor found');
+        return null; 
+      }
+      console.log('[fetchTideForStart] 🔍 DEBUG Harbor found:', { pc: harbor.pc, hc: harbor.hc, hn: harbor.hn });
 
       const d = new Date(startedAtIso);
       
@@ -5397,22 +5422,32 @@
       }
 
       const chartAll = tideJson?.tide?.chart && typeof tideJson.tide.chart === 'object' ? tideJson.tide.chart : null;
-      if (!chartAll) { LOG.tide("no chart in response"); return null; }
-      console.log('[fetchTideForStart] chartAll keys:', Object.keys(chartAll));
+      if (!chartAll) { 
+        LOG.tide("no chart in response"); 
+        console.log('[fetchTideForStart] 🔍 DEBUG No chart in response:', { tideJson });
+        return null; 
+      }
+      console.log('[fetchTideForStart] 🔍 DEBUG chartAll keys:', Object.keys(chartAll));
 
       // ★修正：chartDateKey は実際の釣行開始日付から決定
       const key1 = `${actualYr}-${actualMn}-${actualDy}`;
       const key2 = `${actualYr}-${String(actualMn).padStart(2,'0')}-${String(actualDy).padStart(2,'0')}`;
+      console.log('[fetchTideForStart] 🔍 DEBUG Trying to find chart with key1:', key1, 'or key2:', key2);
       let chartDateKey = null;
       let chart = null;
-      if (chartAll[key1]) { chartDateKey = key1; chart = chartAll[key1]; }
-      else if (chartAll[key2]) { chartDateKey = key2; chart = chartAll[key2]; }
+      if (chartAll[key1]) { chartDateKey = key1; chart = chartAll[key1]; console.log('[fetchTideForStart] 🔍 DEBUG Found with key1'); }
+      else if (chartAll[key2]) { chartDateKey = key2; chart = chartAll[key2]; console.log('[fetchTideForStart] 🔍 DEBUG Found with key2'); }
       else {
         const keys = Object.keys(chartAll).sort().reverse();
         chartDateKey = keys[0] || null;
         chart = chartDateKey ? chartAll[chartDateKey] : null;
+        console.log('[fetchTideForStart] 🔍 DEBUG Fallback to first key:', chartDateKey);
       }
-      if (!chart) { LOG.tide("chart not found even after fallback"); return null; }
+      if (!chart) { 
+        LOG.tide("chart not found even after fallback"); 
+        console.log('[fetchTideForStart] 🔍 DEBUG chart is null even after fallback');
+        return null; 
+      }
       console.log('[fetchTideForStart] Selected chart date key:', chartDateKey);
       console.log('[fetchTideForStart] Chart edd:', chart?.edd);
       console.log('[fetchTideForStart] Chart flood:', chart?.flood);
@@ -6761,8 +6796,9 @@
         const r = rows[i];
 
         const thisTripId = col.tripId>=0 ? (r[col.tripId] || '') : '';
-        const started = col.startedAt>=0 ? (r[col.startedAt] || '') : '';
-        const ended   = col.endedAt>=0   ? (r[col.endedAt]   || '') : '';
+        // ★修正（v1.5.2b）：シートから読み込んだタイムスタンプを正規化
+        const started = col.startedAt>=0 ? normalizeTimestampSeconds(r[col.startedAt] || '') : '';
+        const ended   = col.endedAt>=0   ? normalizeTimestampSeconds(r[col.endedAt] || '')   : '';
         const count   = Number(col.catches>=0 ? (r[col.catches] || 0) : 0);
 
         const moonV = col.moon_v>=0 ? (r[col.moon_v] || '') : '';
@@ -6982,8 +7018,9 @@
             draft = {
               tripId: tripRow[col.tripId] || '',
               status: tripRow[col.status] || 'ended',
-              startedAt: tripRow[col.startedAt] || null,
-              endedAt: tripRow[col.endedAt] || null,
+              // ★修正（v1.5.2b）：シートからロードした tripRow のタイムスタンプを正規化
+              startedAt: normalizeTimestampSeconds(tripRow[col.startedAt]) || null,
+              endedAt: normalizeTimestampSeconds(tripRow[col.endedAt]) || null,
               lat: parseFloat(tripRow[col.pos_lat]) || null,
               lng: parseFloat(tripRow[col.pos_lng]) || null,
               start_weather: tripRow[col.start_weather_main] ? {
@@ -6996,7 +7033,8 @@
               start_water_temp: tripRow[col.water_temp_c] ? {
                 temperature_c: parseFloat(tripRow[col.water_temp_c]) || null,
                 point_name: String(tripRow[col.water_temp_point] || '') || null,
-                date: tripRow[col.water_temp_time] || null
+                // ★修正（v1.5.2b）：水温の日時も正規化
+                date: normalizeTimestampSeconds(tripRow[col.water_temp_time]) || null
               } : null,
               weather: tripRow[col.start_weather_main] || null,  // ★補完用：天気
               tide_trend: tripRow[col.tide_trend] || null,  // ★補完用：潮汐傾向
@@ -7094,7 +7132,8 @@
               let timeStr = '';
               if (catchObj.timestamp) {
                 const d = new Date(catchObj.timestamp);
-                timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+              // ★修正（v1.5.2b）：秒を表示しない（分までとする）
+              timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
               }
               
               // 潮汐情報（下げ潮（7分）109 cm のような形式）
@@ -7242,7 +7281,8 @@
                       let timeStrTemp = '';
                       if (catchObjTemp.timestamp) {
                         const d = new Date(catchObjTemp.timestamp);
-                        timeStrTemp = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+                        // ★修正（v1.5.2b）：秒を表示しない（分までとする）
+                        timeStrTemp = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
                       }
                       
                       const tideInfoTemp = [];
@@ -7498,7 +7538,7 @@
                   <div class="font-semibold truncate">
                     ${c.species||'(魚種不明)'} ${c.size?`<span class="text-sm text-slate-300 ml-1">${c.size} cm</span>`:''}
                   </div>
-                  <div class="text-xs text-slate-400 mt-0.5">${c.ts ? new Date(c.ts).toLocaleString() : ''}</div>
+                  <div class="text-xs text-slate-400 mt-0.5">${c.ts ? new Date(c.ts).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : ''}</div>
                   <div class="mt-1 flex flex-wrap items-center gap-2">
                     ${c.tideTrend ? pill(c.tideTrend,'emerald') : ''}
                     ${(c.tideLevel || c.tideLevel===0) ? pill(`${c.tideLevel} cm`, 'violet') : ''}
@@ -7565,7 +7605,7 @@
 
         const meta = document.createElement('div');
         meta.className = 'mt-1 text-sm text-slate-300';
-        const ts = r[cidx.ts] ? new Date(r[cidx.ts]).toLocaleString() : '';
+        const ts = r[cidx.ts] ? new Date(r[cidx.ts]).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '';
         meta.textContent = ts;
         info.appendChild(meta);
 
@@ -7660,6 +7700,10 @@
         lng: draft.selected_location_lng
       });
       try{
+        // ★追加：デバッグ用のログ - draft.startedAtの状態確認
+        console.log('[continueStartTripAfterLocationSelection] 🔍 DEBUG draft.startedAt:', draft.startedAt);
+        console.log('[continueStartTripAfterLocationSelection] 🔍 DEBUG new Date(draft.startedAt):', new Date(draft.startedAt));
+        
         // 選択位置を使用して海況データを取得
         if (typeof draft.selected_location_lat === 'number' && typeof draft.selected_location_lng === 'number'){
           // 天気
@@ -7872,7 +7916,7 @@
       return {
         id: getValue('catchId') || uuid(),
         tripId: getValue('tripId') || '',
-        timestamp: getValue('timestamp') || null,
+        timestamp: normalizeTimestampSeconds(getValue('timestamp')) || null,  // ★修正（v1.5.2b）：秒を 00 に正規化
         species: getValue('species') || '',
         size_cm: getValue('size_cm') ? parseFloat(getValue('size_cm')) : null,
         weight_g: getValue('weight_g') ? parseFloat(getValue('weight_g')) : null,
@@ -8079,7 +8123,8 @@
           let timeStrTemp = '';
           if (catchObjTemp.timestamp) {
             const d = new Date(catchObjTemp.timestamp);
-            timeStrTemp = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+            // ★修正（v1.5.2b）：秒を表示しない（分までとする）
+            timeStrTemp = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
           }
           
           const tideInfoTemp = [];
@@ -8869,6 +8914,10 @@
 
       const sanitizedCatch = { ...catchForm };
       delete sanitizedCatch.location_candidates;
+      // ★追加（v1.5.2b）：ドラフトに保存される前に秒を正規化
+      if (sanitizedCatch.timestamp) {
+        sanitizedCatch.timestamp = normalizeTimestampSeconds(sanitizedCatch.timestamp) || sanitizedCatch.timestamp;
+      }
       console.log('[submitCatch] Location info in sanitizedCatch:', {
         location_name: sanitizedCatch.location_name,
         location_source: sanitizedCatch.location_source,
@@ -9601,11 +9650,18 @@
         lat: reviewDraft.lat, lng: reviewDraft.lng
       });
 
-      const endAtDisplay = reviewPendingEnd?.endedAt ? new Date(reviewPendingEnd.endedAt).toLocaleString() : (reviewDraft.endedAt ? new Date(reviewDraft.endedAt).toLocaleString() : '—');
+      // ★修正（v1.5.2b）：秒を表示しない（分までとする）
+      const formatDateTimeNoSeconds = (dateStr) => {
+        if (!dateStr) return '—';
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return '—';
+        return d.toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+      };
+      const endAtDisplay = formatDateTimeNoSeconds(reviewPendingEnd?.endedAt || reviewDraft.endedAt);
       const head = document.createElement('div');
       head.innerHTML =
         `<div class="text-slate-300">Trip ID: <span class="text-slate-100">${reviewDraft.tripId.slice(0,8)}</span></div>
-        <div class="text-slate-300">開始: <span class="text-slate-100">${reviewDraft.startedAt?new Date(reviewDraft.startedAt).toLocaleString():'—'}</span></div>
+        <div class="text-slate-300">開始: <span class="text-slate-100">${formatDateTimeNoSeconds(reviewDraft.startedAt)}</span></div>
         <div class="text-slate-300">終了: <span class="text-slate-100">${endAtDisplay}</span></div>
         <div class="text-slate-300">件数: <span class="text-slate-100">${cts.length}</span></div>`;
       sum.appendChild(head);
@@ -9668,7 +9724,8 @@
       list.className='divide-y divide-slate-800 rounded-xl border border-slate-800';
       cts.forEach((c, idx)=>{
         const row=document.createElement('div'); row.className='p-3 text-sm';
-        const t   = c.timestamp? new Date(c.timestamp).toLocaleString(): '';
+        // ★修正（v1.5.2b）：秒を表示しない（分までとする）
+        const t   = c.timestamp? new Date(c.timestamp).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }): '';
         const wxs = c.weather? formatWeatherBrief(c.weather): '';
         
         // ★修正：draftに保存されたEXIFデータのみを表示
@@ -9926,11 +9983,18 @@
         const sum_manual = document.createElement('div');
         sum_manual.className = 'space-y-3';
 
-        const endAtDisplay_manual = draft.endedAt ? new Date(draft.endedAt).toLocaleString() : '—';
+        // ★修正（v1.5.2b）：秒を表示しない（分までとする）
+        const formatDateTimeNoSeconds2 = (dateStr) => {
+          if (!dateStr) return '—';
+          const d = new Date(dateStr);
+          if (isNaN(d.getTime())) return '—';
+          return d.toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+        };
+        const endAtDisplay_manual = formatDateTimeNoSeconds2(draft.endedAt);
         const head_manual = document.createElement('div');
         head_manual.innerHTML =
           `<div class="text-slate-300">Trip ID: <span class="text-slate-100">${draft.tripId.slice(0,8)}</span></div>
-          <div class="text-slate-300">開始: <span class="text-slate-100">${draft.startedAt?new Date(draft.startedAt).toLocaleString():'—'}</span></div>
+          <div class="text-slate-300">開始: <span class="text-slate-100">${formatDateTimeNoSeconds2(draft.startedAt)}</span></div>
           <div class="text-slate-300">終了: <span class="text-slate-100">${endAtDisplay_manual}</span></div>
           <div class="text-slate-300">件数: <span class="text-slate-100">${cts_manual.length}</span></div>`;
         sum_manual.appendChild(head_manual);
@@ -9993,7 +10057,8 @@
         list_manual.className='divide-y divide-slate-800 rounded-xl border border-slate-800';
         cts_manual.forEach((c, idx)=>{
           const row_manual=document.createElement('div'); row_manual.className='p-3 text-sm';
-          const t_manual   = c.timestamp? new Date(c.timestamp).toLocaleString(): '';
+          // ★修正（v1.5.2b）：秒を表示しない（分までとする）
+          const t_manual   = c.timestamp? new Date(c.timestamp).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }): '';
           const wxs_manual = c.weather? formatWeatherBrief(c.weather): '';
           row_manual.innerHTML =
             `<div class="font-semibold text-slate-100">${c.species||'(魚種未設定)'} <span class="text-slate-400 text-xs ml-2">${t_manual}</span></div>
@@ -10057,8 +10122,8 @@
       const m = exifLocal.match(/^(\d{4}):?(\d{2}):?(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/);
       if (!m) return null;
       const [_, y, mo, d, hh, mi, ss] = m;
-      // JST固定のISO拡張
-      return `${y}-${mo}-${d}T${hh}:${mi}:${ss}+09:00`;
+      // ★修正（v1.5.2b）：秒を常に 00 に統一
+      return `${y}-${mo}-${d}T${hh}:${mi}:00+09:00`;
     }
 
     // ★追加：EXIF日付文字列をローカル表記にフォーマット（Invalid Date回避）
@@ -10068,7 +10133,8 @@
       if (!m) return null;
       const [_, y, mo, d, hh, mi, ss] = m;
       try {
-        const date = new Date(`${y}-${mo}-${d}T${hh}:${mi}:${ss}`);
+        // ★修正（v1.5.2b）：秒を常に 00 に統一
+        const date = new Date(`${y}-${mo}-${d}T${hh}:${mi}:00`);
         if (isNaN(date.getTime())) return null;
         return date.toLocaleString('ja-JP', {
           year: 'numeric',
@@ -10946,7 +11012,8 @@
             catchObj.weight_g != null ? `重量: ${catchObj.weight_g}g` : null,
             catchObj.method || null
           ].filter(Boolean).join(' / ')}</div>
-          <div class="text-slate-400 text-xs mt-1">${catchObj.timestamp ? new Date(catchObj.timestamp).toLocaleString() : ''}</div>
+          <!-- ★修正（v1.5.2b）：秒を表示しない（分までとする） -->
+          <div class="text-slate-400 text-xs mt-1">${catchObj.timestamp ? new Date(catchObj.timestamp).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : ''}</div>
         `;
         content.onclick = () => {
           // 釣果編集フォームを開く（同じフォーム使用）
@@ -11413,7 +11480,8 @@
             const existingCatch = draft.catches[editingIndex];
             if (timeInput) {
               if (parsedTime) {
-                newCatch.timestamp = parsedTime.toISOString();
+                // ★修正（v1.5.2b）：toISOString() の代わりに toOffsetIsoLocal() を使用（秒を 00 に統一）
+                newCatch.timestamp = toOffsetIsoLocal(parsedTime);
               } else {
                 console.warn('[EditModal] invalid time input, keeping existing timestamp:', timeInput);
                 newCatch.timestamp = existingCatch.timestamp;
@@ -11425,9 +11493,11 @@
           } else {
             // ★追加モード：通常のタイムスタンプ設定
             if (parsedTime) {
-              newCatch.timestamp = parsedTime.toISOString();
+              // ★修正（v1.5.2b）：toISOString() の代わりに toOffsetIsoLocal() を使用（秒を 00 に統一）
+              newCatch.timestamp = toOffsetIsoLocal(parsedTime);
             } else {
-              newCatch.timestamp = new Date().toISOString();
+              // ★修正（v1.5.2b）：new Date().toISOString() の代わりに nowIsoLocal() を使用（秒を 00 に統一）
+              newCatch.timestamp = nowIsoLocal();
             }
           }
         
@@ -11546,6 +11616,11 @@
           }
           console.log('[EditModal] Before draft.catches.push, newCatch:', newCatch);
           
+          // ★修正（v1.5.2b）：ドラフトに保存される前に秒を正規化
+          if (newCatch.timestamp) {
+            newCatch.timestamp = normalizeTimestampSeconds(newCatch.timestamp) || newCatch.timestamp;
+          }
+          
           // ★修正：前で既に定義した editFormSection, isEditing, editingIndex を使用
           // (再定義しない)
           
@@ -11607,7 +11682,8 @@
               let timeStrTemp = '';
               if (catchObjTemp.timestamp) {
                 const d = new Date(catchObjTemp.timestamp);
-                timeStrTemp = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+                // ★修正（v1.5.2b）：秒を表示しない（分までとする）
+                timeStrTemp = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
               }
               
               const tideInfoTemp = [];
@@ -11806,9 +11882,11 @@
           // ★修正：Trips シートから復元（フォーム値がない場合のみ）
           if (!formStartedAt && tripRow[col.startedAt]) {
             try {
-              const dt = new Date(tripRow[col.startedAt]);
+              // ★修正（v1.5.2b）：シートからのタイムスタンプを正規化
+              const normalizedStartedAt = normalizeTimestampSeconds(tripRow[col.startedAt]);
+              const dt = new Date(normalizedStartedAt);
               if (!isNaN(dt.getTime())) {
-                formStartedAt = tripRow[col.startedAt];
+                formStartedAt = normalizedStartedAt;
               }
             } catch (e) {
               console.warn('[submitTripEditData] Invalid startedAt in sheet');
@@ -11817,9 +11895,11 @@
           
           if (!formEndedAt && tripRow[col.endedAt]) {
             try {
-              const dt = new Date(tripRow[col.endedAt]);
+              // ★修正（v1.5.2b）：シートからのタイムスタンプを正規化
+              const normalizedEndedAt = normalizeTimestampSeconds(tripRow[col.endedAt]);
+              const dt = new Date(normalizedEndedAt);
               if (!isNaN(dt.getTime())) {
-                formEndedAt = tripRow[col.endedAt];
+                formEndedAt = normalizedEndedAt;
               }
             } catch (e) {
               console.warn('[submitTripEditData] Invalid endedAt in sheet');
