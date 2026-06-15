@@ -12,9 +12,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Fishing Log">
-  <!-- ★Version: 1.5.4 - 2026-06-10 -->
-  <!-- ★Updates: 通常釣行のモーダル表示ロジック統一 / 手動釣行との一貫性向上 -->
-  <title>釣行記録 v1.5.4（PWAフロント / コンパクトUI）</title>
+  <!-- ★Version: 1.5.5 - 2026-06-15 -->
+  <!-- ★Updates: 釣果編集時にモーダル下部ボタンを隠す機能追加 -->
+  <title>釣行記録 v1.5.5（PWAフロント / コンパクトUI）</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* ★追加：入力フォーム自動ズーム抑制 */
@@ -250,7 +250,7 @@
 
       <div class="flex gap-2 mt-4">
         <button id="btnCancelTripEdit" class="flex-1 py-2 rounded-xl border border-slate-700 hover:bg-slate-800">キャンセル</button>
-        <button id="btnSaveTripEdit" class="flex-1 py-2 rounded-2xl bg-purple-600 hover:bg-purple-500 font-semibold">上書き保存</button>
+        <button id="btnSaveTripEdit" class="flex-1 py-2 rounded-2xl bg-purple-600 hover:bg-purple-500 font-semibold">保存</button>
       </div>
     </div>
   </div>
@@ -7151,7 +7151,7 @@
               // ★追加：編集ボタン
               const btnEdit = document.createElement('button');
               btnEdit.className = 'text-xs py-1 px-2 rounded bg-blue-900 hover:bg-blue-800 text-blue-200 ml-2';
-              btnEdit.textContent = '編集';
+              btnEdit.textContent = '[編集中]テスト用';
               btnEdit.onclick = (e) => {
                 e.stopPropagation();
                 // 編集フォームにデータを展開
@@ -7197,6 +7197,22 @@
                 
                 // 保存ボタンのテキストを変更
                 document.getElementById('btnSaveCatchFormInEdit').textContent = '更新';
+                
+                // ★追加（v1.5.4）：編集モード時にモーダル下部ボタンを隠す（意図しない変更を防ぐ）
+                const btnCancelTripEditBtn = document.getElementById('btnCancelTripEdit');
+                const btnSaveTripEditBtn = document.getElementById('btnSaveTripEdit');
+                console.log('[EditButton] Hiding buttons:', {
+                  btnCancelTripEditBtn: !!btnCancelTripEditBtn,
+                  btnSaveTripEditBtn: !!btnSaveTripEditBtn
+                });
+                if (btnCancelTripEditBtn) {
+                  btnCancelTripEditBtn.style.cssText = 'display: none !important;';
+                  console.log('[EditButton] btnCancelTripEdit hidden');
+                }
+                if (btnSaveTripEditBtn) {
+                  btnSaveTripEditBtn.style.cssText = 'display: none !important;';
+                  console.log('[EditButton] btnSaveTripEdit hidden');
+                }
                 
                 // フォームにスクロール
                 editFormSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -8983,7 +8999,13 @@
         }
         hideUploadingOverlay();
       } else if (!editMode) {
-        openUploadReview();
+        // ★修正（v1.5.4）：通常釣行時もopenUploadReview()をスキップ（モーダルなし）
+        try {
+          await _complementTripDataOnly();
+        } catch (compErr) {
+          console.warn('[submitCatch] complementTripData failed:', compErr);
+        }
+        hideUploadingOverlay();
       } else {
         // editMode true の場合：何もしない（オーバーレイは finally で消す）
       }
@@ -11150,6 +11172,7 @@
         const formSection = document.getElementById('editCatchFormSection');
         if (formSection) {
           formSection.classList.remove('hidden');
+          // ★修正（v1.5.4）：新規追加時はモーダル下部ボタンは表示したまま（隠さない）
           document.getElementById('editFormCatchTime').focus();
         }
       };
@@ -11377,6 +11400,11 @@
         const formSection = document.getElementById('editCatchFormSection');
         if (formSection) {
           formSection.classList.add('hidden');
+          // ★修正（v1.5.4）：釣果フォーム非表示時にモーダル下部ボタンを再表示
+          const btnCancelTripEditBtn = document.getElementById('btnCancelTripEdit');
+          const btnSaveTripEditBtn = document.getElementById('btnSaveTripEdit');
+          if (btnCancelTripEditBtn) btnCancelTripEditBtn.style.cssText = '';
+          if (btnSaveTripEditBtn) btnSaveTripEditBtn.style.cssText = '';
         }
       };
     }
@@ -11391,6 +11419,12 @@
           formSection.dataset.isEditing = 'false';
           formSection.dataset.editingIndex = '-1';
           formSection.classList.add('hidden');
+          
+          // ★修正（v1.5.4）：フォーム非表示時にモーダル下部ボタンを再表示
+          const btnCancelTripEditBtn = document.getElementById('btnCancelTripEdit');
+          const btnSaveTripEditBtn = document.getElementById('btnSaveTripEdit');
+          if (btnCancelTripEditBtn) btnCancelTripEditBtn.style.cssText = '';
+          if (btnSaveTripEditBtn) btnSaveTripEditBtn.style.cssText = '';
           
           // フォームをクリア
           document.getElementById('editFormCatchTime').value = '';
@@ -11659,6 +11693,11 @@
           }
           if (formSection) {
             formSection.classList.add('hidden');
+            // ★修正（v1.5.4）：釣果保存後にモーダル下部ボタンを再表示
+            const btnCancelTripEditBtn = document.getElementById('btnCancelTripEdit');
+            const btnSaveTripEditBtn = document.getElementById('btnSaveTripEdit');
+            if (btnCancelTripEditBtn) btnCancelTripEditBtn.style.cssText = '';
+            if (btnSaveTripEditBtn) btnSaveTripEditBtn.style.cssText = '';
           }
           
           // 釣果リストを再描画
@@ -11700,9 +11739,27 @@
               // ★追加：編集ボタン
               const btnEditTemp = document.createElement('button');
               btnEditTemp.className = 'text-xs py-1 px-2 rounded bg-blue-900 hover:bg-blue-800 text-blue-200 ml-2';
-              btnEditTemp.textContent = '編集';
+              btnEditTemp.textContent = '[編集中]テスト用';
               btnEditTemp.onclick = (e) => {
                 e.stopPropagation();
+                console.log('[EditButton] Edit button clicked!');
+                
+                // ★追加（v1.5.4）：編集モード時にモーダル下部ボタンを隠す（意図しない変更を防ぐ）
+                const btnCancelTripEditBtn = document.getElementById('btnCancelTripEdit');
+                const btnSaveTripEditBtn = document.getElementById('btnSaveTripEdit');
+                console.log('[EditButton] Hiding buttons:', {
+                  btnCancelTripEditBtn: !!btnCancelTripEditBtn,
+                  btnSaveTripEditBtn: !!btnSaveTripEditBtn
+                });
+                if (btnCancelTripEditBtn) {
+                  btnCancelTripEditBtn.style.cssText = 'display: none !important;';
+                  console.log('[EditButton] btnCancelTripEdit hidden');
+                }
+                if (btnSaveTripEditBtn) {
+                  btnSaveTripEditBtn.style.cssText = 'display: none !important;';
+                  console.log('[EditButton] btnSaveTripEdit hidden');
+                }
+                
                 // 編集フォームにデータを展開
                 const editFormSection = document.getElementById('editCatchFormSection');
                 const editFormTime = document.getElementById('editFormCatchTime');
@@ -11745,6 +11802,22 @@
                 editFormSection.classList.remove('hidden');
                 // 保存ボタンのテキストを変更
                 document.getElementById('btnSaveCatchFormInEdit').textContent = '更新';
+                
+                // ★追加（v1.5.4）：編集モード時にモーダル下部ボタンを隠す（意図しない変更を防ぐ）
+                const btnCancelTripEditBtn2 = document.getElementById('btnCancelTripEdit');
+                const btnSaveTripEditBtn2 = document.getElementById('btnSaveTripEdit');
+                console.log('[EditButtonTemp] Hiding buttons:', {
+                  btnCancelTripEditBtn2: !!btnCancelTripEditBtn2,
+                  btnSaveTripEditBtn2: !!btnSaveTripEditBtn2
+                });
+                if (btnCancelTripEditBtn2) {
+                  btnCancelTripEditBtn2.style.cssText = 'display: none !important;';
+                  console.log('[EditButtonTemp] btnCancelTripEdit hidden');
+                }
+                if (btnSaveTripEditBtn2) {
+                  btnSaveTripEditBtn2.style.cssText = 'display: none !important;';
+                  console.log('[EditButtonTemp] btnSaveTripEdit hidden');
+                }
                 
                 // フォームにスクロール
                 editFormSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
