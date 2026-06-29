@@ -12,9 +12,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Fishing Log">
-  <!-- ★Version: 1.5.5 - 2026-06-15 -->
-  <!-- ★Updates: 釣果編集時にモーダル下部ボタンを隠す機能追加 -->
-  <title>釣行記録 v1.5.5（PWAフロント / コンパクトUI）</title>
+  <!-- ★Version: 1.5.6 - 2026-06-29 -->
+  <!-- ★Updates: 釣果編集時を上書き更新、位置候補の距离・水温表示を追加 -->
+  <title>釣行記録 v1.5.6（PWAフロント / コンパクトUI）</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* ★追加：入力フォーム自動ズーム抑制 */
@@ -615,10 +615,12 @@
       </section>
 
       <div id="bottomBar" class="hidden fixed bottom-0 left-0 right-0 z-20 border-t border-slate-800 bg-slate-950/80 backdrop-blur pb-12">
-        <div class="max-w-4xl mx-auto px-4 py-3 grid grid-cols-3 gap-2">
-          <button id="btnAddCatchBottom" class="py-3 rounded-2xl bg-sky-600 hover:bg-sky-500 font-semibold">＋釣果</button>
-          <button id="btnCancelTrip" class="py-3 rounded-2xl bg-slate-700 hover:bg-slate-600 font-semibold">キャンセル</button>
-          <button id="btnEndBottom" class="py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 font-semibold">釣行終了</button>
+        <div class="max-w-4xl mx-auto px-4 py-3 flex flex-col gap-2">
+          <button id="btnAddCatchBottom" class="w-full py-6 rounded-2xl bg-sky-600 hover:bg-sky-500 font-semibold text-lg">＋釣果</button>
+          <div class="grid grid-cols-2 gap-2">
+            <button id="btnCancelTrip" class="py-3 rounded-2xl bg-slate-700 hover:bg-slate-600 font-semibold">キャンセル</button>
+            <button id="btnEndBottom" class="py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 font-semibold">釣行終了</button>
+          </div>
         </div>
       </div>
 
@@ -1207,7 +1209,32 @@
       window.dispatchEvent(new Event('CONFIG_READY'));
     })();
 
-    // ===== Logger =====
+    // ===== グローバル変数：釣果編集状態を追跡（v1.5.5修正） =====
+    // ★追加：datasetの代わりに、グローバル変数で状態を管理
+    let editCatchState = {
+      isEditing: false,
+      editingIndex: -1
+    };
+
+    // ===== 釣果編集状態の設定・取得関数 =====
+    function setEditCatchState(isEditing, editingIndex) {
+      editCatchState.isEditing = isEditing;
+      editCatchState.editingIndex = editingIndex;
+      console.log('[EditCatchState] 状態を更新:', editCatchState);
+    }
+
+    function getEditCatchState() {
+      console.log('[EditCatchState] 現在の状態:', editCatchState);
+      return { ...editCatchState };
+    }
+
+    function resetEditCatchState() {
+      editCatchState.isEditing = false;
+      editCatchState.editingIndex = -1;
+      console.log('[EditCatchState] 状態をリセット:', editCatchState);
+    }
+
+    // ===== グローバル変数：釣行編集モーダル =====
     const DEBUG_WATER = true; // 必要に応じて true/false で出力を切替
 
     window.LOG = window.LOG || {};
@@ -7152,8 +7179,16 @@
               const btnEdit = document.createElement('button');
               btnEdit.className = 'text-xs py-1 px-2 rounded bg-blue-900 hover:bg-blue-800 text-blue-200 ml-2';
               btnEdit.textContent = '[編集中]テスト用';
-              btnEdit.onclick = (e) => {
+              btnEdit.onclick = async (e) => {
                 e.stopPropagation();
+                
+                // ★追加（v1.5.5デバッガー）：編集ボタンクリック時点でのデータセット値
+                console.log('[DEBUGGER-START] 編集ボタンクリック開始', {
+                  timestamp: new Date().toISOString(),
+                  idx: idx,
+                  catchObj_species: catchObj?.species
+                });
+                
                 // 編集フォームにデータを展開
                 const editFormSection = document.getElementById('editCatchFormSection');
                 const editFormTime = document.getElementById('editFormCatchTime');
@@ -7162,9 +7197,24 @@
                 const editFormWeight = document.getElementById('editFormCatchWeight');
                 const editFormMethod = document.getElementById('editFormCatchMethod');
                 
-                // ★追加：編集中のインデックスを保存（更新時に使用）
-                editFormSection.dataset.editingIndex = idx;
-                editFormSection.dataset.isEditing = 'true';
+                // ★修正（v1.5.5）：datasetではなくグローバル変数を使用
+                setEditCatchState(true, idx);
+                
+                // ★追加（v1.5.5デバッガー）：設定後の値を確認
+                const state = getEditCatchState();
+                console.log('[DEBUGGER] グローバル状態を設定直後:', {
+                  before_set_idx: idx,
+                  after_set_isEditing: state.isEditing,
+                  after_set_editingIndex: state.editingIndex
+                });
+                
+                // ★追加（v1.5.5調査用）：設定確認ログ
+                console.log('[EditButton-TripCard] DEBUG - 編集ボタンクリック（TripCard）:', {
+                  idx: idx,
+                  catchObj_species: catchObj?.species,
+                  editCatchState: state,
+                  draft_catches: draft?.catches?.length
+                });
                 
                 // 既存データを展開
                 if (catchObj.timestamp) {
@@ -7212,6 +7262,60 @@
                 if (btnSaveTripEditBtn) {
                   btnSaveTripEditBtn.style.cssText = 'display: none !important;';
                   console.log('[EditButton] btnSaveTripEdit hidden');
+                }
+                
+                // ★追加（v1.5.5）：位置候補を取得して位置セレクターに表示
+                try {
+                  // catchObj から location 情報を取得、なければ tripRow から取得
+                  let locLat = catchObj.location_lat;
+                  let locLng = catchObj.location_lng;
+                  
+                  // tripRow から col インデックスを使って pos_lat/pos_lng を取得
+                  if (!locLat && col.pos_lat !== undefined) {
+                    locLat = tripRow[col.pos_lat];
+                  }
+                  if (!locLng && col.pos_lng !== undefined) {
+                    locLng = tripRow[col.pos_lng];
+                  }
+                  
+                  // 最後の手段：draft.selected_location_lat/lng
+                  if (!locLat) {
+                    locLat = draft.selected_location_lat;
+                  }
+                  if (!locLng) {
+                    locLng = draft.selected_location_lng;
+                  }
+                  
+                  if (typeof locLat === 'number' && typeof locLng === 'number') {
+                    const waterTempResult = await fetchTodayWaterTempByNearest(locLat, locLng);
+                    
+                    const candidates = Array.isArray(waterTempResult?.location_candidates) 
+                      ? waterTempResult.location_candidates.map(cand => ({
+                          name: cand.point_name || cand.name || '位置',
+                          latitude: cand.latitude,
+                          longitude: cand.longitude,
+                          distance_km: cand.distance_km || 0,
+                          temperature_c: cand.temperature_c || null
+                        }))
+                      : [];
+                    console.log('[TripCard-EditButton] Candidates prepared:', candidates);
+                    
+                    // 位置セレクターを更新（釣行編集モーダルの editFormLocationSelect を使用）
+                    updateLocationSelector(candidates, true);
+                    
+                    // 既存の位置を設定値として記録
+                    const selectElem = document.getElementById('editFormLocationSelect');
+                    if (selectElem) {
+                      const existingLocationName = catchObj.location_name || catchObj.water_temp_point || '位置未設定';
+                      // 値が対応する候補があれば選択、なければ updateLocationSelector で選択された最寄りの候補を保持
+                      const matchingCandidate = candidates.find(c => c.name === existingLocationName);
+                      if (matchingCandidate) {
+                        selectElem.value = matchingCandidate.name;
+                      }
+                    }
+                  }
+                } catch (err) {
+                  console.warn('[TripCard-EditButton] Location fetching error:', err);
                 }
                 
                 // フォームにスクロール
@@ -7826,7 +7930,9 @@
               name: c.point_name || c.name || '位置' + (idx + 1),
               lat: c.latitude,
               lng: c.longitude,
-              code: c.point_code || c.code || null
+              code: c.point_code || c.code || null,
+              distance_km: c.distance_km,
+              temperature_c: c.temperature_c
             }));
             console.log('[LocationModal] ✅ Candidates extracted:', { count: candidates.length, candidates: candidates });
           }
@@ -7863,7 +7969,9 @@
         candidates.forEach((candidate, idx) => {
           const option = document.createElement('option');
           option.value = idx.toString();
-          option.textContent = `${candidate.name}${idx === 0 ? ' (推奨)' : ''}`;
+          const distanceText = typeof candidate.distance_km === 'number' ? candidate.distance_km.toFixed(1) + 'km' : '距離不明';
+          const tempText = typeof candidate.temperature_c === 'number' ? ' / ' + candidate.temperature_c.toFixed(1) + '°C' : '';
+          option.textContent = `${candidate.name} (${distanceText}${tempText})${idx === 0 ? ' 推奨' : ''}`;
           select.appendChild(option);
         });
 
@@ -8015,7 +8123,9 @@
                   name: c.point_name || c.name || '位置' + (waterTempResult.location_candidates.indexOf(c) + 1),
                   lat: c.latitude,
                   lng: c.longitude,
-                  code: c.point_code || c.code || null
+                  code: c.point_code || c.code || null,
+                  distance_km: c.distance_km,
+                  temperature_c: c.temperature_c
                 }))
               : [];
             console.log('[openAddCatch] ✅ Location candidates fetched (normal mode):', { count: candidates?.length || 0, candidates: candidates });
@@ -8046,7 +8156,7 @@
         visibility: window.getComputedStyle(catchModal).visibility
       });
     }
-    function openEditCatch(id){
+    async function openEditCatch(id){
       const c = draft.catches.find(x=>x.id===id); if(!c) return;
       editMode=true; editingId=id; modalTitle.textContent='釣果を編集'; catchForm={...c};
       // ★追加：編集開始時の snapshot を保存（ロールバック用）
@@ -8078,10 +8188,46 @@
         }
       }
 
-      // ★追加：既存のロケーション情報があれば表示
+      // ★修正：編集時の位置候補を取得して表示
       const locationSelect = document.getElementById('editFormLocationSelect');
-      if (locationSelect && c.location_name && c.location_source === 'selected') {
-        locationSelect.value = c.location_name;
+      if (locationSelect) {
+        const locLat = c.location_lat || draft.selected_location_lat;
+        const locLng = c.location_lng || draft.selected_location_lng;
+        
+        if (typeof locLat === 'number' && typeof locLng === 'number') {
+          showUploadingOverlay('位置を読み込み中...');
+          try {
+            const waterTempResult = await fetchTodayWaterTempByNearest(locLat, locLng);
+            const candidates = Array.isArray(waterTempResult?.location_candidates) 
+              ? waterTempResult.location_candidates.map(cand => ({
+                  name: cand.point_name || cand.name || '位置' + (waterTempResult.location_candidates.indexOf(cand) + 1),
+                  lat: cand.latitude,
+                  lng: cand.longitude,
+                  code: cand.point_code || cand.code || null,
+                  distance_km: cand.distance_km,
+                  temperature_c: cand.temperature_c
+                }))
+              : [];
+            console.log('[openEditCatch] Location candidates fetched:', { count: candidates?.length || 0, catchLocationName: c.location_name });
+            updateLocationSelector(candidates, true);  // editFormLocationSelect用
+            
+            // ★追加：既存の location_name を選択状態にする
+            if (c.location_name && candidates.length > 0) {
+              const matchingCandidate = candidates.find(cand => cand.name === c.location_name);
+              if (matchingCandidate) {
+                const candidateId = getLocationCandidateId(matchingCandidate);
+                if (candidateId) {
+                  locationSelect.value = candidateId;
+                  console.log('[openEditCatch] Existing location selected:', { name: c.location_name, value: candidateId });
+                }
+              }
+            }
+            hideUploadingOverlay();
+          } catch (err) {
+            console.error('[openEditCatch] Failed to fetch location candidates:', err?.message || err);
+            hideUploadingOverlay();
+          }
+        }
       }
 
       manualCatchPhotoMetadata = null;
@@ -8427,16 +8573,19 @@
         select = document.getElementById('catchLocationSelect');
       }
 
-      if (!select) return;
+      if (!select) {
+        console.warn('[updateLocationSelector] select element not found');
+        return;
+      }
 
       catchForm.location_candidates = Array.isArray(candidates) ? candidates : [];
 
       while (select.options.length > 1) {
-        select.remove(1);
+        select.options[1].remove();
       }
 
       if (candidates && candidates.length > 0) {
-        candidates.forEach(c => {
+        candidates.forEach((c, idx) => {
           const candidateId = getLocationCandidateId(c);
           const opt = document.createElement('option');
           opt.value = candidateId;
@@ -8462,7 +8611,9 @@
         }
         if (nearestCandidate) {
           const nearestId = getLocationCandidateId(nearestCandidate);
-          if (nearestId) select.value = nearestId;
+          if (nearestId) {
+            select.value = nearestId;
+          }
           applyLocationCandidateSelection(nearestCandidate);
         }
       } else {
@@ -11397,6 +11548,15 @@
     const btnCloseCatchFormInEdit = document.getElementById('btnCloseCatchFormInEdit');
     if (btnCloseCatchFormInEdit) {
       btnCloseCatchFormInEdit.onclick = () => {
+        // ★追加（v1.5.5デバッガー）：クローズボタンクリックを追跡
+        console.log('[DEBUGGER] btnCloseCatchFormInEdit.onclick 実行、信号情報:', {
+          timestamp: new Date().toISOString(),
+          formSection_dataset_before: {
+            isEditing: document.getElementById('editCatchFormSection')?.dataset.isEditing,
+            editingIndex: document.getElementById('editCatchFormSection')?.dataset.editingIndex
+          }
+        });
+        
         const formSection = document.getElementById('editCatchFormSection');
         if (formSection) {
           formSection.classList.add('hidden');
@@ -11413,11 +11573,23 @@
     const btnCancelCatchFormInEdit = document.getElementById('btnCancelCatchFormInEdit');
     if (btnCancelCatchFormInEdit) {
       btnCancelCatchFormInEdit.onclick = () => {
+        // ★追加（v1.5.5デバッガー）：キャンセルボタンクリックを追跡
+        const stateBefore = getEditCatchState();
+        console.log('[DEBUGGER] btnCancelCatchFormInEdit.onclick 実行前:', {
+          timestamp: new Date().toISOString(),
+          editCatchState_before: stateBefore
+        });
+        
         const formSection = document.getElementById('editCatchFormSection');
         if (formSection) {
-          // ★修正：編集状態をリセット
-          formSection.dataset.isEditing = 'false';
-          formSection.dataset.editingIndex = '-1';
+          // ★修正（v1.5.5）：グローバル変数を使用してリセット
+          resetEditCatchState();
+          
+          const stateAfter = getEditCatchState();
+          console.log('[DEBUGGER] 編集状態をリセット後:', {
+            editCatchState_after: stateAfter
+          });
+          
           formSection.classList.add('hidden');
           
           // ★修正（v1.5.4）：フォーム非表示時にモーダル下部ボタンを再表示
@@ -11452,6 +11624,22 @@
         // ★修正：CONFIG初期化完了を待機（API呼び出し前の必須処理）
         await configInitPromise;
         
+        // ★修正（v1.5.5）：グローバル変数から状態を取得
+        const state = getEditCatchState();
+        const isEditing = state.isEditing;
+        const editingIndex = state.editingIndex;
+        
+        // ★追加（v1.5.5デバッガー）：グローバル状態を確認
+        console.log('[DEBUGGER-INIT] 保存ボタンハンドラー開始', {
+          timestamp: new Date().toISOString(),
+          editCatchState_global: state,
+          isEditing: isEditing,
+          editingIndex: editingIndex
+        });
+        
+        // ★追加：編集フォームセクション参照（11791行で使用）
+        const editFormSection = document.getElementById('editCatchFormSection');
+        
         const timeInput = document.getElementById('editFormCatchTime').value.trim();
         const species = document.getElementById('editFormCatchSpecies').value.trim();
         const size = document.getElementById('editFormCatchSize').value.trim();
@@ -11463,9 +11651,7 @@
           alert('魚種を入力してください');
           return;
         }
-        const editFormSection = document.getElementById('editCatchFormSection');
-        const isEditing = editFormSection?.dataset.isEditing === 'true';
-        const editingIndex = parseInt(editFormSection?.dataset.editingIndex) || -1;
+        
         const overlayMessage = isEditing ? '釣果を更新しています...' : '釣果を追加しています...';
         
         showUploadingOverlay(overlayMessage);
@@ -11655,29 +11841,46 @@
             newCatch.timestamp = normalizeTimestampSeconds(newCatch.timestamp) || newCatch.timestamp;
           }
           
-          // ★修正：前で既に定義した editFormSection, isEditing, editingIndex を使用
-          // (再定義しない)
+          // ★修正（v1.5.5）：前で既に定義した isEditing, editingIndex は古い（datasetベース）ので再読込不可
+          // グローバル変数からの読み込みは保存開始後（async処理前）に実施済みのため、そのまま使用
+          
+          // ★追加（v1.5.5調査用）：条件判定前ログ
+          console.log('[SaveButton] DEBUG - 条件判定直前:', {
+            isEditing_from_global: isEditing,
+            editingIndex_from_global: editingIndex,
+            condition_valid: isEditing && editingIndex >= 0 && editingIndex < draft.catches.length,
+            draft_catches_length: draft?.catches?.length,
+            newCatch_id_sample: `uuid generated: ${uuid()}`,
+            existingCatch_check: editingIndex >= 0 && editingIndex < (draft?.catches?.length || 0) ? draft.catches[editingIndex]?.id : 'N/A'
+          });
           
           if (isEditing && editingIndex >= 0 && editingIndex < draft.catches.length) {
             // ★編集モード：既存釣果を上書き
             const existingCatch = draft.catches[editingIndex];
             newCatch.id = existingCatch.id;  // IDは保持
             draft.catches[editingIndex] = newCatch;
+            console.log('[SaveButton] DEBUG - 編集モード実行（上書き）:', {
+              editingIndex: editingIndex,
+              existingCatch_id: existingCatch.id,
+              newCatch_id_after: newCatch.id,
+              species: newCatch.species
+            });
             console.log('[EditModal] Catch updated at index:', editingIndex, newCatch);
           } else {
             // ★追加モード：新規釣果を追加
+            console.log('[SaveButton] DEBUG - 追加モード実行（新規追加）:', {
+              isEditing: isEditing,
+              editingIndex: editingIndex,
+              reason: isEditing ? '編集フラグはtrueだが条件チェック失敗' : '編集フラグがfalse'
+            });
             draft.catches.push(newCatch);
             console.log('[EditModal] Catch added with tide completion:', newCatch);
           }
           
           saveDraft(draft);
           
-          // ★修正：編集フラグをリセット（次回作成を防ぐ）
-          const formSection = document.getElementById('editCatchFormSection');
-          if (formSection) {
-            formSection.dataset.isEditing = 'false';
-            formSection.dataset.editingIndex = '-1';
-          }
+          // ★修正（v1.5.5）：編集フラグをリセット（グローバル変数を使用）
+          resetEditCatchState();
           
           // フォームをクリアして隠す
           document.getElementById('editFormCatchTime').value = '';
@@ -11691,8 +11894,8 @@
             photoPreview.classList.add('hidden');
             photoPreview.src = '';
           }
-          if (formSection) {
-            formSection.classList.add('hidden');
+          if (editFormSection) {
+            editFormSection.classList.add('hidden');
             // ★修正（v1.5.4）：釣果保存後にモーダル下部ボタンを再表示
             const btnCancelTripEditBtn = document.getElementById('btnCancelTripEdit');
             const btnSaveTripEditBtn = document.getElementById('btnSaveTripEdit');
@@ -11705,6 +11908,11 @@
             const cts = draft.catches || [];
             const editCatchList = document.getElementById('editCatchList');
             const editCatchCount = document.getElementById('editCatchCount');
+            console.log('[renderEditCatchListLocal-START] 関数が実行されました:', { 
+              catchCount: cts.length,
+              editCatchList: !!editCatchList,
+              editCatchCount: !!editCatchCount 
+            });
             editCatchList.innerHTML = '';
             editCatchCount.textContent = cts.length;
 
@@ -11740,7 +11948,7 @@
               const btnEditTemp = document.createElement('button');
               btnEditTemp.className = 'text-xs py-1 px-2 rounded bg-blue-900 hover:bg-blue-800 text-blue-200 ml-2';
               btnEditTemp.textContent = '[編集中]テスト用';
-              btnEditTemp.onclick = (e) => {
+              btnEditTemp.onclick = async (e) => {
                 e.stopPropagation();
                 console.log('[EditButton] Edit button clicked!');
                 
@@ -11768,9 +11976,24 @@
                 const editFormWeight = document.getElementById('editFormCatchWeight');
                 const editFormMethod = document.getElementById('editFormCatchMethod');
                 
-                // ★追加：編集中のインデックスを保存（更新時に使用）
-                editFormSection.dataset.editingIndex = i;
-                editFormSection.dataset.isEditing = 'true';
+                // ★修正（v1.5.5）：datasetではなくグローバル変数を使用
+                setEditCatchState(true, i);
+                
+                // ★追加（v1.5.5デバッガー）：設定後の値を確認
+                const stateTemp = getEditCatchState();
+                console.log('[EditButton-RenderLocal] DEBUG - グローバル状態を設定直後:', {
+                  before_set_i: i,
+                  after_set_isEditing: stateTemp.isEditing,
+                  after_set_editingIndex: stateTemp.editingIndex
+                });
+                
+                // ★追加（v1.5.5調査用）：設定確認ログ
+                console.log('[EditButton-RenderLocal] DEBUG - 編集ボタンクリック（再描画）:', {
+                  i: i,
+                  catchObjTemp_species: catchObjTemp?.species,
+                  editCatchState: stateTemp,
+                  draft_catches: draft?.catches?.length
+                });
                 
                 // 既存データを展開
                 if (catchObjTemp.timestamp) {
@@ -11793,6 +12016,60 @@
                 editFormSize.value = catchObjTemp.size_cm ? String(catchObjTemp.size_cm) : '';
                 editFormWeight.value = catchObjTemp.weight_g ? String(catchObjTemp.weight_g) : '';
                 editFormMethod.value = catchObjTemp.method || '';
+                
+                // ★追加：位置候補を取得して表示（釣行編集モード用）
+                const locLat = catchObjTemp.location_lat || draft.selected_location_lat;
+                const locLng = catchObjTemp.location_lng || draft.selected_location_lng;
+                
+                console.log('[EditButton-TripEdit] Location fetching setup:', { locLat, locLng, hasLocationLat: typeof locLat, hasLocationLng: typeof locLng });
+                
+                if (typeof locLat === 'number' && typeof locLng === 'number') {
+                  try {
+                    console.log('[EditButton-TripEdit] Fetching water temp from:', { locLat, locLng });
+                    const waterTempResult = await fetchTodayWaterTempByNearest(locLat, locLng);
+                    console.log('[EditButton-TripEdit] waterTempResult received:', { 
+                      hasResult: !!waterTempResult,
+                      hasCandidates: !!waterTempResult?.location_candidates,
+                      candidatesCount: waterTempResult?.location_candidates?.length || 0,
+                      firstCandidate: waterTempResult?.location_candidates?.[0]
+                    });
+                    
+                    const candidates = Array.isArray(waterTempResult?.location_candidates) 
+                      ? waterTempResult.location_candidates.map(cand => ({
+                          name: cand.point_name || cand.name || '位置' + (waterTempResult.location_candidates.indexOf(cand) + 1),
+                          lat: cand.latitude,
+                          lng: cand.longitude,
+                          code: cand.point_code || cand.code || null,
+                          distance_km: cand.distance_km,
+                          temperature_c: cand.temperature_c
+                        }))
+                      : [];
+                    console.log('[EditButton-TripEdit] Mapped candidates:', { count: candidates.length, candidates });
+                    console.log('[EditButton-TripEdit] Calling updateLocationSelector with isEditModal=true');
+                    updateLocationSelector(candidates, true);  // editFormLocationSelect用
+                    
+                    // ★追加：既存の location_name を選択状態にする
+                    if (catchObjTemp.location_name && candidates.length > 0) {
+                      const matchingCandidate = candidates.find(cand => cand.name === catchObjTemp.location_name);
+                      console.log('[EditButton-TripEdit] Looking for existing location:', { 
+                        existingName: catchObjTemp.location_name,
+                        foundMatch: !!matchingCandidate
+                      });
+                      if (matchingCandidate) {
+                        const candidateId = getLocationCandidateId(matchingCandidate);
+                        if (candidateId) {
+                          const editFormLocationSelectElement = document.getElementById('editFormLocationSelect');
+                          if (editFormLocationSelectElement) {
+                            editFormLocationSelectElement.value = candidateId;
+                            console.log('[EditButton-TripEdit] Existing location selected:', { name: catchObjTemp.location_name, value: candidateId });
+                          }
+                        }
+                      }
+                    }
+                  } catch (err) {
+                    console.warn('[EditButton-TripEdit] Failed to fetch location candidates:', err?.message || err);
+                  }
+                }
                 
                 // ★追加：写真フィールドを表示（編集時でも写真変更可能に）
                 const photoLabel = document.querySelector('label:has(#editFormCatchPhoto)');
@@ -11833,6 +12110,7 @@
                 if (confirm('この釣果を削除しますか？')) {
                   draft.catches.splice(i, 1);
                   saveDraft(draft);
+                  console.log('[renderEditCatchListLocal] 削除ボタンから呼ばれます');
                   renderEditCatchListLocal();
                 }
               };
@@ -11843,6 +12121,7 @@
               editCatchList.appendChild(itemTemp);
             });
           };
+          console.log('[TripEdit] renderEditCatchListLocal を実行します');
           renderEditCatchListLocal();
         } catch (err) {
           console.error('[EditModal] Catch save failed:', err);
@@ -12349,6 +12628,5 @@
 
 </body>
 </html>
-
 
 
