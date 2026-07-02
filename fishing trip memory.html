@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="Fishing Log">
   <!-- ★Version: 1.5.6 - 2026-06-29 -->
   <!-- ★Updates: 釣果編集時を上書き更新、位置候補の距离・水温表示を追加 -->
-  <title>釣行記録 v1.5.6（PWAフロント / コンパクトUI）</title>
+  <title>釣行記録 v1.6.0（PWAフロント / コンパクトUI）</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* ★追加：入力フォーム自動ズーム抑制 */
@@ -574,7 +574,7 @@
           </div>
         </div>
       </div>
-    <section id="recordView" class="hidden">
+    <section id="recordView" class="hidden pb-[260px]">
       <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4 flex flex-col gap-2 mb-4">
         <div class="flex items-center justify-between">
           <div>
@@ -605,6 +605,16 @@
         <div id="buttonRow" class="flex gap-2 mt-2"></div>
       </div>
 
+      <!-- ★追加：トピック記録セクション -->
+      <section id="topicsSection" class="mb-6">
+        <div class="flex items-baseline gap-3 mb-2">
+          <h2 class="text-base font-semibold">トピック</h2>
+          <div id="txtTopicCount" class="text-sm text-slate-400">0 件</div>
+        </div>
+        <div id="topicListEmpty" class="text-slate-400 text-sm">トピックはまだ記録されていません</div>
+        <ul id="topicList" class="space-y-2"></ul>
+      </section>
+
       <section>
         <div class="flex items-baseline gap-3 mb-2">
           <h2 class="text-base font-semibold">釣果</h2>
@@ -616,10 +626,17 @@
 
       <div id="bottomBar" class="hidden fixed bottom-0 left-0 right-0 z-20 border-t border-slate-800 bg-slate-950/80 backdrop-blur pb-12">
         <div class="max-w-4xl mx-auto px-4 py-3 flex flex-col gap-2">
-          <button id="btnAddCatchBottom" class="w-full py-6 rounded-2xl bg-sky-600 hover:bg-sky-500 font-semibold text-lg">＋釣果</button>
+          <!-- ★追加：トピック記録ボタン（4つ） -->
           <div class="grid grid-cols-2 gap-2">
-            <button id="btnCancelTrip" class="py-3 rounded-2xl bg-slate-700 hover:bg-slate-600 font-semibold">キャンセル</button>
-            <button id="btnEndBottom" class="py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 font-semibold">釣行終了</button>
+            <button id="btnTopicOceanCondition" class="py-2 rounded-2xl bg-cyan-600 hover:bg-cyan-500 font-semibold text-sm">🌊 海況変化</button>
+            <button id="btnTopicBait" class="py-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 font-semibold text-sm">🐟 ベイト流入</button>
+            <button id="btnTopicBoil" class="py-2 rounded-2xl bg-amber-600 hover:bg-amber-500 font-semibold text-sm">💥 ボイル・ナブラ</button>
+            <button id="btnTopicCatch" class="py-2 rounded-2xl bg-orange-600 hover:bg-orange-500 font-semibold text-sm">🎣 周囲の釣果</button>
+          </div>
+          <button id="btnAddCatchBottom" class="w-full py-3 rounded-2xl bg-sky-600 hover:bg-sky-500 font-semibold text-lg">＋釣果</button>
+          <div class="grid grid-cols-2 gap-2">
+            <button id="btnCancelTrip" class="py-2 rounded-2xl bg-slate-700 hover:bg-slate-600 font-semibold">キャンセル</button>
+            <button id="btnEndBottom" class="py-2 rounded-2xl bg-rose-600 hover:bg-rose-500 font-semibold">釣行終了</button>
           </div>
         </div>
       </div>
@@ -721,6 +738,34 @@
       </div>
       <div class="flex gap-2 mt-4">
         <button id="btnConfirmLocation" class="flex-1 py-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 font-semibold transition" type="button">確定</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ★追加：トピック内容入力モーダル -->
+  <div id="topicModal" class="hidden fixed inset-0 z-40 bg-black/60 grid place-items-center p-4">
+    <div class="w-full max-w-md rounded-2xl bg-slate-900 border border-slate-800 p-4" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between mb-2">
+        <h3 id="topicModalTitle" class="font-semibold">トピックを記録</h3>
+        <button id="btnCloseTopicModal" class="text-slate-400 hover:text-slate-200">×</button>
+      </div>
+      <div class="space-y-3">
+        <label class="block">
+          <span class="text-sm text-slate-300">時刻</span>
+          <input id="inpTopicTime" type="text" readonly class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-slate-400" />
+        </label>
+        <label class="block">
+          <span class="text-sm text-slate-300">カテゴリ</span>
+          <input id="inpTopicCategory" type="text" readonly class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-slate-400" />
+        </label>
+        <label class="block">
+          <span class="text-sm text-slate-300">内容</span>
+          <textarea id="inpTopicContent" placeholder="具体的な内容を入力してください" class="mt-1 w-full h-24 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 resize-none"></textarea>
+        </label>
+      </div>
+      <div class="flex gap-2 mt-4">
+        <button id="btnCancelTopic" class="flex-1 py-2 rounded-xl border border-slate-700 hover:bg-slate-800">キャンセル</button>
+        <button id="btnSaveTopic" class="flex-1 py-2 rounded-2xl bg-sky-600 hover:bg-sky-500 font-semibold">保存</button>
       </div>
     </div>
   </div>
@@ -1473,6 +1518,40 @@
       const idx = Math.round(d / 22.5) % 16;
       return dirs[idx];
     }
+
+    // ★追加：天気コードから絵文字アイコンを取得
+    function getWeatherEmoji(weatherId, weatherMain) {
+      // OWM weather IDs
+      // 200-299: Thunderstorm
+      // 300-399: Drizzle
+      // 500-599: Rain
+      // 600-699: Snow
+      // 700-799: Atmosphere (mist, smoke, dust...)
+      // 800: Clear
+      // 801-804: Clouds
+      if (typeof weatherId === 'number') {
+        if (weatherId >= 200 && weatherId < 300) return '⛈️'; // Thunderstorm
+        if (weatherId >= 300 && weatherId < 400) return '🌧️'; // Drizzle
+        if (weatherId >= 500 && weatherId < 600) return '🌧️'; // Rain
+        if (weatherId >= 600 && weatherId < 700) return '❄️'; // Snow
+        if (weatherId >= 700 && weatherId < 800) return '🌫️'; // Atmosphere
+        if (weatherId === 800) return '☀️'; // Clear
+        if (weatherId === 801) return '🌤️'; // Few clouds
+        if (weatherId === 802) return '⛅'; // Scattered clouds
+        if (weatherId >= 803) return '☁️'; // Overcast
+      }
+      // Fallback to main
+      if (typeof weatherMain === 'string') {
+        const main = weatherMain.toLowerCase();
+        if (main.includes('clear')) return '☀️';
+        if (main.includes('cloud')) return '☁️';
+        if (main.includes('rain')) return '🌧️';
+        if (main.includes('snow')) return '❄️';
+        if (main.includes('thunder') || main.includes('storm')) return '⛈️';
+        if (main.includes('mist') || main.includes('fog')) return '🌫️';
+      }
+      return '🌡️'; // Default
+    }
     function formatWeatherBrief(wx){
       if (!wx) return '';
       const parts = [];
@@ -1642,6 +1721,97 @@
         weather_description: w.description ?? null,
         raw: j
       };
+    }
+
+    // ★追加：天気の経過記録（10分間隔）
+    async function fetchWeatherTimeline(lat, lng, startedAtIso, endedAtIso) {
+      console.log('[WeatherTimeline] 🚀 Starting weather timeline fetch', {
+        lat, lng, startedAtIso, endedAtIso
+      });
+
+      if (!startedAtIso || !endedAtIso) {
+        console.warn('[WeatherTimeline] ❌ Missing startedAt or endedAt');
+        return [];
+      }
+
+      try {
+        const startDate = new Date(startedAtIso);
+        const endDate = new Date(endedAtIso);
+
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+          console.warn('[WeatherTimeline] ❌ Invalid date format');
+          return [];
+        }
+
+        // 10分前の時刻を計算
+        const endDateMinus10 = new Date(endDate.getTime() - 10 * 60 * 1000);
+
+        console.log('[WeatherTimeline] ℹ️ Time range:', {
+          start: startDate.toISOString(),
+          end: endDate.toISOString(),
+          endMinus10: endDateMinus10.toISOString()
+        });
+
+        // 10分間隔のタイムスタンプ配列を生成
+        const timestamps = [];
+        let current = new Date(startDate);
+
+        while (current <= endDateMinus10) {
+          timestamps.push(new Date(current));
+          current = new Date(current.getTime() + 10 * 60 * 1000); // 10分後
+        }
+
+        console.log('[WeatherTimeline] 📊 Generated timestamps:', {
+          count: timestamps.length,
+          first: timestamps[0]?.toISOString(),
+          last: timestamps[timestamps.length - 1]?.toISOString()
+        });
+
+        // 天気データを取得
+        const timeline = [];
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (let i = 0; i < timestamps.length; i++) {
+          const ts = timestamps[i];
+          const tsIso = ts.toISOString();
+
+          try {
+            console.log(`[WeatherTimeline] ⏳ Fetching [${i + 1}/${timestamps.length}]: ${tsIso}`);
+            const wx = await fetchWeather(lat, lng, ts);
+
+            timeline.push({
+              timestamp: tsIso,
+              data: wx || null
+            });
+
+            console.log(`[WeatherTimeline] ✅ [${i + 1}/${timestamps.length}]: temp=${wx?.temp ?? 'N/A'}°C`);
+            successCount++;
+          } catch (err) {
+            console.warn(`[WeatherTimeline] ⚠️ [${i + 1}/${timestamps.length}] error:`, err?.message);
+            timeline.push({
+              timestamp: tsIso,
+              data: null
+            });
+            errorCount++;
+          }
+
+          // API呼び出し間隔を調整（オプション）
+          // await new Promise(resolve => setTimeout(resolve, 100));
+        }
+
+        console.log('[WeatherTimeline] 📋 Fetch completed', {
+          total: timestamps.length,
+          success: successCount,
+          error: errorCount,
+          timelineEntries: timeline.length
+        });
+
+        return timeline;
+      } catch (err) {
+        console.error('[WeatherTimeline] ❌ Fatal error:', err);
+        return [];
+      }
     }
 
     // ★追加：緯度経度から海域コードを取得する（簡易版：緯度経度の範囲で判定）
@@ -3561,6 +3731,8 @@
         tripId: uuid(), 
         status: 'idle', 
         catches: [], 
+        weather_timeline: [],
+        topics: [],
         tide_daily_cache: {}, 
         manualStarted: false, 
         shouldFetchTideImages: false,  // ★追加：潮流画像取得対象フラグ
@@ -3576,6 +3748,8 @@
             tripId: p.tripId || uuid(),
             status: p.status || 'idle',
             catches: p.catches || [],
+            weather_timeline: p.weather_timeline || [],
+            topics: p.topics || [],
             startedAt: p.startedAt,
             endedAt: p.endedAt,
             lat: p.lat,
@@ -3643,6 +3817,7 @@
         selected_location_name: null,
         selected_location_lat: null,
         selected_location_lng: null,
+        topics: [],  // ★追加：トピック記録
         updatedAt: new Date().toISOString()
       };
       saveDraft(draft);
@@ -5509,7 +5684,7 @@
       return (isFinite(h)?h:0)*60 + (isFinite(m)?m:0);
     }
 
-    function drawTideChartOnCanvas(canvas, chart, catches = []){
+    function drawTideChartOnCanvas(canvas, chart, catches = [], startedAt = null, endedAt = null){
       const ctx = canvas.getContext('2d');
       const W = 720, H = 320;
       canvas.width = W; canvas.height = H;
@@ -5543,6 +5718,35 @@
       ctx.clearRect(0,0,W,H);
       ctx.fillStyle = "#0f172a";
       ctx.fillRect(0,0,W,H);
+
+      // ★追加：釣行時間の背景色付け
+      if (startedAt && endedAt) {
+        try {
+          const startDate = new Date(startedAt);
+          const endDate = new Date(endedAt);
+          
+          if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+            // 釣行開始・終了時刻を分単位に変換
+            const startMinutes = startDate.getHours() * 60 + startDate.getMinutes();
+            const endMinutes = endDate.getHours() * 60 + endDate.getMinutes();
+            
+            // グラフ上のX座標を計算
+            const startX = mapX(startMinutes);
+            const endX = mapX(endMinutes);
+            
+            // 釣行時間の背景を薄い色で塗りつぶし
+            ctx.fillStyle = "rgba(34, 197, 94, 0.15)";  // 薄い緑
+            ctx.fillRect(startX, padding.top, Math.max(endX - startX, 1), innerH);
+            
+            // 釣行時間の範囲を枠線で表示
+            ctx.strokeStyle = "rgba(34, 197, 94, 0.4)";
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(startX, padding.top, Math.max(endX - startX, 1), innerH);
+          }
+        } catch (e) {
+          console.warn('[drawTideChartOnCanvas] Failed to draw trip time background:', e);
+        }
+      }
 
       ctx.strokeStyle = "#1e293b";
       ctx.lineWidth = 1;
@@ -6405,6 +6609,81 @@
         hintAddWhenActive.classList.add('hidden'); 
       }
 
+      // ★追加：トピックリスト
+      const topicList = document.getElementById('topicList');
+      const topicListEmpty = document.getElementById('topicListEmpty');
+      const txtTopicCount = document.getElementById('txtTopicCount');
+      topicList.innerHTML = '';
+      const hasTopics = draft.topics && draft.topics.length > 0;
+      topicListEmpty.classList.toggle('hidden', hasTopics);
+      txtTopicCount.textContent = (draft.topics?.length || 0) + ' 件';
+      if (hasTopics) {
+        draft.topics.forEach((topic, idx) => {
+          const li = document.createElement('li');
+          li.className = 'rounded-xl bg-slate-900 border border-slate-800 p-3 flex justify-between items-start gap-3';
+          
+          const content = document.createElement('div');
+          content.className = 'flex-1 min-w-0';
+          
+          const header = document.createElement('div');
+          header.className = 'flex items-center justify-between gap-2';
+          
+          const catEmoji = {
+            '海況変化': '🌊',
+            'ベイト流入': '🐟',
+            'ボイル・ナブラ': '💥',
+            '周囲の釣果': '🎣'
+          }[topic.category] || '📝';
+          
+          const cat = document.createElement('span');
+          cat.className = 'font-semibold text-sm';
+          cat.textContent = `${catEmoji} ${topic.category}`;
+          
+          const time = document.createElement('span');
+          time.className = 'text-xs text-slate-400';
+          time.textContent = topic.time || '—';
+          
+          header.appendChild(cat);
+          header.appendChild(time);
+          content.appendChild(header);
+          
+          if (topic.content) {
+            const text = document.createElement('div');
+            text.className = 'text-sm text-slate-300 mt-1 break-words';
+            text.textContent = topic.content;
+            content.appendChild(text);
+          }
+          
+          li.appendChild(content);
+          
+          // ★修正：編集・削除ボタンを2つに分割
+          const btnGroup = document.createElement('div');
+          btnGroup.className = 'flex gap-1 shrink-0';
+          
+          const btnEdit = document.createElement('button');
+          btnEdit.className = 'px-2 py-1 text-xs rounded-lg border border-slate-700 hover:bg-slate-800';
+          btnEdit.textContent = '編集';
+          btnEdit.onclick = () => openTopicEditModal(idx);
+          
+          const btnDel = document.createElement('button');
+          btnDel.className = 'px-2 py-1 text-xs rounded-lg border border-slate-700 hover:bg-slate-800';
+          btnDel.textContent = '削除';
+          btnDel.onclick = async () => {
+            if (confirm('このトピックを削除しますか？')) {
+              draft.topics.splice(idx, 1);
+              await saveDraft(draft);
+              render();
+            }
+          };
+          
+          btnGroup.appendChild(btnEdit);
+          btnGroup.appendChild(btnDel);
+          li.appendChild(btnGroup);
+          
+          topicList.appendChild(li);
+        });
+      }
+
       // 釣果リスト
       catchList.innerHTML='';
       const has = draft.catches && draft.catches.length>0;
@@ -6960,12 +7239,35 @@
         const detail = document.createElement('div');
         detail.className = 'px-3 pb-3';
         detail.innerHTML = `
-          <div class="flex items-center justify-between mt-1 mb-2">
-            <div class="text-xs text-slate-400">この釣行の釣果</div>
+          <!-- ★修正：閉じるボタンを最上部に移動 -->
+          <div class="flex items-center justify-between mb-3">
+            <div></div>
             <button type="button" data-role="trip-detail-close"
               class="text-xs px-2 py-1 rounded-lg border border-slate-700 hover:bg-slate-800">
               閉じる
             </button>
+          </div>
+          <!-- ★追加：潮汐グラフ -->
+          <div data-role="trip-tide-chart-wrap" class="rounded-2xl border border-slate-800 bg-slate-900 p-3 mb-3 hidden">
+            <div class="text-sm text-slate-300 mb-2">この釣行の潮汐グラフ</div>
+            <canvas data-role="trip-tide-canvas" class="w-full h-[260px] bg-slate-950 rounded-lg"></canvas>
+            <div class="mt-2 text-xs text-slate-400 flex flex-wrap gap-2">
+              <span class="flex items-center gap-1">
+                <div class="w-3 h-1 bg-green-500" style="opacity:0.3"></div>
+                釣行時間
+              </span>
+              <span class="flex items-center gap-1">
+                <div class="w-3 h-px bg-cyan-400"></div>
+                潮汐
+              </span>
+              <span class="flex items-center gap-1">
+                <div class="w-3 h-px border-t-2 border-dashed border-amber-400"></div>
+                釣果時刻
+              </span>
+            </div>
+          </div>
+          <div class="flex items-center justify-between mt-1 mb-2">
+            <div class="text-xs text-slate-400">この釣行の釣果</div>
           </div>
           <div class="text-sm text-slate-400" data-role="trip-catches-loading">読み込み中...</div>
           <div class="grid md:grid-cols-2 gap-3 mt-2" data-role="trip-catches-list"></div>
@@ -7604,6 +7906,63 @@
         // 開いた時に Catches シートから tripId で該当釣果を読み込み
         wrap.addEventListener('toggle', async () => {
           if (!wrap.open) return;
+
+          // ★追加：潮汐グラフを描画（釣果読み込みの前）
+          try {
+            const headers = tripsCache[0];
+            const colMap = {};
+            for (let i = 0; i < headers.length; i++) {
+              colMap[String(headers[i]).trim()] = i;
+            }
+            
+            const tripRow = tripsCache.find((t, idx) => idx > 0 && String(t[colMap.tripId]) === String(thisTripId));
+            if (tripRow && colMap.raw_json >= 0) {
+              try {
+                const rawJson = tripRow[colMap.raw_json];
+                if (rawJson) {
+                  const raw = typeof rawJson === 'string' ? JSON.parse(rawJson) : rawJson;
+                  const startTide = raw?.start_tide;
+                  
+                  if (startTide && startTide.chart) {
+                    const canvas = detail.querySelector('[data-role="trip-tide-canvas"]');
+                    const chartWrap = detail.querySelector('[data-role="trip-tide-chart-wrap"]');
+                    
+                    if (canvas && chartWrap) {
+                      chartWrap.classList.remove('hidden');
+                      const startedAt = colMap.startedAt >= 0 ? tripRow[colMap.startedAt] : null;
+                      const endedAt = colMap.endedAt >= 0 ? tripRow[colMap.endedAt] : null;
+                      
+                      // 釣果データを取得
+                      const rowsC = await loadSheetViaGAS('Catches', SHEET_ID);
+                      const hs = rowsC[0].map(h=>String(h||'').trim());
+                      const cTrip = hs.indexOf('tripId');
+                      const cTime = hs.indexOf('timestamp');
+                      
+                      const catchList = [];
+                      for (let j=1;j<rowsC.length;j++){
+                        const rr = rowsC[j];
+                        if (String(rr[cTrip]||'') !== String(thisTripId)) continue;
+                        if (rr[cTime]) {
+                          catchList.push({ timestamp: rr[cTime] });
+                        }
+                      }
+                      
+                      setTimeout(() => {
+                        drawTideChartOnCanvas(canvas, startTide.chart, catchList, startedAt, endedAt);
+                      }, 0);
+                    }
+                  } else {
+                    const chartWrap = detail.querySelector('[data-role="trip-tide-chart-wrap"]');
+                    if (chartWrap) chartWrap.classList.add('hidden');
+                  }
+                }
+              } catch (err) {
+                console.warn('[TripCard] Failed to parse raw_json:', err);
+              }
+            }
+          } catch (err) {
+            console.warn('[TripCard] Error rendering tide chart:', err);
+          }
 
           const listEl = detail.querySelector('[data-role="trip-catches-list"]');
           const loadingEl = detail.querySelector('[data-role="trip-catches-loading"]');
@@ -9701,7 +10060,13 @@
         }),
         
         // ★追加：潮汐チャート画像情報
-        tide_chart_images: d.tide_chart_images || []
+        tide_chart_images: d.tide_chart_images || [],
+        
+        // ★追加：天気の経過記録（10分間隔）
+        weather_timeline: d.weather_timeline || [],
+        
+        // ★追加：トピック記録
+        topics: d.topics || []
       };
     }
 
@@ -9860,6 +10225,72 @@
       wx.appendChild(boxWx('当日の水温', wt));
       sum.appendChild(wx);
 
+      // ★追加：天気の経過記録を表示（横スクロール）
+      if (Array.isArray(reviewDraft.weather_timeline) && reviewDraft.weather_timeline.length > 0) {
+        const weatherTimelineWrap = document.createElement('div');
+        weatherTimelineWrap.className = 'rounded-2xl border border-slate-800 bg-slate-900 p-3';
+        
+        const timelineTitle = document.createElement('div');
+        timelineTitle.className = 'text-sm text-slate-300 mb-3';
+        timelineTitle.textContent = '天気の経過記録（10分間隔）';
+        weatherTimelineWrap.appendChild(timelineTitle);
+        
+        const scrollContainer = document.createElement('div');
+        scrollContainer.className = 'overflow-x-auto pb-2';
+        const cardContainer = document.createElement('div');
+        cardContainer.className = 'flex gap-2';
+        cardContainer.style.minWidth = 'fit-content';
+        
+        reviewDraft.weather_timeline.forEach((entry, idx) => {
+          const card = document.createElement('div');
+          card.className = 'flex-shrink-0 rounded-lg bg-slate-800/50 border border-slate-700 p-2 w-[120px] text-xs text-slate-200';
+          
+          let contentHTML = '';
+          
+          // タイムスタンプ（時刻のみ）
+          if (entry.timestamp) {
+            const timeStr = new Date(entry.timestamp).toLocaleString('ja-JP', { 
+              hour: '2-digit', minute: '2-digit', hour12: false 
+            });
+            contentHTML += `<div class="font-semibold text-slate-100 mb-1">${timeStr}</div>`;
+          }
+          
+          if (entry.data) {
+            const d = entry.data;
+            
+            // 天気アイコン
+            const emoji = getWeatherEmoji(d.weather_id, d.weather_main);
+            contentHTML += `<div class="text-lg mb-1">${emoji}</div>`;
+            
+            // 気温
+            if (typeof d.temp === 'number') {
+              contentHTML += `<div class="text-slate-300">${Math.round(d.temp)}°C</div>`;
+            }
+            
+            // 湿度
+            if (typeof d.humidity === 'number') {
+              contentHTML += `<div class="text-slate-400">💧 ${d.humidity}%</div>`;
+            }
+            
+            // 風向・風速
+            if (typeof d.wind_speed === 'number' || typeof d.wind_deg === 'number') {
+              const windDir = windDegToCardinal(d.wind_deg) || '—';
+              const windSpd = typeof d.wind_speed === 'number' ? `${Math.round(d.wind_speed * 10) / 10}` : '—';
+              contentHTML += `<div class="text-slate-400">${windDir} ${windSpd}m/s</div>`;
+            }
+          } else {
+            contentHTML += `<div class="text-slate-500">データなし</div>`;
+          }
+          
+          card.innerHTML = contentHTML;
+          cardContainer.appendChild(card);
+        });
+        
+        scrollContainer.appendChild(cardContainer);
+        weatherTimelineWrap.appendChild(scrollContainer);
+        sum.appendChild(weatherTimelineWrap);
+      }
+
       if (reviewDraft.start_tide?.chart){
         const tideWrap = document.createElement('div');
         tideWrap.className = 'rounded-2xl border border-slate-800 bg-slate-900 p-3';
@@ -9878,6 +10309,10 @@
         legend.className = 'mt-2 text-xs text-slate-400 flex flex-wrap gap-2';
         legend.innerHTML = `
           <span class="flex items-center gap-1">
+            <div class="w-3 h-1 bg-green-500" style="opacity:0.3"></div>
+            釣行時間
+          </span>
+          <span class="flex items-center gap-1">
             <div class="w-3 h-px bg-cyan-400"></div>
             潮汐
           </span>
@@ -9890,7 +10325,7 @@
         
         sum.appendChild(tideWrap);
         // ★修正：catches を第3パラメータとして渡す
-        setTimeout(()=> drawTideChartOnCanvas(canvas, reviewDraft.start_tide.chart, cts), 0);
+        setTimeout(()=> drawTideChartOnCanvas(canvas, reviewDraft.start_tide.chart, cts, reviewDraft.startedAt, reviewDraft.endedAt), 0);
       }
 
       const list = document.createElement('div');
@@ -10147,6 +10582,30 @@
         } catch (err) {
           console.warn('[openTripReview:Manual] ❌ Tide image fetch error:', err);
         }
+
+        // ★追加：天気の経過記録を取得（10分間隔）
+        console.log('[openTripReview:Manual] ★ Starting weather timeline fetch');
+        if (typeof draft.lat === 'number' && typeof draft.lng === 'number' && draft.startedAt && draft.endedAt) {
+          try {
+            const weatherTimeline = await fetchWeatherTimeline(draft.lat, draft.lng, draft.startedAt, draft.endedAt);
+            draft.weather_timeline = weatherTimeline || [];
+            console.log('[openTripReview:Manual] ✅ Weather timeline fetch completed:', {
+              count: draft.weather_timeline.length,
+              entries: draft.weather_timeline.length > 0 ? draft.weather_timeline.map(w => ({ ts: w.timestamp, temp: w.data?.temp })) : []
+            });
+          } catch (err) {
+            console.warn('[openTripReview:Manual] ❌ Weather timeline fetch error:', err);
+            draft.weather_timeline = [];
+          }
+        } else {
+          console.warn('[openTripReview:Manual] ℹ️ Weather timeline skipped (missing lat/lng/startedAt/endedAt)', {
+            hasLat: typeof draft.lat === 'number',
+            hasLng: typeof draft.lng === 'number',
+            hasStart: !!draft.startedAt,
+            hasEnd: !!draft.endedAt
+          });
+          draft.weather_timeline = [];
+        }
         
         saveDraft(draft);
 
@@ -10193,6 +10652,72 @@
         wx_manual.appendChild(boxWx_manual('当日の水温', wt_manual));
         sum_manual.appendChild(wx_manual);
 
+        // ★追加：天気の経過記録を表示（横スクロール）
+        if (Array.isArray(draft.weather_timeline) && draft.weather_timeline.length > 0) {
+          const weatherTimelineWrap = document.createElement('div');
+          weatherTimelineWrap.className = 'rounded-2xl border border-slate-800 bg-slate-900 p-3';
+          
+          const timelineTitle = document.createElement('div');
+          timelineTitle.className = 'text-sm text-slate-300 mb-3';
+          timelineTitle.textContent = '天気の経過記録（10分間隔）';
+          weatherTimelineWrap.appendChild(timelineTitle);
+          
+          const scrollContainer = document.createElement('div');
+          scrollContainer.className = 'overflow-x-auto pb-2';
+          const cardContainer = document.createElement('div');
+          cardContainer.className = 'flex gap-2';
+          cardContainer.style.minWidth = 'fit-content';
+          
+          draft.weather_timeline.forEach((entry, idx) => {
+            const card = document.createElement('div');
+            card.className = 'flex-shrink-0 rounded-lg bg-slate-800/50 border border-slate-700 p-2 w-[120px] text-xs text-slate-200';
+            
+            let contentHTML = '';
+            
+            // タイムスタンプ（時刻のみ）
+            if (entry.timestamp) {
+              const timeStr = new Date(entry.timestamp).toLocaleString('ja-JP', { 
+                hour: '2-digit', minute: '2-digit', hour12: false 
+              });
+              contentHTML += `<div class="font-semibold text-slate-100 mb-1">${timeStr}</div>`;
+            }
+            
+            if (entry.data) {
+              const d = entry.data;
+              
+              // 天気アイコン
+              const emoji = getWeatherEmoji(d.weather_id, d.weather_main);
+              contentHTML += `<div class="text-lg mb-1">${emoji}</div>`;
+              
+              // 気温
+              if (typeof d.temp === 'number') {
+                contentHTML += `<div class="text-slate-300">${Math.round(d.temp)}°C</div>`;
+              }
+              
+              // 湿度
+              if (typeof d.humidity === 'number') {
+                contentHTML += `<div class="text-slate-400">💧 ${d.humidity}%</div>`;
+              }
+              
+              // 風向・風速
+              if (typeof d.wind_speed === 'number' || typeof d.wind_deg === 'number') {
+                const windDir = windDegToCardinal(d.wind_deg) || '—';
+                const windSpd = typeof d.wind_speed === 'number' ? `${Math.round(d.wind_speed * 10) / 10}` : '—';
+                contentHTML += `<div class="text-slate-400">${windDir} ${windSpd}m/s</div>`;
+              }
+            } else {
+              contentHTML += `<div class="text-slate-500">データなし</div>`;
+            }
+            
+            card.innerHTML = contentHTML;
+            cardContainer.appendChild(card);
+          });
+          
+          scrollContainer.appendChild(cardContainer);
+          weatherTimelineWrap.appendChild(scrollContainer);
+          sum_manual.appendChild(weatherTimelineWrap);
+        }
+
         if (draft.start_tide?.chart){
           const tideWrap_manual = document.createElement('div');
           tideWrap_manual.className = 'rounded-2xl border border-slate-800 bg-slate-900 p-3';
@@ -10211,6 +10736,10 @@
           legend_manual.className = 'mt-2 text-xs text-slate-400 flex flex-wrap gap-2';
           legend_manual.innerHTML = `
             <span class="flex items-center gap-1">
+              <div class="w-3 h-1 bg-green-500" style="opacity:0.3"></div>
+              釣行時間
+            </span>
+            <span class="flex items-center gap-1">
               <div class="w-3 h-px bg-cyan-400"></div>
               潮汐
             </span>
@@ -10223,7 +10752,7 @@
           
           sum_manual.appendChild(tideWrap_manual);
           // ★修正：catches を第3パラメータとして渡す
-          setTimeout(()=> drawTideChartOnCanvas(canvas_manual, draft.start_tide.chart, cts_manual), 0);
+          setTimeout(()=> drawTideChartOnCanvas(canvas_manual, draft.start_tide.chart, cts_manual, draft.startedAt, draft.endedAt), 0);
         }
 
         const list_manual = document.createElement('div');
@@ -10280,6 +10809,33 @@
       } catch (err) {
         console.warn('[openTripReview:Normal] ❌ Tide image fetch error:', err);
       }
+
+      // ★追加：天気の経過記録を取得（10分間隔）
+      console.log('[openTripReview:Normal] ★ Starting weather timeline fetch');
+      if (typeof draft.lat === 'number' && typeof draft.lng === 'number' && draft.startedAt && pendingEnd?.endedAt) {
+        try {
+          const weatherTimeline = await fetchWeatherTimeline(draft.lat, draft.lng, draft.startedAt, pendingEnd.endedAt);
+          draft.weather_timeline = weatherTimeline || [];
+          console.log('[openTripReview:Normal] ✅ Weather timeline fetch completed:', {
+            count: draft.weather_timeline.length,
+            entries: draft.weather_timeline.length > 0 ? draft.weather_timeline.map(w => ({ ts: w.timestamp, temp: w.data?.temp })) : []
+          });
+        } catch (err) {
+          console.warn('[openTripReview:Normal] ❌ Weather timeline fetch error:', err);
+          draft.weather_timeline = [];
+        }
+      } else {
+        console.warn('[openTripReview:Normal] ℹ️ Weather timeline skipped (missing lat/lng/startedAt/endedAt)', {
+          hasLat: typeof draft.lat === 'number',
+          hasLng: typeof draft.lng === 'number',
+          hasStart: !!draft.startedAt,
+          hasEnd: !!pendingEnd?.endedAt
+        });
+        draft.weather_timeline = [];
+      }
+
+      saveDraft(draft);
+      captureUploadReviewBackup();
 
       // 従来どおりアップロード確認モーダルへ
       openUploadReview();
@@ -10368,13 +10924,14 @@
 
         if (!timestamps.length) {
           LOG.app("[Complement] startedAt not decided (no valid timestamps)");
-        } else if (!draft.startedAt && !draft.manualStarted) {
-          // ★修正: manualStarted フラグがある場合は上書きしない（ユーザー入力値を優先）
+        } else if (!draft.startedAt) {
+          // ★修正: ユーザー入力値がない場合のみ、EXIFから計算
           const min = timestamps.reduce((a,b)=> a.t<b.t ? a : b);
           draft.startedAt = toOffsetIsoLocal(new Date(min.t));
-          LOG.app("[Complement] decided startedAt (filled)", { startedAt: draft.startedAt, sample: timestamps[0]?.raw || null });
+          LOG.app("[Complement] decided startedAt (from EXIF)", { startedAt: draft.startedAt, sample: timestamps[0]?.raw || null });
         } else {
-          LOG.app("[Complement] kept startedAt", { startedAt: draft.startedAt, manual: !!hasManualFlag, manualStartedFlag: draft.manualStarted });
+          // ★ユーザー入力値がある場合はそのまま保持
+          LOG.app("[Complement] kept startedAt (user input)", { startedAt: draft.startedAt });
         }
       }
       
@@ -11094,6 +11651,104 @@
     btnAddCatchBottom.onclick=openAddCatch;
     btnEndBottom.onclick = openTripReview;
 
+    // ★追加：トピックボタンハンドラ
+    const topicCategories = {
+      'btnTopicOceanCondition': '海況変化',
+      'btnTopicBait': 'ベイト流入',
+      'btnTopicBoil': 'ボイル・ナブラ',
+      'btnTopicCatch': '周囲の釣果'
+    };
+
+    Object.entries(topicCategories).forEach(([btnId, category]) => {
+      const btn = document.getElementById(btnId);
+      if (btn) {
+        btn.onclick = () => openTopicModal(category);
+      }
+    });
+
+    // トピックモーダルハンドラ
+    const topicModal = document.getElementById('topicModal');
+    const inpTopicTime = document.getElementById('inpTopicTime');
+    const inpTopicCategory = document.getElementById('inpTopicCategory');
+    const inpTopicContent = document.getElementById('inpTopicContent');
+    const btnSaveTopic = document.getElementById('btnSaveTopic');
+    const btnCancelTopic = document.getElementById('btnCancelTopic');
+    const btnCloseTopicModal = document.getElementById('btnCloseTopicModal');
+    
+    // ★追加：編集中のトピック索引（-1 = 新規）
+    let editingTopicIdx = -1;
+
+    function openTopicModal(category) {
+      // 現在時刻を設定
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      inpTopicTime.value = `${hours}:${minutes}`;
+      inpTopicCategory.value = category;
+      inpTopicContent.value = '';
+      editingTopicIdx = -1;  // 新規モード
+      topicModal.classList.remove('hidden');
+    }
+
+    // ★追加：トピック編集モード用
+    function openTopicEditModal(idx) {
+      if (idx < 0 || !draft.topics || !draft.topics[idx]) {
+        alert('トピックが見つかりません');
+        return;
+      }
+      const topic = draft.topics[idx];
+      inpTopicTime.value = topic.time || '';
+      inpTopicCategory.value = topic.category || '';
+      inpTopicContent.value = topic.content || '';
+      editingTopicIdx = idx;  // 編集モード
+      topicModal.classList.remove('hidden');
+    }
+
+    function closeTopicModal() {
+      topicModal.classList.add('hidden');
+      editingTopicIdx = -1;
+      inpTopicContent.value = '';
+    }
+
+    btnCloseTopicModal.onclick = closeTopicModal;
+    btnCancelTopic.onclick = closeTopicModal;
+
+    btnSaveTopic.onclick = async () => {
+      const time = inpTopicTime.value;
+      const category = inpTopicCategory.value;
+      const content = inpTopicContent.value.trim();
+
+      if (!time || !category) {
+        alert('時刻とカテゴリを入力してください');
+        return;
+      }
+
+      if (!draft.topics) draft.topics = [];
+
+      // ★修正：新規/編集を判定
+      if (editingTopicIdx >= 0) {
+        // 編集モード
+        draft.topics[editingTopicIdx] = {
+          time: time,
+          category: category,
+          content: content,
+          recordedAt: draft.topics[editingTopicIdx].recordedAt || new Date().toISOString()
+        };
+      } else {
+        // 新規モード
+        draft.topics.push({
+          time: time,
+          category: category,
+          content: content,
+          recordedAt: new Date().toISOString()
+        });
+      }
+
+      await saveDraft(draft);
+      closeTopicModal();
+      render();
+    };
+
     // 初期表示
     render();
     // ★追加：釣行編集モーダルを開く
@@ -11383,6 +12038,17 @@
           } catch (weatherErr) {
             console.error('[btnRefetchCompData] Weather fetch error:', weatherErr);
             draft.start_weather = null;
+          }
+          
+          // ★追加：天気の経過記録を再取得
+          try {
+            const endedAtForTimeline = draft.endedAt || new Date(new Date(startedAt).getTime() + 3 * 3600000).toISOString();
+            const weatherTimeline = await fetchWeatherTimeline(lat, lng, startedAt, endedAtForTimeline);
+            draft.weather_timeline = weatherTimeline || [];
+            console.log('[btnRefetchCompData] Weather timeline refetched:', weatherTimeline?.length || 0, 'entries');
+          } catch (timelineErr) {
+            console.error('[btnRefetchCompData] Weather timeline fetch error:', timelineErr);
+            draft.weather_timeline = [];
           }
           
           // 潮汐を再取得（重要：新しい潮汐データで上書き）
