@@ -12,9 +12,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Fishing Log">
-  <!-- ★Version: 1.6.1 - 2026-07-16 -->
-  <!-- ★Updates: 釣果編集時を上書き更新、位置候補の距离・水温表示を追加 -->
-  <title>釣行記録 v1.6.1（PWAフロント / コンパクトUI）</title>
+  <!-- ★Version: 1.6.2 - 2026-07-21 -->
+  <!-- ★Updates: トピックモーダルの時刻入力はみ出しを修正 -->
+  <title>釣行記録 v1.6.2（PWAフロント / コンパクトUI）</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* ★追加：入力フォーム自動ズーム抑制 */
@@ -744,15 +744,15 @@
 
   <!-- ★追加：トピック内容入力モーダル -->
   <div id="topicModal" class="hidden fixed inset-0 z-40 bg-black/60 grid place-items-center p-4">
-    <div class="w-full max-w-md rounded-2xl bg-slate-900 border border-slate-800 p-4" onclick="event.stopPropagation()">
+    <div class="w-full max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden rounded-2xl bg-slate-900 border border-slate-800 p-4" onclick="event.stopPropagation()">
       <div class="flex items-center justify-between mb-2">
         <h3 id="topicModalTitle" class="font-semibold">トピックを記録</h3>
         <button id="btnCloseTopicModal" class="text-slate-400 hover:text-slate-200">×</button>
       </div>
       <div class="space-y-3">
-        <label class="block">
+        <label class="block overflow-hidden">
           <span class="text-sm text-slate-300">時刻</span>
-          <input id="inpTopicTime" type="time" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" />
+          <input id="inpTopicTime" type="time" class="mt-1 w-full min-w-0 max-w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" />
         </label>
         <label class="block">
           <span class="text-sm text-slate-300">カテゴリ</span>
