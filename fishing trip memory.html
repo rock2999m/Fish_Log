@@ -12,9 +12,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Fishing Log">
-  <!-- ★Version: 1.6.3 - 2026-07-22 -->
-  <!-- ★Updates: トピックモーダルの時刻入力はみ出しを修正 -->
-  <title>釣行記録 v1.6.3（PWAフロント / コンパクトUI）</title>
+  <!-- ★Version: 1.6.4 - 2026-07-27 -->
+  <!-- ★Updates: 潮流画像の複数海域フレーム（鳴門）とデバッグログを追加 -->
+  <title>釣行記録 v1.6.4（PWAフロント / コンパクトUI）</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* ★追加：入力フォーム自動ズーム抑制 */
@@ -3724,6 +3724,35 @@
     
     // ★追加：潮流画像ホワイトリストキャッシュ（グローバル）
     let akashiTidePointsCache = { codes: [], names: [] };
+
+    // ★追加：潮流画像取得対象リージョン設定（将来拡張用フレーム）
+    const TIDE_IMAGE_REGIONS = [
+      {
+        id: 'akashi',
+        label: '明石海峡',
+        center: { lat: 34.616539, lng: 135.022438 },
+        radiusKm: 25,
+        imageBaseUrl: 'http://www.mirc.jha.or.jp/online/w/w-tcp/img/akashi/',
+        minuteStep: 10
+      },
+      {
+        id: 'naruto',
+        label: '鳴門',
+        center: { lat: 34.238889, lng: 134.651861 },
+        radiusKm: 15,
+        imageBaseUrl: 'http://www.mirc.jha.or.jp/online/w/w-tcp/img/naruto/',
+        minuteStep: 10
+      }
+      // 追加予定例:
+      // {
+      //   id: 'new_region',
+      //   label: '新規地点',
+      //   center: { lat: 0, lng: 0 },
+      //   radiusKm: 25,
+      //   imageBaseUrl: 'http://example.com/path/',
+      //   minuteStep: 10
+      // }
+    ];
     
     // ドラフト読み込みのフォールバック実装
     const loadDraft = () => {
@@ -3736,6 +3765,7 @@
         tide_daily_cache: {}, 
         manualStarted: false, 
         shouldFetchTideImages: false,  // ★追加：潮流画像取得対象フラグ
+        tideImageRegionId: null,       // ★追加：潮流画像取得リージョンID
         updatedAt: new Date().toISOString() 
       };
       
@@ -3761,6 +3791,7 @@
             start_water_temp: p.start_water_temp || null,
             manualStarted: !!p.manualStarted,
             shouldFetchTideImages: !!p.shouldFetchTideImages,  // ★追加：フラグを復元
+            tideImageRegionId: p.tideImageRegionId || null,    // ★追加：リージョンIDを復元
             updatedAt: p.updatedAt || new Date().toISOString()
           };
         }
@@ -3814,6 +3845,7 @@
         memo: null,
         manualStarted: false,
         shouldFetchTideImages: false,
+        tideImageRegionId: null,
         selected_location_name: null,
         selected_location_lat: null,
         selected_location_lng: null,
@@ -4707,8 +4739,90 @@
     }
     
     // ============================================
-    // ★修正：Phase 2 - 判定関数（座標ベースに変更）
+    // ★修正：Phase 2 - 判定関数（座標ベース・リージョン拡張フレーム）
     // ============================================
+
+    function getTideImageRegionById(regionId) {
+      return TIDE_IMAGE_REGIONS.find(r => r.id === regionId) || null;
+    }
+
+    function calcDistanceKm(lat1, lng1, lat2, lng2) {
+      const R = 6371; // km
+      const toRad = deg => (deg * Math.PI) / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lng2 - lng1);
+      const a = Math.sin(dLat / 2) ** 2 +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+      return R * 2 * Math.asin(Math.sqrt(a));
+    }
+
+    // ★追加：該当リージョン判定（将来は複数海域をここで分岐）
+    function detectTideImageRegion(params) {
+      // 座標の抽出
+      const { lat: userLat, lng: userLng } = params || {};
+
+      console.log('[TideImage:DetectRegion] input:', { userLat, userLng });
+
+      if (!isFinite(userLat) || !isFinite(userLng)) {
+        console.warn('[TideImage:DetectRegion] invalid coordinates');
+        return null;
+      }
+
+      const storedHarborCache = getHarborCacheFromStorage();
+      if (!storedHarborCache || !storedHarborCache.mapped || storedHarborCache.mapped.length === 0) {
+        console.warn('[TideImage:DetectRegion] harbor cache unavailable');
+        return null;
+      }
+
+      // ユーザー座標から最近接港を検出
+      let nearestHarbor = null;
+      let minDistance = Infinity;
+      storedHarborCache.mapped.forEach(harbor => {
+        const distance = calcDistanceKm(userLat, userLng, harbor.lat, harbor.lon);
+        if (distance < minDistance) {
+          minDistance = distance;
+          nearestHarbor = harbor;
+        }
+      });
+
+      if (!nearestHarbor) {
+        console.warn('[TideImage:DetectRegion] nearest harbor not found');
+        return null;
+      }
+
+      console.log('[TideImage:DetectRegion] nearest harbor:', {
+        name: nearestHarbor.hn,
+        code: nearestHarbor.hc,
+        distanceFromUserKm: Number(minDistance.toFixed(3))
+      });
+
+      // 各リージョンに対して判定（将来拡張）
+      for (const region of TIDE_IMAGE_REGIONS) {
+        const distFromCenter = calcDistanceKm(
+          nearestHarbor.lat,
+          nearestHarbor.lon,
+          region.center.lat,
+          region.center.lng
+        );
+        console.log('[TideImage:DetectRegion] region check:', {
+          regionId: region.id,
+          regionLabel: region.label,
+          distFromCenterKm: Number(distFromCenter.toFixed(3)),
+          radiusKm: region.radiusKm,
+          hit: distFromCenter <= region.radiusKm
+        });
+        if (distFromCenter <= region.radiusKm) {
+          return {
+            region,
+            nearestHarbor,
+            distanceFromUserKm: minDistance,
+            distanceFromRegionCenterKm: distFromCenter
+          };
+        }
+      }
+
+      return null;
+    }
     
     /**
      * ★修正版：座標ベースで潮位画像取得対象判定
@@ -4722,75 +4836,29 @@
      */
     function isTideImageEligible(params) {
       console.log('[TideImage:Eligible] ★ Checking eligibility (coordinate-based)...');
-      
-      // 座標の抽出
-      const { lat: userLat, lng: userLng } = params || {};
-      
-      if (!isFinite(userLat) || !isFinite(userLng)) {
-        console.warn('[TideImage:Eligible] ⚠️ Invalid coordinates:', { userLat, userLng });
-        return false;
-      }
-      
-      console.log('[TideImage:Eligible] Input coordinates:', { userLat, userLng });
-      
-      // ★修正：localStorage から港データを直接取得
-      const storedHarborCache = getHarborCacheFromStorage();
-      if (!storedHarborCache || !storedHarborCache.mapped || storedHarborCache.mapped.length === 0) {
-        console.warn('[TideImage:Eligible] ⚠️ Harbor data not available in localStorage');
-        return false;
-      }
-      
-      // 明石中心から25km圏内に港があるか判定
-      const akashiCenter = { lat: 34.616539, lng: 135.022438 };
-      const radiusKm = 25;
-      const R = 6371; // 地球半径 km
-      const toRad = deg => (deg * Math.PI) / 180;
-      
-      // ユーザー座標から最近接港を検出
-      let nearestHarbor = null;
-      let minDistance = Infinity;
-      
-      storedHarborCache.mapped.forEach(harbor => {
-        // ユーザー座標と港の距離を計算
-        const dLat = toRad(harbor.lat - userLat);
-        const dLon = toRad(harbor.lon - userLng);
-        const a = Math.sin(dLat / 2) ** 2 +
-                  Math.cos(toRad(userLat)) * Math.cos(toRad(harbor.lat)) * Math.sin(dLon / 2) ** 2;
-        const distance = R * 2 * Math.asin(Math.sqrt(a));
-        
-        if (distance < minDistance) {
-          minDistance = distance;
-          nearestHarbor = harbor;
-        }
-      });
-      
-      // 最近接港が明石25km以内か判定
-      if (nearestHarbor) {
-        const dLat = toRad(nearestHarbor.lat - akashiCenter.lat);
-        const dLon = toRad(nearestHarbor.lon - akashiCenter.lng);
-        const a = Math.sin(dLat / 2) ** 2 +
-                  Math.cos(toRad(akashiCenter.lat)) * Math.cos(toRad(nearestHarbor.lat)) * Math.sin(dLon / 2) ** 2;
-        const distanceFromAkashi = R * 2 * Math.asin(Math.sqrt(a));
-        
-        const eligible = distanceFromAkashi <= radiusKm;
-        
+
+      const match = detectTideImageRegion(params);
+      const eligible = !!match;
+
+      if (match) {
         console.log('[TideImage:Eligible] ✅ Result:', {
+          regionId: match.region.id,
+          regionLabel: match.region.label,
           nearestHarbor: {
-            name: nearestHarbor.hn,
-            code: nearestHarbor.hc,
-            distance: minDistance.toFixed(2) + ' km'
+            name: match.nearestHarbor.hn,
+            code: match.nearestHarbor.hc,
+            distance: match.distanceFromUserKm.toFixed(2) + ' km'
           },
-          distanceFromAkashi: distanceFromAkashi.toFixed(2) + ' km',
-          radiusKm: radiusKm,
-          eligible: eligible,
-          decision: eligible ? '✅ TARGET' : '❌ NOT_TARGET'
+          distanceFromRegionCenter: match.distanceFromRegionCenterKm.toFixed(2) + ' km',
+          radiusKm: match.region.radiusKm,
+          eligible: true,
+          decision: '✅ TARGET'
         });
-        
-        return eligible;
+      } else {
+        console.log('[TideImage:Eligible] ❌ Result: NOT_TARGET');
       }
-      
-      console.warn('[TideImage:Eligible] ⚠️ No harbor found');
-      return false;
+
+      return eligible;
     }
 
     // ★追加：潮汐チャート画像取得・アップロード関数（GASプロキシ経由）
@@ -4804,7 +4872,7 @@
         
         if (!draft.shouldFetchTideImages) {
           console.log('[TideImageUpload:Flag] ℹ️ Flag is FALSE - skipping tide image fetch');
-          console.log('[TideImageUpload:Flag] ℹ️ Reason: Location is outside Akashi 12km area or position not set');
+          console.log('[TideImageUpload:Flag] ℹ️ Reason: Location is outside target region or position not set');
           return {
             ok: true,
             images: [],
@@ -4812,9 +4880,29 @@
             reason: 'flag disabled'
           };
         }
+
+        const selectedRegion = getTideImageRegionById(draft.tideImageRegionId) || getTideImageRegionById('akashi');
+        if (!selectedRegion) {
+          console.warn('[TideImageUpload:Flag] ⚠️ Region config not found');
+          return { ok: false, images: [], error: 'region config not found' };
+        }
+
+        console.log('[TideImageUpload:Region] selected region config:', {
+          id: selectedRegion.id,
+          label: selectedRegion.label,
+          center: selectedRegion.center,
+          radiusKm: selectedRegion.radiusKm,
+          imageBaseUrl: selectedRegion.imageBaseUrl,
+          minuteStep: selectedRegion.minuteStep
+        });
         
         console.log('[TideImageUpload:Flag] ✅ Flag is TRUE - proceeding with tide image fetch');
-        console.log('[TideImageUpload] Starting tide image fetch', { startedAt, endedAt });
+        console.log('[TideImageUpload] Starting tide image fetch', {
+          startedAt,
+          endedAt,
+          regionId: selectedRegion.id,
+          regionLabel: selectedRegion.label
+        });
         
         if (!startedAt || !endedAt) {
           console.warn('[TideImageUpload] Missing startedAt or endedAt');
@@ -4862,6 +4950,10 @@
         }
 
         console.log('[TideImageUpload] Total images to fetch:', filenames.length);
+        console.log('[TideImageUpload] Filename range:', {
+          first: filenames[0] || null,
+          last: filenames[filenames.length - 1] || null
+        });
 
         // ★案1修正：ループ外でトークンを一度だけ読み込み
         const latestToken = await configStorage.getItem('WORKERS_AUTH_TOKEN');
@@ -4876,7 +4968,8 @@
             
             const gasPayload = {
               action: 'fetchTideImageViaProxy',
-              fileName: filename
+              fileName: filename,
+              regionId: selectedRegion.id
             };
 
             const workerUrl = CONFIG.API.FISHING_TRIP_API_WORKER + '/api/upload';
@@ -4918,6 +5011,12 @@
         const uploadedImages = results.filter(r => r !== null);
 
         console.log('[TideImageUpload] Completed. Uploaded', uploadedImages.length, 'images');
+        console.log('[TideImageUpload] Upload summary:', {
+          requested: filenames.length,
+          uploaded: uploadedImages.length,
+          failed: filenames.length - uploadedImages.length,
+          regionId: selectedRegion.id
+        });
         return { ok: true, images: uploadedImages };
       } catch (err) {
         console.error('[TideImageUpload] Fatal error:', err);
@@ -7118,6 +7217,8 @@
 
         // ★追加: 水温の概要
         let waterTempBrief = '';
+        // ★追加: 天気の経過記録（カード詳細表示用）
+        let weatherTimelineSectionHtml = '';
         
         // ★追加：メモを取得（1行表示用）
         const memo = col.memo >= 0 ? (r[col.memo] || '') : '';
@@ -7132,6 +7233,44 @@
           }
           tideName = raw?.start_tide?.tideName || raw?.start_tide?.chart?.moon?.title || '';
           if (raw?.start_weather) startWeatherBrief = formatWeatherBrief(raw.start_weather);
+
+          // ★追加: raw_json.weather_timeline をカード詳細に表示
+          const weatherTimeline = Array.isArray(raw?.weather_timeline) ? raw.weather_timeline : [];
+          if (weatherTimeline.length > 0) {
+            const weatherCardsHtml = weatherTimeline.map((entry) => {
+              const dt = entry?.timestamp ? new Date(entry.timestamp) : null;
+              const timeStr = (dt && !isNaN(dt.getTime()))
+                ? dt.toLocaleString('ja-JP', { hour: '2-digit', minute: '2-digit', hour12: false })
+                : '—';
+
+              const d = entry?.data || null;
+              const emoji = d ? getWeatherEmoji(d.weather_id, d.weather_main) : '—';
+              const tempText = (typeof d?.temp === 'number') ? `${Math.round(d.temp)}°C` : '—';
+              const humidityText = (typeof d?.humidity === 'number') ? `💧 ${d.humidity}%` : '';
+              const windDir = (typeof d?.wind_deg === 'number') ? (windDegToCardinal(d.wind_deg) || '—') : '—';
+              const windSpd = (typeof d?.wind_speed === 'number') ? `${Math.round(d.wind_speed * 10) / 10}` : '—';
+              const windText = d ? `${windDir} ${windSpd}m/s` : 'データなし';
+
+              return `
+                <div class="flex-shrink-0 rounded-lg bg-slate-800/50 border border-slate-700 p-2 w-[110px] text-xs text-slate-200">
+                  <div class="font-semibold text-slate-100 mb-1">${timeStr}</div>
+                  <div class="text-lg mb-1">${emoji}</div>
+                  <div class="text-slate-300">${tempText}</div>
+                  ${humidityText ? `<div class="text-slate-400">${humidityText}</div>` : ''}
+                  <div class="text-slate-400">${windText}</div>
+                </div>
+              `;
+            }).join('');
+
+            weatherTimelineSectionHtml = `
+              <div class="rounded-2xl border border-slate-800 bg-slate-900 p-3 mb-3 overflow-hidden">
+                <div class="text-sm text-slate-300 mb-2">天気の経過記録（10分間隔）</div>
+                <div class="w-full max-w-full overflow-x-auto overflow-y-hidden pb-1">
+                  <div class="flex gap-2" style="min-width: fit-content;">${weatherCardsHtml}</div>
+                </div>
+              </div>
+            `;
+          }
 
           // ★追加: raw_json に start_water_temp があれば優先
           const wt = raw?.start_water_temp;
@@ -7266,6 +7405,7 @@
               </span>
             </div>
           </div>
+          ${weatherTimelineSectionHtml}
           <div class="flex items-center justify-between mt-1 mb-2">
             <div class="text-xs text-slate-400">この釣行の釣果</div>
           </div>
@@ -8226,15 +8366,26 @@
           // 潮流画像取得対象かどうかをフロント側で判定（座標ベース）
           console.log('[continueStartTripAfterLocationSelection] 🌀 Checking tide image eligibility...');
           try {
-            // ★修正：座標を直接渡す（修正後のisTideImageEligibleは座標ベース）
-            draft.shouldFetchTideImages = isTideImageEligible({
+            const matchedRegion = detectTideImageRegion({
               lat: draft.selected_location_lat,
               lng: draft.selected_location_lng
             });
+            draft.shouldFetchTideImages = !!matchedRegion;
+            draft.tideImageRegionId = matchedRegion?.region?.id || null;
             console.log('[continueStartTripAfterLocationSelection] ✅ Tide image flag set:', draft.shouldFetchTideImages ? 'WILL_FETCH' : 'SKIP');
+            if (draft.tideImageRegionId) {
+              console.log('[continueStartTripAfterLocationSelection] ✅ Tide image region:', draft.tideImageRegionId);
+              console.log('[continueStartTripAfterLocationSelection] ✅ Tide image region detail:', {
+                label: matchedRegion?.region?.label,
+                nearestHarbor: matchedRegion?.nearestHarbor?.hn,
+                distanceFromUserKm: Number((matchedRegion?.distanceFromUserKm || 0).toFixed(3)),
+                distanceFromRegionCenterKm: Number((matchedRegion?.distanceFromRegionCenterKm || 0).toFixed(3))
+              });
+            }
           } catch (e) {
             console.warn('[continueStartTripAfterLocationSelection] ❌ Tide image check failed:', e.message);
             draft.shouldFetchTideImages = false;
+            draft.tideImageRegionId = null;
           }
         }
 
@@ -11522,6 +11673,37 @@
         console.warn("[TripManual] unexpected:", e?.message||e);
       }
 
+      // ★追加：手動フローでも潮流画像リージョン判定を実行
+      if (typeof draft.lat === 'number' && typeof draft.lng === 'number' && isFinite(draft.lat) && isFinite(draft.lng)) {
+        try {
+          const matchedRegion = detectTideImageRegion({
+            lat: draft.lat,
+            lng: draft.lng
+          });
+          draft.shouldFetchTideImages = !!matchedRegion;
+          draft.tideImageRegionId = matchedRegion?.region?.id || null;
+
+          console.log('[TripManual] ✅ Tide image flag set:', draft.shouldFetchTideImages ? 'WILL_FETCH' : 'SKIP');
+          if (draft.tideImageRegionId) {
+            console.log('[TripManual] ✅ Tide image region:', draft.tideImageRegionId);
+            console.log('[TripManual] ✅ Tide image region detail:', {
+              label: matchedRegion?.region?.label,
+              nearestHarbor: matchedRegion?.nearestHarbor?.hn,
+              distanceFromUserKm: Number((matchedRegion?.distanceFromUserKm || 0).toFixed(3)),
+              distanceFromRegionCenterKm: Number((matchedRegion?.distanceFromRegionCenterKm || 0).toFixed(3))
+            });
+          }
+        } catch (e) {
+          console.warn('[TripManual] ❌ Tide image check failed:', e.message);
+          draft.shouldFetchTideImages = false;
+          draft.tideImageRegionId = null;
+        }
+      } else {
+        draft.shouldFetchTideImages = false;
+        draft.tideImageRegionId = null;
+        console.log('[TripManual] ℹ️ Tide image check skipped: no valid lat/lng');
+      }
+
       // 5) 保存とUI
       saveDraft(draft);
       LOG.app("[TripManual] saved (no photo, no geolocation)", {
@@ -13217,7 +13399,7 @@
 
   <!-- ★修正：バージョン情報フッター（ホーム画面でのみ表示） -->
   <footer id="versionFooter" class="fixed bottom-0 left-0 right-0 z-0 bg-slate-950/95 border-t border-slate-800 text-xs text-slate-400 text-center py-2 pb-safe">
-    <span id="versionInfo">Fishing_Log_dev | v1.6.3</span>
+    <span id="versionInfo">Fishing_Log_dev | v1.6.4</span>
   </footer>
 
   <!-- ★追加：エラー・通知表示エリア -->
