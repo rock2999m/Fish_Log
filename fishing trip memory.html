@@ -12,9 +12,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Fishing Log">
-  <!-- ★Version: 2.3.0 - 2026-07-31 -->
+  <!-- ★Version: 2.4.0 - 2026-07-31 -->
   <!-- ★Updates: 潮流画像の複数海域フレーム（鳴門）とデバッグログを追加 -->
-  <title>釣行記録 v2.3.0（PWAフロント / コンパクトUI）</title>
+  <title>釣行記録 v2.4.0（PWAフロント / コンパクトUI）</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* ★追加：入力フォーム自動ズーム抑制 */
@@ -7533,9 +7533,18 @@
                 return isFinite(v) ? v : null;
               })(),
               start_weather: tripRow[col.start_weather_main] ? {
-                temp: parseFloat(tripRow[col.start_temp]) || null,
-                wind_speed: parseFloat(tripRow[col.start_wind_speed]) || null,
-                wind_deg: parseFloat(tripRow[col.start_wind_deg]) || null,
+                temp: (() => {
+                  const v = parseFloat(tripRow[col.start_temp]);
+                  return isFinite(v) ? v : null;
+                })(),
+                wind_speed: (() => {
+                  const v = parseFloat(tripRow[col.start_wind_speed]);
+                  return isFinite(v) ? v : null;
+                })(),
+                wind_deg: (() => {
+                  const v = parseFloat(tripRow[col.start_wind_deg]);
+                  return isFinite(v) ? v : null;
+                })(),
                 weather_main: tripRow[col.start_weather_main] || '',
                 weather_description: tripRow[col.start_weather_desc] || ''
               } : null,
@@ -7551,7 +7560,12 @@
               } : null,
               weather: tripRow[col.start_weather_main] || null,  // ★補完用：天気
               tide_trend: tripRow[col.tide_trend] || null,  // ★補完用：潮汐傾向
-              tide_level_cm: tripRow[col.tide_level_cm] ? parseFloat(tripRow[col.tide_level_cm]) : null,  // ★補完用：潮位
+              tide_level_cm: (col.tide_level_cm >= 0 && tripRow[col.tide_level_cm] !== '' && tripRow[col.tide_level_cm] !== null && tripRow[col.tide_level_cm] !== undefined)
+                ? (() => {
+                    const v = parseFloat(tripRow[col.tide_level_cm]);
+                    return isFinite(v) ? v : null;
+                  })()
+                : null,  // ★補完用：潮位
               // ★修正：既存釣果を配列形式からオブジェクト形式に正規化
               catches: tripCatches.map(c => normalizeCatch(c, colCatchForEdit)),
               start_tide: start_tide,  // ★追加：raw_json から取得した潮汐データ
@@ -12201,6 +12215,17 @@
         document.body.style.overflow = 'auto';
         tripEditModal.style.display = 'none';
         tripEditModal.classList.add('hidden');
+        resetEditCatchState();
+        const formSection = document.getElementById('editCatchFormSection');
+        if (formSection) {
+          formSection.classList.add('hidden');
+          formSection.dataset.isEditing = 'false';
+          formSection.dataset.editingIndex = '-1';
+        }
+        const btnCancelTripEditBtn = document.getElementById('btnCancelTripEdit');
+        const btnSaveTripEditBtn = document.getElementById('btnSaveTripEdit');
+        if (btnCancelTripEditBtn) btnCancelTripEditBtn.style.cssText = '';
+        if (btnSaveTripEditBtn) btnSaveTripEditBtn.style.cssText = '';
         console.log('[tripEditModal] 🔓 Body overflow unlocked');
       };
     }
@@ -12214,6 +12239,7 @@
         if (isUploading) return;
         
         console.log('[ModalButton] Cancel button clicked');
+        resetEditCatchState();
         
         // ★追加：編集フォームをリセット
         const formSection = document.getElementById('editCatchFormSection');
@@ -12236,11 +12262,10 @@
         
         tripEditModal.style.display = 'none';
         tripEditModal.classList.add('hidden');
-        
-        // ★追加：編集モーダルをキャンセル時にdraftをクリア（saveDraftをawaitして完了を待つ）
-        draft = { tripId: uuid(), status: 'idle', catches: [], tide_daily_cache: {}, start_water_temp: null, memo: null };
-        await saveDraft(draft);
-        render();
+        const btnCancelTripEditBtn = document.getElementById('btnCancelTripEdit');
+        const btnSaveTripEditBtn = document.getElementById('btnSaveTripEdit');
+        if (btnCancelTripEditBtn) btnCancelTripEditBtn.style.cssText = '';
+        if (btnSaveTripEditBtn) btnSaveTripEditBtn.style.cssText = '';
       };
     }
     if (btnAddCatchInEdit) {
@@ -13220,6 +13245,12 @@
         alert('釣り場所は必須です。Googleマップから場所を選択してください。');
         return;
       }
+
+      const invalidCatchIdx = (draft.catches || []).findIndex(c => !(c?.species && String(c.species).trim()));
+      if (invalidCatchIdx >= 0) {
+        alert(`釣果${invalidCatchIdx + 1}件目の魚種が未入力です。釣果を確認してください。`);
+        return;
+      }
       
       // ★修正：保存時に Trips シートから全データを再度取得して draft に反映（未編集データの喪失を防ぐ）
       try {
@@ -13237,18 +13268,36 @@
           // 天気データ（開始・終了）を全て引き継ぐ
           if (tripRow[col.start_weather_main]) {
             draft.start_weather = {
-              temp: parseFloat(tripRow[col.start_temp]) || null,
-              wind_speed: parseFloat(tripRow[col.start_wind_speed]) || null,
-              wind_deg: parseFloat(tripRow[col.start_wind_deg]) || null,
+              temp: (() => {
+                const v = parseFloat(tripRow[col.start_temp]);
+                return isFinite(v) ? v : null;
+              })(),
+              wind_speed: (() => {
+                const v = parseFloat(tripRow[col.start_wind_speed]);
+                return isFinite(v) ? v : null;
+              })(),
+              wind_deg: (() => {
+                const v = parseFloat(tripRow[col.start_wind_deg]);
+                return isFinite(v) ? v : null;
+              })(),
               weather_main: tripRow[col.start_weather_main] || '',
               weather_description: tripRow[col.start_weather_desc] || ''
             };
           }
           if (tripRow[col.end_weather_main]) {
             draft.end_weather = {
-              temp: parseFloat(tripRow[col.end_temp]) || null,
-              wind_speed: parseFloat(tripRow[col.end_wind_speed]) || null,
-              wind_deg: parseFloat(tripRow[col.end_wind_deg]) || null,
+              temp: (() => {
+                const v = parseFloat(tripRow[col.end_temp]);
+                return isFinite(v) ? v : null;
+              })(),
+              wind_speed: (() => {
+                const v = parseFloat(tripRow[col.end_wind_speed]);
+                return isFinite(v) ? v : null;
+              })(),
+              wind_deg: (() => {
+                const v = parseFloat(tripRow[col.end_wind_deg]);
+                return isFinite(v) ? v : null;
+              })(),
               weather_main: tripRow[col.end_weather_main] || '',
               weather_description: tripRow[col.end_weather_desc] || ''
             };
@@ -13286,7 +13335,12 @@
           // その他の補完用カラム
           draft.weather = tripRow[col.start_weather_main] || draft.weather || null;
           draft.tide_trend = tripRow[col.tide_trend] || draft.tide_trend || null;
-          draft.tide_level_cm = tripRow[col.tide_level_cm] ? parseFloat(tripRow[col.tide_level_cm]) : (draft.tide_level_cm || null);
+          draft.tide_level_cm = (col.tide_level_cm >= 0 && tripRow[col.tide_level_cm] !== '' && tripRow[col.tide_level_cm] !== null && tripRow[col.tide_level_cm] !== undefined)
+            ? (() => {
+                const v = parseFloat(tripRow[col.tide_level_cm]);
+                return isFinite(v) ? v : null;
+              })()
+            : (draft.tide_level_cm ?? null);
           if (!editTripMemo || !editTripMemo.value) {
             draft.memo = tripRow[col.memo] || draft.memo || null;
           }
@@ -13364,6 +13418,21 @@
 
       const merged = { ...baseRaw, ...editedPayload };
 
+      const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
+      const isSameValue = (a, b) => {
+        try {
+          return JSON.stringify(a) === JSON.stringify(b);
+        } catch (_) {
+          return a === b;
+        }
+      };
+
+      const shouldKeepBase = (key) => {
+        if (!hasOwn(baseRaw, key)) return false;
+        if (!hasOwn(editedPayload, key)) return true;
+        return isSameValue(editedPayload[key], baseRaw[key]);
+      };
+
       // 水温は「再取得で値が入っている場合は editedPayload を優先」し、
       // 値が無い場合のみ baseRaw を維持して空上書きを防ぐ。
       const hasEditedWaterTempC = editedPayload.water_temp_c !== null && editedPayload.water_temp_c !== undefined;
@@ -13384,7 +13453,7 @@
         'topics'
       ];
       for (const key of preserveKeys) {
-        if (Object.prototype.hasOwnProperty.call(baseRaw, key)) {
+        if (shouldKeepBase(key)) {
           merged[key] = baseRaw[key];
         }
       }
@@ -13519,7 +13588,7 @@
 
   <!-- ★修正：バージョン情報フッター（ホーム画面でのみ表示） -->
   <footer id="versionFooter" class="fixed bottom-0 left-0 right-0 z-0 bg-slate-950/95 border-t border-slate-800 text-xs text-slate-400 text-center py-2 pb-safe">
-    <span id="versionInfo">Fishing_Log_dev | v2.3.0</span>
+    <span id="versionInfo">Fishing_Log_dev | v2.4.0</span>
   </footer>
 
   <!-- ★追加：エラー・通知表示エリア -->
