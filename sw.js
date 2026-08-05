@@ -5,9 +5,9 @@
 
 const CACHE_VERSION = `fishlog-${Date.now()}`;
 const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json',
+  './',
+  './index.html',
+  './manifest.json',
   'https://cdn.tailwindcss.com'
 ];
 
@@ -58,6 +58,24 @@ self.addEventListener('activate', (event) => {
  */
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+
+  // HTML は常に最新を優先（PWA での旧版固定を防止）
+  if (request.method === 'GET' && (request.mode === 'navigate' || (request.headers.get('accept') || '').includes('text/html'))) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response && response.status === 200 && response.type !== 'error') {
+            const responseToCache = response.clone();
+            caches.open(CACHE_VERSION).then((cache) => {
+              cache.put(request, responseToCache);
+            });
+          }
+          return response;
+        })
+        .catch(() => caches.match(request).then((cached) => cached || caches.match('./index.html')))
+    );
+    return;
+  }
   
   // GAS への POST リクエストはネットワーク優先
   if (request.method === 'POST' && request.url.includes('script.google.com')) {
@@ -104,7 +122,7 @@ self.addEventListener('fetch', (event) => {
         .catch((err) => {
           console.warn('[SW] Fetch failed, returning cached:', request.url);
           // フォールバック：キャッシュがなければオフラインページ
-          return caches.match('/fishing trip memory.html');
+          return caches.match('./index.html');
         });
     })
   );
