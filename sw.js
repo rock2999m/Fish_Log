@@ -7,7 +7,6 @@ const CACHE_VERSION = `fishlog-${Date.now()}`;
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
-  '/fishing trip memory.html',
   '/manifest.json',
   'https://cdn.tailwindcss.com'
 ];
