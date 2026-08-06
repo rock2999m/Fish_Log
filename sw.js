@@ -4,9 +4,9 @@
  */
 
 const CACHE_VERSION = `fishlog-${Date.now()}`;
+const APP_SHELL_URL = './index.html?v=3.0.1';
 const ASSETS_TO_CACHE = [
-  './',
-  './index.html',
+  APP_SHELL_URL,
   './manifest.json',
   'https://cdn.tailwindcss.com'
 ];
@@ -62,17 +62,17 @@ self.addEventListener('fetch', (event) => {
   // HTML は常に最新を優先（PWA での旧版固定を防止）
   if (request.method === 'GET' && (request.mode === 'navigate' || (request.headers.get('accept') || '').includes('text/html'))) {
     event.respondWith(
-      fetch(request)
+      fetch(APP_SHELL_URL, { cache: 'no-store' })
         .then((response) => {
           if (response && response.status === 200 && response.type !== 'error') {
             const responseToCache = response.clone();
             caches.open(CACHE_VERSION).then((cache) => {
-              cache.put(request, responseToCache);
+              cache.put(APP_SHELL_URL, responseToCache);
             });
           }
           return response;
         })
-        .catch(() => caches.match(request).then((cached) => cached || caches.match('./index.html')))
+        .catch(() => caches.match(APP_SHELL_URL).then((cached) => cached || caches.match('./index.html')))
     );
     return;
   }
@@ -122,7 +122,7 @@ self.addEventListener('fetch', (event) => {
         .catch((err) => {
           console.warn('[SW] Fetch failed, returning cached:', request.url);
           // フォールバック：キャッシュがなければオフラインページ
-          return caches.match('./index.html');
+          return caches.match(APP_SHELL_URL).then((cached) => cached || caches.match('./index.html'));
         });
     })
   );

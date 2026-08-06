@@ -5,16 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#0f172a" />
   <meta name="description" content="釣行の記録、釣果の管理、潮汐情報の自動取得ができるPWAアプリケーション" />
-  <link rel="manifest" href="./manifest.json">
+  <link rel="manifest" href="./manifest.json?v=3.0.1">
   <link rel="apple-touch-icon" href="./icon-192.png">
   <link rel="icon" type="image/png" href="./icon-192.png" sizes="192x192">
   <link rel="icon" type="image/png" href="./icon-512.png" sizes="512x512">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Fishing Log">
-  <!-- ★Version: 3.0.0 - 2026-08-04 -->
+  <!-- ★Version: 3.0.1 - 2026-08-06 -->
   <!-- ★Updates: 潮流画像の複数海域フレーム（鳴門）とデバッグログを追加 -->
-  <title>釣行記録 v3.0.0（PWAフロント / コンパクトUI）</title>
+  <title>釣行記録 v3.0.1（PWAフロント / コンパクトUI）</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* ★追加：入力フォーム自動ズーム抑制 */
@@ -1136,9 +1136,6 @@
         updateConfigUrl('TIDE_WORKER_URL');
         updateConfigUrl('EXIF_WORKER_URL');
         updateConfigUrl('WATER_WORKER_URL');
-        if (payload?.WORKERS_AUTH_TOKEN) {
-          CONFIG.API.WORKERS_AUTH_TOKEN = payload.WORKERS_AUTH_TOKEN;
-        }
 
         return payload;
       } catch (err) {
@@ -3775,7 +3772,7 @@
     // ===== PWA: Service Worker 登録 =====
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js', {
+        navigator.serviceWorker.register('./sw.js?v=3.0.1', {
           scope: './'
         })
           .then(registration => {
@@ -5578,20 +5575,12 @@
       return { before, after };
     }
 
-    // ★新規：edd/flood を使った新しい潮位傾向計算ロジック
-    function analyzeTideTrendForTime_v2(chart, chartAll, chartDateKey, localDate) {
+    // ★新規：edd/flood を使った潮位傾向計算ロジック（旧ロジック統合済み）
+    function analyzeTideTrendForTime(chart, chartAll, chartDateKey, localDate) {
       try {
         const tideList = chart?.tide;
         if (!tideList || tideList.length < 2) return "不明";
 
-        // ステップ1：前後の極値を取得
-        const { before, after } = findHighLowAroundTime(chart, chartAll, chartDateKey, localDate);
-        if (!before || !after) {
-          console.warn('[analyzeTideTrendForTime_v2] Missing before/after extrema');
-          return "不明";
-        }
-
-        // ステップ2：現在時刻に最も近い潮位データを検索
         const hh = localDate.getHours();
         const mm = localDate.getMinutes();
         const shotSec = hh * 3600 + mm * 60;
@@ -5604,16 +5593,6 @@
           if (diff < closestDiff) { closest = tideList[i]; closestDiff = diff; }
         }
 
-        // ステップ3：前後データから min/max を取得
-        const minCm = Math.min(before.cm, after.cm);
-        const maxCm = Math.max(before.cm, after.cm);
-        const range = maxCm - minCm;
-        if (range <= 0) return "不明";
-
-        // ステップ4：レベル計算（前後のサイクルを基準）
-        const level = Math.round(((closest.cm - minCm) / range) * 10);
-
-        // ステップ5：前後データで潮の方向を判定
         const idx = tideList.indexOf(closest);
         const prev = tideList[idx - 1];
         const next = tideList[idx + 1];
@@ -5621,52 +5600,45 @@
 
         const trend = next.cm > prev.cm ? "上げ潮" : "下げ潮";
 
-        console.log('[analyzeTideTrendForTime_v2] Result:', {
+        // 既定は潮位データ全体から min/max を算出（旧ロジック互換）
+        let minCm = Number.POSITIVE_INFINITY;
+        let maxCm = Number.NEGATIVE_INFINITY;
+        const heights = tideList.map(t => Number(t?.cm)).filter(v => Number.isFinite(v));
+        if (heights.length > 0) {
+          minCm = Math.min(...heights);
+          maxCm = Math.max(...heights);
+        }
+
+        // chartAll + chartDateKey がある場合は前後極値ベースを優先
+        if (chartAll && chartDateKey) {
+          const { before, after } = findHighLowAroundTime(chart, chartAll, chartDateKey, localDate);
+          if (before && after && Number.isFinite(before.cm) && Number.isFinite(after.cm)) {
+            minCm = Math.min(before.cm, after.cm);
+            maxCm = Math.max(before.cm, after.cm);
+          } else {
+            console.warn('[analyzeTideTrendForTime] Missing before/after extrema, fallback to full-day range');
+          }
+        }
+
+        const range = maxCm - minCm;
+        if (!Number.isFinite(range) || range <= 0) return "不明";
+
+        const level = Math.round(((closest.cm - minCm) / range) * 10);
+
+        console.log('[analyzeTideTrendForTime] Result:', {
           closest: { time: closest.time, cm: closest.cm },
-          before: { time: before.time, type: before.type, cm: before.cm },
-          after: { time: after.time, type: after.type, cm: after.cm },
-          range: range,
-          level: level,
-          trend: trend
+          range,
+          level,
+          trend,
+          hasChartAll: !!chartAll,
+          chartDateKey: chartDateKey || null
         });
 
         return `${trend}（${level}分）`;
       } catch (e) {
-        console.error('[analyzeTideTrendForTime_v2] Error:', e);
+        console.error('[analyzeTideTrendForTime] Error:', e);
         return "不明";
       }
-    }
-
-    function analyzeTideTrendForTime(chart, localDate){
-      try{
-        const tideList = chart?.tide;
-        if (!tideList || tideList.length < 2) return "不明";
-        const heights = tideList.map(t => t.cm);
-        const min = Math.min(...heights);
-        const max = Math.max(...heights);
-        const range = max - min;
-        if (!isFinite(range) || range <= 0) return "不明";
-
-        const hh = localDate.getHours();
-        const mm = localDate.getMinutes();
-        const shotSec = hh*3600 + mm*60;
-
-        let closest = tideList[0];
-        let closestDiff = Math.abs(toSeconds_HHMM(closest.time) - shotSec);
-        for (let i=1; i<tideList.length; i++){
-          const sec = toSeconds_HHMM(tideList[i].time);
-          const diff = Math.abs(sec - shotSec);
-          if (diff < closestDiff){ closest = tideList[i]; closestDiff = diff; }
-        }
-        const idx = tideList.indexOf(closest);
-        const prev = tideList[idx-1];
-        const next = tideList[idx+1];
-        if (!prev || !next) return "不明";
-
-        const trend = next.cm > prev.cm ? "上げ潮" : "下げ潮";
-        const level = Math.round(((closest.cm - min) / range) * 10);
-        return `${trend}（${level}分）`;
-      }catch{ return "不明"; }
     }
 
     // === その日の満潮/干潮の時刻を抽出（最大2つずつ） ===
@@ -5792,17 +5764,7 @@
     function tideInfoFromChart(chart, isoWithOffset, chartAll = null, chartDateKey = null){
       const localDate = new Date(isoWithOffset);
       const level_cm = nearestTideLevelCm(chart, localDate);
-      
-      // chartAll と chartDateKey がある場合は _v2 ロジックを使用
-      let trend_text;
-      if (chartAll && chartDateKey) {
-        console.log('[tideInfoFromChart] Using v2 logic (chartAll + chartDateKey provided)');
-        trend_text = analyzeTideTrendForTime_v2(chart, chartAll, chartDateKey, localDate);
-      } else {
-        // フォールバック：古いロジック（単日データのみの場合）
-        console.log('[tideInfoFromChart] Using fallback (legacy logic)');
-        trend_text = analyzeTideTrendForTime(chart, localDate);
-      }
+      const trend_text = analyzeTideTrendForTime(chart, chartAll, chartDateKey, localDate);
       
       console.log('[tideInfoFromChart] Result:', { level_cm, trend_text, hasChartAll: !!chartAll, chartDateKey });
       return { level_cm, trend_text };
@@ -5913,7 +5875,7 @@
       const sunset   = chart?.sun?.set  || "不明";
       
       // ★修正：新しいロジックで潮位傾向を計算
-      const trendText= analyzeTideTrendForTime_v2(chart, chartAll, chartDateKey, d);
+      const trendText= analyzeTideTrendForTime(chart, chartAll, chartDateKey, d);
       const rawAge = chart?.moon?.age;
       const rawBrightness =
         (chart?.moon?.brightness ?? chart?.moon?.illumination ?? chart?.moon?.percent ?? null);
@@ -13398,7 +13360,8 @@
         return;
       }
       
-      // ★修正：保存時に Trips シートから全データを再度取得して draft に反映（未編集データの喪失を防ぐ）
+      // ★修正：保存時に Trips シートから全データを再取得するが、draft の最新値は上書きしない
+      // （編集モーダル内で再取得した潮汐/天気を保持し、欠損項目のみ補完する）
       try {
         const headers = tripsCache[0];
         const col = {};
@@ -13408,11 +13371,13 @@
         const tripRow = tripsCache.find((t, idx) => idx > 0 && String(t[col.tripId]) === String(draft.tripId));
         
         if (tripRow) {
-          // 元データから全カラムを draft に反映
-          draft.status = tripRow[col.status] || draft.status || 'ended';
+          // 欠損時のみ補完（既に draft にある値は優先維持）
+          if (!draft.status) {
+            draft.status = tripRow[col.status] || 'ended';
+          }
           
-          // 天気データ（開始・終了）を全て引き継ぐ
-          if (tripRow[col.start_weather_main]) {
+          // 天気データは draft 未設定時のみ補完
+          if (!draft.start_weather && tripRow[col.start_weather_main]) {
             draft.start_weather = {
               temp: (() => {
                 const v = parseFloat(tripRow[col.start_temp]);
@@ -13430,7 +13395,7 @@
               weather_description: tripRow[col.start_weather_desc] || ''
             };
           }
-          if (tripRow[col.end_weather_main]) {
+          if (!draft.end_weather && tripRow[col.end_weather_main]) {
             draft.end_weather = {
               temp: (() => {
                 const v = parseFloat(tripRow[col.end_temp]);
@@ -13449,8 +13414,8 @@
             };
           }
           
-          // 水温データを引き継ぐ
-          if (col.water_temp_c >= 0 && tripRow[col.water_temp_c] !== '' && tripRow[col.water_temp_c] !== null && tripRow[col.water_temp_c] !== undefined) {
+          // 水温データは draft 未設定時のみ補完
+          if (!draft.start_water_temp && col.water_temp_c >= 0 && tripRow[col.water_temp_c] !== '' && tripRow[col.water_temp_c] !== null && tripRow[col.water_temp_c] !== undefined) {
             draft.start_water_temp = {
               temperature_c: (() => {
                 const v = parseFloat(tripRow[col.water_temp_c]);
@@ -13461,34 +13426,37 @@
             };
           }
           
-          // 潮汐データを引き継ぐ
-          let start_tide = null;
-          const raw = await loadTripRawWithFallback(draft.tripId, col.raw_json >= 0 ? tripRow[col.raw_json] : null);
-          if (raw) {
-            start_tide = raw?.start_tide || null;
-          }
-          if (start_tide) {
-            draft.start_tide = start_tide;
+          // 潮汐データは draft 未設定時のみ補完
+          if (!draft.start_tide) {
+            const raw = await loadTripRawWithFallback(draft.tripId, col.raw_json >= 0 ? tripRow[col.raw_json] : null);
+            const start_tide = raw?.start_tide || null;
+            if (start_tide) {
+              draft.start_tide = start_tide;
+            }
           }
           
-          // その他の補完用カラム
-          draft.weather = tripRow[col.start_weather_main] || draft.weather || null;
-          draft.tide_trend = tripRow[col.tide_trend] || draft.tide_trend || null;
-          draft.tide_level_cm = (col.tide_level_cm >= 0 && tripRow[col.tide_level_cm] !== '' && tripRow[col.tide_level_cm] !== null && tripRow[col.tide_level_cm] !== undefined)
-            ? (() => {
-                const v = parseFloat(tripRow[col.tide_level_cm]);
-                return isFinite(v) ? v : null;
-              })()
-            : (draft.tide_level_cm ?? null);
+          // その他の補完用カラム（欠損時のみ）
+          if (!draft.weather) {
+            draft.weather = tripRow[col.start_weather_main] || null;
+          }
+          if (!draft.tide_trend && col.tide_trend >= 0) {
+            draft.tide_trend = tripRow[col.tide_trend] || null;
+          }
+          if ((draft.tide_level_cm === null || draft.tide_level_cm === undefined) && col.tide_level_cm >= 0 && tripRow[col.tide_level_cm] !== '' && tripRow[col.tide_level_cm] !== null && tripRow[col.tide_level_cm] !== undefined) {
+            draft.tide_level_cm = (() => {
+              const v = parseFloat(tripRow[col.tide_level_cm]);
+              return isFinite(v) ? v : null;
+            })();
+          }
           if (!editTripMemo || !editTripMemo.value) {
             draft.memo = tripRow[col.memo] || draft.memo || null;
           }
           
-          // moon データを引き継ぐ
-          if (tripRow[col.moon_v]) draft.moon_v = tripRow[col.moon_v];
-          if (tripRow[col.moon_a]) draft.moon_a = tripRow[col.moon_a];
-          if (tripRow[col.sunrise]) draft.sunrise = tripRow[col.sunrise];
-          if (tripRow[col.sunset]) draft.sunset = tripRow[col.sunset];
+          // moon データも欠損時のみ補完
+          if (!draft.moon_v && tripRow[col.moon_v]) draft.moon_v = tripRow[col.moon_v];
+          if (!draft.moon_a && tripRow[col.moon_a]) draft.moon_a = tripRow[col.moon_a];
+          if (!draft.sunrise && tripRow[col.sunrise]) draft.sunrise = tripRow[col.sunrise];
+          if (!draft.sunset && tripRow[col.sunset]) draft.sunset = tripRow[col.sunset];
         }
       } catch (e) {
         console.error('[TripEdit] Error restoring full trip data:', e);
@@ -13732,7 +13700,7 @@
 
   <!-- ★修正：バージョン情報フッター（ホーム画面でのみ表示） -->
   <footer id="versionFooter" class="fixed bottom-0 left-0 right-0 z-0 bg-slate-950/95 border-t border-slate-800 text-xs text-slate-400 text-center py-2 pb-safe">
-    <span id="versionInfo">Fishing_Log_dev | v3.0.0</span>
+    <span id="versionInfo">Fishing_Log_dev | v3.0.1</span>
   </footer>
 
   <!-- ★追加：エラー・通知表示エリア -->

@@ -1,9 +1,9 @@
 {
   "name": "Fishing Log",
   "short_name": "Fishing Log",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "釣行記録アプリ - 釣果、潮汐、天気を自動で記録",
-  "start_url": "./index.html?v=3.0.0",
+  "start_url": "./index.html?v=3.0.1",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
