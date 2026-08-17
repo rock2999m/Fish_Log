@@ -4163,13 +4163,14 @@
           console.warn('[Token] Failed to clear old token from localStorage:', e.message);
         }
         
-        // ★計薸：sessionStorage に保存（セキュア）
+        // ★修正：sessionStorage + configStorage(IndexedDB) に保存
         try {
           sessionStorage.setItem('WORKERS_AUTH_TOKEN', token);
-          console.log('[Token] ✅ Saved to sessionStorage (secure, deleted on browser restart)');
+          await configStorage.setItem('WORKERS_AUTH_TOKEN', token);
+          console.log('[Token] ✅ Saved to sessionStorage and configStorage');
         } catch (e) {
-          console.error('[Token] Failed to save to sessionStorage:', e.message);
-          if (status) status.textContent = 'sessionStorage を使用できません';
+          console.error('[Token] Failed to save token storage:', e.message);
+          if (status) status.textContent = 'トークンの保存に失敗しました';
           return;
         }
         
