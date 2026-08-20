@@ -1605,42 +1605,57 @@
       
       if (typeof lat !== 'number' || typeof lng !== 'number') throw new Error("座標が未設定です");
       
-      const jstTimestamp = getJSTTimestampForOWM(targetDate);
-      const nowTimestamp = Math.floor(Date.now() / 1000);
-      const isHistorical = targetDate !== null && jstTimestamp < nowTimestamp;
-      
-      // ★リクエストボディを構築
-      const requestBody = {
-        lat: lat,
-        lng: lng,
-        isHistorical: isHistorical,
-        dt: isHistorical ? jstTimestamp : undefined
+      // ★修正：同日の過去時刻は historical 扱いにしない（JST日付で判定）
+      let resolvedTargetDate = null;
+      if (targetDate !== null) {
+        if (typeof targetDate === 'string') {
+          resolvedTargetDate = new Date(targetDate);
+        } else if (targetDate instanceof Date) {
+          resolvedTargetDate = targetDate;
+        } else {
+          resolvedTargetDate = new Date(targetDate);
+        }
+      }
+
+      const toJstDateKey = (d) => {
+        if (!(d instanceof Date) || isNaN(d.getTime())) return null;
+        const jst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+        return jst.toISOString().slice(0, 10);
       };
-      
-      LOG.wx("[fetchWeather] Request to Worker:", {
-        lat: lat,
-        lng: lng,
-        isHistorical: isHistorical,
-        dt: isHistorical ? jstTimestamp : "(current)",
-        jst_datetime: targetDate ? (typeof targetDate.toISOString === 'function' ? targetDate.toISOString() : String(targetDate)) : new Date().toISOString(),
-        workerUrl: CONFIG.API.WEATHER_WORKER_URL
-      });
-      
-      const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort("timeout"), timeoutMs);
-      try {
+
+      const targetJstDateKey = toJstDateKey(resolvedTargetDate);
+      const todayJstDateKey = toJstDateKey(new Date());
+      const isHistorical = !!(targetJstDateKey && todayJstDateKey && targetJstDateKey < todayJstDateKey);
+
+      const requestWeather = async (historicalMode) => {
+        const requestBody = {
+          lat: lat,
+          lng: lng,
+          isHistorical: historicalMode,
+          dt: historicalMode ? getJSTTimestampForOWM(resolvedTargetDate) : undefined
+        };
+
+        LOG.wx("[fetchWeather] Request to Worker:", {
+          lat: lat,
+          lng: lng,
+          isHistorical: historicalMode,
+          dt: historicalMode ? requestBody.dt : "(current)",
+          target_jst_date: targetJstDateKey,
+          today_jst_date: todayJstDateKey,
+          workerUrl: CONFIG.API.WEATHER_WORKER_URL
+        });
+
         const res = await fetch(CONFIG.API.WEATHER_WORKER_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(requestBody),
           signal: ctrl.signal
         });
-        
+
         if (!res.ok) {
           let msg = `HTTP ${res.status}`;
-          try { 
-            const err = await res.json(); 
-            // ★追加：Worker からのエラー詳細情報を表示
+          try {
+            const err = await res.json();
             if (err?.error) msg += ` - ${err.error}`;
             if (err?.detail) msg += `: ${err.detail}`;
             if (err?.message) msg += ': エラーが発生しました';
@@ -1649,11 +1664,11 @@
           console.error("[fetchWeather] Worker returned error:", msg);
           throw new Error(msg);
         }
-        
+
         const j = await res.json();
-        
+
         // ★ログ：レスポンス値
-        const data = isHistorical ? (j.data?.[0] || {}) : (j.current || {});
+        const data = historicalMode ? (j.data?.[0] || {}) : (j.current || {});
         const rain1h = data.rain?.["1h"];
         const snow1h = data.snow?.["1h"];
         LOG.wx("[fetchWeather] Response:", {
@@ -1672,10 +1687,25 @@
           weather_main: data.weather?.[0]?.main,
           weather_description: data.weather?.[0]?.description,
           rain_1h: rain1h,
-          snow_1h: snow1h
+          snow_1h: snow1h,
+          mode: historicalMode ? 'historical' : 'current'
         });
-        
+
         return mapWeather(j, lat, lng);
+      };
+      
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort("timeout"), timeoutMs);
+      try {
+        try {
+          return await requestWeather(isHistorical);
+        } catch (firstErr) {
+          if (isHistorical) {
+            console.warn('[fetchWeather] Historical request failed; retrying current weather', firstErr?.message || firstErr);
+            return await requestWeather(false);
+          }
+          throw firstErr;
+        }
       } catch (err) {
         const msg = `天気取得失敗: エラーが発生しました`;
         showError(msg);
@@ -9605,6 +9635,7 @@
 
       // 天気
       let wx = null;
+      const existingWeather = editMode ? (catchForm.weather || null) : null;
       const weatherTargetDate = catchForm.timestamp || whenLocal || null;
       
       // ★修正：位置情報の優先順位を統一
@@ -9648,7 +9679,11 @@
           console.error('[submitCatch] ❌ fetchWeather error:', e); 
         }
       }
-      catchForm.weather = wx;
+      if (editMode) {
+        catchForm.weather = wx || existingWeather;
+      } else {
+        catchForm.weather = wx;
+      }
 
       // ★修正後：EXIF補完後に潮汐ロジックを実行
       // --- 潮位/傾向/港名/満潮・干潮 ---
