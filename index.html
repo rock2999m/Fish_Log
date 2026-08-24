@@ -146,6 +146,24 @@
           <label class="block mb-3"><span class="text-sm text-slate-300">メモ</span>
             <textarea id="editTripMemo" placeholder="釣行のメモを入力..." class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm h-24 resize-none"></textarea>
           </label>
+
+          <div class="rounded-xl border border-slate-700 bg-slate-950 p-3">
+            <div class="flex items-center justify-between mb-2">
+              <div class="text-sm text-slate-300">GPSトラック（GPX）</div>
+              <div id="editTripGpsStatus" class="text-xs text-slate-400">未設定</div>
+            </div>
+            <div class="text-xs text-slate-400 mb-2">カヤック釣行後にGPXファイルを追加できます（UI先行実装）。</div>
+            <input id="editTripGpsFile" type="file" accept=".gpx,.xml,application/gpx+xml" class="hidden" />
+            <div class="grid grid-cols-2 gap-2">
+              <button id="btnSelectEditTripGps" type="button" class="py-2 rounded-lg bg-sky-700 hover:bg-sky-600 text-xs font-semibold">GPXを選択</button>
+              <button id="btnClearEditTripGps" type="button" class="py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs font-semibold">GPSを解除</button>
+            </div>
+            <div id="editTripGpsMeta" class="mt-2 text-xs text-slate-300 hidden">
+              <div>ファイル: <span id="editTripGpsFileName">-</span></div>
+              <div>サイズ: <span id="editTripGpsFileSize">-</span></div>
+              <div>更新: <span id="editTripGpsUpdatedAt">-</span></div>
+            </div>
+          </div>
         </div>
 
         <!-- 補完データ表示 -->
@@ -1713,6 +1731,43 @@
         throw err;
       } finally { clearTimeout(t); }
     }
+
+    function sanitizeWeatherRaw(raw) {
+      if (!raw || typeof raw !== 'object') return raw;
+      let copy;
+      try {
+        copy = JSON.parse(JSON.stringify(raw));
+      } catch (_) {
+        return null;
+      }
+
+      if (copy && typeof copy === 'object') {
+        delete copy._debug;
+      }
+
+      const stripAppIdFromUrl = (u) => {
+        if (!u || typeof u !== 'string') return u;
+        try {
+          const urlObj = new URL(u);
+          if (urlObj.searchParams.has('appid')) {
+            urlObj.searchParams.delete('appid');
+          }
+          return urlObj.toString();
+        } catch (_) {
+          return u.replace(/([?&])appid=[^&]*/gi, '$1appid=REDACTED').replace(/[?&]$/, '');
+        }
+      };
+
+      if (copy._meta && typeof copy._meta === 'object' && typeof copy._meta.url === 'string') {
+        copy._meta.url = stripAppIdFromUrl(copy._meta.url);
+      }
+      if (copy.url && typeof copy.url === 'string') {
+        copy.url = stripAppIdFromUrl(copy.url);
+      }
+
+      return copy;
+    }
+
     function mapWeather(j, lat, lng){
       // One Call API 3.0 のレスポンス形式
       // timemachine の場合は data[0]、current & forecast の場合は current を使用
@@ -1749,7 +1804,7 @@
         weather_id: w.id ?? null,
         weather_main: w.main ?? null,
         weather_description: w.description ?? null,
-        raw: j
+        raw: sanitizeWeatherRaw(j)
       };
     }
 
@@ -3941,6 +3996,7 @@
         status: 'idle', 
         catches: [], 
         weather_timeline: [],
+        gps_track: null,
         topics: [],
         tide_daily_cache: {}, 
         manualStarted: false, 
@@ -3959,6 +4015,7 @@
             status: p.status || 'idle',
             catches: p.catches || [],
             weather_timeline: p.weather_timeline || [],
+            gps_track: p.gps_track || null,
             topics: p.topics || [],
             startedAt: p.startedAt,
             endedAt: p.endedAt,
@@ -4022,6 +4079,7 @@
         catches: [],
         tide_daily_cache: {},
         start_water_temp: null,
+        gps_track: null,
         memo: null,
         manualStarted: false,
         shouldFetchTideImages: false,
@@ -7624,6 +7682,7 @@
             let tide_chart_images = [];
             let weather_timeline = [];
             let topics = [];
+            let gps_track = null;
             let selected_location_name = null;
             let selected_location_lat = null;
             let selected_location_lng = null;
@@ -7644,6 +7703,7 @@
                 tide_chart_images = Array.isArray(raw?.tide_chart_images) ? raw.tide_chart_images : [];
                 weather_timeline = Array.isArray(raw?.weather_timeline) ? raw.weather_timeline : [];
                 topics = Array.isArray(raw?.topics) ? raw.topics : [];
+                gps_track = raw?.gps_track || null;
                 selected_location_name = raw?.selected_location_name || null;
                 selected_location_lat = Number.isFinite(Number(raw?.selected_location_lat)) ? Number(raw.selected_location_lat) : null;
                 selected_location_lng = Number.isFinite(Number(raw?.selected_location_lng)) ? Number(raw.selected_location_lng) : null;
@@ -7655,6 +7715,7 @@
               tide_chart_images = [];
               weather_timeline = [];
               topics = [];
+              gps_track = null;
               selected_location_name = null;
               selected_location_lat = null;
               selected_location_lng = null;
@@ -7713,6 +7774,7 @@
               start_tide: start_tide,  // ★追加：raw_json から取得した潮汐データ
               tide_chart_images: tide_chart_images,
               weather_timeline: weather_timeline,
+              gps_track: gps_track,
               topics: topics,          // ★追加：raw_json から取得したトピックデータ
               tide_daily_cache: {},
               manualStarted: true,  // 既存データ編集なので手動扱い
@@ -10122,6 +10184,14 @@
     const editTripWeather = document.getElementById('editTripWeather');
     const editTripTide = document.getElementById('editTripTide');
     const editTripWaterTemp = document.getElementById('editTripWaterTemp');
+    const editTripGpsStatus = document.getElementById('editTripGpsStatus');
+    const editTripGpsMeta = document.getElementById('editTripGpsMeta');
+    const editTripGpsFileName = document.getElementById('editTripGpsFileName');
+    const editTripGpsFileSize = document.getElementById('editTripGpsFileSize');
+    const editTripGpsUpdatedAt = document.getElementById('editTripGpsUpdatedAt');
+    const editTripGpsFile = document.getElementById('editTripGpsFile');
+    const btnSelectEditTripGps = document.getElementById('btnSelectEditTripGps');
+    const btnClearEditTripGps = document.getElementById('btnClearEditTripGps');
     const editCatchList = document.getElementById('editCatchList');
     const editCatchCount = document.getElementById('editCatchCount');
     const editFormCatchTime = document.getElementById('editFormCatchTime');
@@ -10351,6 +10421,10 @@
     };
 
     function buildTripPayload(d, action = 'create'){
+      if (d && d.endedAt && isFinite(new Date(d.endedAt).getTime())) {
+        d.status = 'ended';
+      }
+
       // ★修正：species が空の釣果（未入力）はフィルタリング
       const validCatches = (d.catches||[]).filter(c => c.species && String(c.species).trim());
       
@@ -10435,6 +10509,9 @@
         
         // ★追加：天気の経過記録（10分間隔）
         weather_timeline: d.weather_timeline || [],
+
+        // ★追加：GPSトラック参照情報（UI先行）
+        gps_track: d.gps_track || null,
         
         // ★追加：トピック記録
         topics: d.topics || []
@@ -10870,20 +10947,20 @@
         console.warn("[TripData] complement failed:", e?.message || e);
       }
 
-      // ★修正②: 釣行終了ボタン押下時、釣果がある場合のみ時刻を再計算
-      // ★重要: render() の BEFORE に実行し、正確な時刻を draft に設定してから画面を描画
-      if (draft.manualStarted) {
+      // ★修正②: 手動釣行の時刻補完は「未設定項目のみ」を対象にする
+      // 既に入力済みの startedAt / endedAt は保持し、釣果追加で上書きしない
+      if (draft.manualStarted && (!draft.startedAt || !draft.endedAt)) {
         const validTimes = draft.catches && Array.isArray(draft.catches)
           ? draft.catches.map(c => c.timestamp).filter(ts => !!ts)
           : [];
         
         if (validTimes.length > 0) {
-          // ★釣果がある場合のみ、時刻を再計算・上書き
+          // ★釣果がある場合のみ、未設定項目を補完
           const earliestTime = validTimes.reduce((a, b) => a < b ? a : b);
           const latestTime = validTimes.reduce((a, b) => a > b ? a : b);
-          draft.startedAt = earliestTime;
-          draft.endedAt = latestTime;
-          console.log('[TripData] Auto-calculated from catches:', { startedAt: draft.startedAt, endedAt: draft.endedAt });
+          if (!draft.startedAt) draft.startedAt = earliestTime;
+          if (!draft.endedAt) draft.endedAt = latestTime;
+          console.log('[TripData] Filled missing manual times from catches:', { startedAt: draft.startedAt, endedAt: draft.endedAt });
         }
         // ★釣果がない場合は、既に設定されている draft.startedAt/endedAt をそのまま保持
         saveDraft(draft);
@@ -12177,6 +12254,33 @@
       }
     }
 
+    function formatGpsFileSize(bytes) {
+      if (typeof bytes !== 'number' || !isFinite(bytes) || bytes < 0) return '不明';
+      if (bytes < 1024) return `${bytes} B`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+      return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+    }
+
+    function updateEditTripGpsDisplay() {
+      if (!editTripGpsStatus || !editTripGpsMeta) return;
+      const gps = draft?.gps_track || null;
+
+      if (!gps) {
+        editTripGpsStatus.textContent = '未設定';
+        editTripGpsMeta.classList.add('hidden');
+        if (btnClearEditTripGps) btnClearEditTripGps.disabled = true;
+        return;
+      }
+
+      const isPersisted = !!gps.r2_key;
+      editTripGpsStatus.textContent = isPersisted ? '保存済み' : '未保存（選択済み）';
+      editTripGpsMeta.classList.remove('hidden');
+      if (editTripGpsFileName) editTripGpsFileName.textContent = gps.file_name || '不明';
+      if (editTripGpsFileSize) editTripGpsFileSize.textContent = formatGpsFileSize(gps.file_size);
+      if (editTripGpsUpdatedAt) editTripGpsUpdatedAt.textContent = gps.uploaded_at ? fmtLocal(gps.uploaded_at) : '不明';
+      if (btnClearEditTripGps) btnClearEditTripGps.disabled = false;
+    }
+
     function openTripEditModal(catchIndexToSelect = -1) {
       if (!draft) {
         alert('データが見つかりません');
@@ -12201,6 +12305,7 @@
       editTripLat.value = typeof draft.lat === 'number' ? String(draft.lat) : '';
       editTripLng.value = typeof draft.lng === 'number' ? String(draft.lng) : '';
       updateEditTripLocationDisplay();
+      updateEditTripGpsDisplay();
 
       // ★追加：メモを反映
       const editTripMemo = document.getElementById('editTripMemo');
@@ -12251,6 +12356,45 @@
           updateEditTripLocationDisplay();
           saveDraft(draft);
         });
+      };
+    }
+
+    if (btnSelectEditTripGps && editTripGpsFile) {
+      btnSelectEditTripGps.onclick = () => {
+        editTripGpsFile.click();
+      };
+
+      editTripGpsFile.onchange = async () => {
+        const file = editTripGpsFile.files && editTripGpsFile.files[0] ? editTripGpsFile.files[0] : null;
+        if (!file) return;
+
+        const fileName = String(file.name || '').trim();
+        if (!/\.gpx$/i.test(fileName)) {
+          alert('GPXファイル（.gpx）を選択してください。');
+          editTripGpsFile.value = '';
+          return;
+        }
+
+        draft.gps_track = {
+          source_format: 'gpx',
+          file_name: file.name,
+          file_size: file.size,
+          uploaded_at: new Date().toISOString(),
+          upload_status: 'pending_ui_only'
+        };
+        await saveDraft(draft);
+        updateEditTripGpsDisplay();
+      };
+    }
+
+    if (btnClearEditTripGps) {
+      btnClearEditTripGps.onclick = async () => {
+        if (!draft?.gps_track) return;
+        if (!confirm('登録済みのGPSトラック情報を解除しますか？')) return;
+        draft.gps_track = null;
+        if (editTripGpsFile) editTripGpsFile.value = '';
+        await saveDraft(draft);
+        updateEditTripGpsDisplay();
       };
     }
 
@@ -12447,6 +12591,7 @@
         
         // 入力値から日時と位置を取得
         let startedAt = null;
+        let endedAt = null;
         if (editTripStarted.value) {
           const parsed = parseDisplayDatetime(editTripStarted.value.trim());
           if (!parsed) {
@@ -12454,6 +12599,15 @@
             return;
           }
           startedAt = toOffsetIsoLocal(parsed);
+        }
+
+        if (editTripEnded && editTripEnded.value) {
+          const parsedEnd = parseDisplayDatetime(editTripEnded.value.trim());
+          if (!parsedEnd) {
+            alert('終了日時の形式が正しくありません');
+            return;
+          }
+          endedAt = toOffsetIsoLocal(parsedEnd);
         }
         
         let lat = parseFloat(editTripLat.value);
@@ -12474,8 +12628,33 @@
           alert('開始日時が設定されていません');
           return;
         }
+
+        // 入力欄が空の場合は既存値を利用（最終手段）
+        if (!endedAt) {
+          endedAt = draft.endedAt || null;
+        }
+        if (!endedAt) {
+          alert('終了日時が設定されていません');
+          return;
+        }
+
+        // 開始 > 終了 は再取得不可
+        const startMs = new Date(startedAt).getTime();
+        const endMs = new Date(endedAt).getTime();
+        if (!isFinite(startMs) || !isFinite(endMs)) {
+          alert('開始日時または終了日時の形式が正しくありません');
+          return;
+        }
+        if (startMs > endMs) {
+          alert('開始日時が終了日時より後になっています。日時を確認してください。');
+          return;
+        }
         
-        console.log('[btnRefetchCompData] refetching with:', { lat, lng, startedAt });
+        // 再取得対象期間を draft に反映
+        draft.startedAt = startedAt;
+        draft.endedAt = endedAt;
+
+        console.log('[btnRefetchCompData] refetching with:', { lat, lng, startedAt, endedAt });
         
         try {
           // ボタンを無効化
@@ -12495,8 +12674,7 @@
           
           // ★追加：天気の経過記録を再取得
           try {
-            const endedAtForTimeline = draft.endedAt || new Date(new Date(startedAt).getTime() + 3 * 3600000).toISOString();
-            const weatherTimeline = await fetchWeatherTimeline(lat, lng, startedAt, endedAtForTimeline);
+            const weatherTimeline = await fetchWeatherTimeline(lat, lng, startedAt, endedAt);
             draft.weather_timeline = weatherTimeline || [];
             console.log('[btnRefetchCompData] Weather timeline refetched:', weatherTimeline?.length || 0, 'entries');
           } catch (timelineErr) {
@@ -13521,6 +13699,37 @@
         draft.memo = String(editTripMemo.value || '').trim() || null;
       }
 
+      const baseEndedAtForCompare = tripEditOriginalRaw?.endedAt || null;
+      const basePositionForCompare = tripEditOriginalRaw?.position || null;
+      const editedPositionForCompare = (typeof draft.lat === 'number' && typeof draft.lng === 'number')
+        ? { lat: draft.lat, lng: draft.lng }
+        : null;
+
+      const endedAtChangedOnEdit = baseEndedAtForCompare !== (draft.endedAt || null);
+      const positionChangedOnEdit = JSON.stringify(basePositionForCompare || null) !== JSON.stringify(editedPositionForCompare || null);
+      const shouldRefetchEndWeather = endedAtChangedOnEdit || positionChangedOnEdit;
+
+      if (shouldRefetchEndWeather && draft.endedAt && typeof draft.lat === 'number' && typeof draft.lng === 'number') {
+        try {
+          const recomputedEndWeather = await fetchWeather(draft.lat, draft.lng, draft.endedAt);
+          draft.end_weather = recomputedEndWeather || null;
+          LOG.app('[TripEdit] end_weather recalculated', {
+            endedAtChanged: endedAtChangedOnEdit,
+            positionChanged: positionChangedOnEdit,
+            hasEndWeather: !!draft.end_weather
+          });
+        } catch (e) {
+          draft.end_weather = null;
+          LOG.app('[TripEdit] end_weather recalculation failed; cleared stale value', {
+            error: e?.message || String(e)
+          });
+        }
+      }
+
+      if (draft.endedAt && isFinite(new Date(draft.endedAt).getTime())) {
+        draft.status = 'ended';
+      }
+
       // 編集保存では、非編集項目は編集開始時スナップショットを優先して保持する。
       // ここでの再取得・リセットは空上書きリスクを高めるため行わない。
 
@@ -13576,6 +13785,16 @@
         return isSameValue(editedPayload[key], baseRaw[key]);
       };
 
+      const baseEndedAt = baseRaw?.endedAt || null;
+      const editedEndedAt = editedPayload?.endedAt || null;
+      const endedAtChanged = !isSameValue(baseEndedAt, editedEndedAt);
+
+      const basePos = baseRaw?.position || null;
+      const editedPos = editedPayload?.position || null;
+      const positionChanged = !isSameValue(basePos, editedPos);
+
+      const shouldRefreshEndWeather = endedAtChanged || positionChanged;
+
       // 水温は「再取得で値が入っている場合は editedPayload を優先」し、
       // 値が無い場合のみ baseRaw を維持して空上書きを防ぐ。
       const hasEditedWaterTempC = editedPayload.water_temp_c !== null && editedPayload.water_temp_c !== undefined;
@@ -13596,6 +13815,9 @@
         'topics'
       ];
       for (const key of preserveKeys) {
+        if (key === 'end_weather' && shouldRefreshEndWeather) {
+          continue;
+        }
         if (shouldKeepBase(key)) {
           merged[key] = baseRaw[key];
         }
