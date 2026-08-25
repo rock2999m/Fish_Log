@@ -13144,6 +13144,10 @@
             size_cm: size ? parseFloat(size) : null,
             weight_g: weight ? parseFloat(weight) : null,
             method: method || '',
+            exif_date: catchForm.exif_date ?? null,
+            exif_date_formatted: catchForm.exif_date_formatted ?? null,
+            exif_lat: catchForm.exif_lat ?? null,
+            exif_lng: catchForm.exif_lng ?? null,
             
             // ★追加：天気情報（釣行の開始天気から初期設定）
             wx_temp: draft.start_weather?.temp ?? null,
@@ -13336,6 +13340,10 @@
           if (isEditing && editingIndex >= 0 && editingIndex < draft.catches.length) {
             // ★編集モード：既存釣果を上書き
             const existingCatch = draft.catches[editingIndex];
+            if (newCatch.exif_date == null) newCatch.exif_date = existingCatch.exif_date ?? null;
+            if (newCatch.exif_date_formatted == null) newCatch.exif_date_formatted = existingCatch.exif_date_formatted ?? null;
+            if (newCatch.exif_lat == null) newCatch.exif_lat = existingCatch.exif_lat ?? null;
+            if (newCatch.exif_lng == null) newCatch.exif_lng = existingCatch.exif_lng ?? null;
             newCatch.id = existingCatch.id;  // IDは保持
             draft.catches[editingIndex] = newCatch;
             console.log('[SaveButton] DEBUG - 編集モード実行（上書き）:', {
