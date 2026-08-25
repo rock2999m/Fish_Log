@@ -5,16 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#0f172a" />
   <meta name="description" content="釣行の記録、釣果の管理、潮汐情報の自動取得ができるPWAアプリケーション" />
-  <link rel="manifest" href="./manifest.json?v=3.1.0">
+  <link rel="manifest" href="./manifest.json?v=3.1.1">
   <link rel="apple-touch-icon" href="./icon-192.png">
   <link rel="icon" type="image/png" href="./icon-192.png" sizes="192x192">
   <link rel="icon" type="image/png" href="./icon-512.png" sizes="512x512">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Fishing Log">
-  <!-- ★Version: 3.1.0 - 2026-08-25 -->
+  <!-- ★Version: 3.1.1 - 2026-08-25 -->
   <!-- ★Updates: 潮流画像の複数海域フレーム（鳴門）とデバッグログを追加 -->
-  <title>釣行記録 v3.1.0（PWAフロント / コンパクトUI）</title>
+  <title>釣行記録 v3.1.1（PWAフロント / コンパクトUI）</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* ★追加：入力フォーム自動ズーム抑制 */
@@ -3857,7 +3857,7 @@
     // ===== PWA: Service Worker 登録 =====
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=3.1.0', {
+        navigator.serviceWorker.register('./sw.js?v=3.1.1', {
           scope: './'
         })
           .then(registration => {
@@ -7686,6 +7686,7 @@
             let selected_location_name = null;
             let selected_location_lat = null;
             let selected_location_lng = null;
+            let raw_catches = [];
             const loadedRaw = await loadTripRawWithFallback(thisTripId, col.raw_json >= 0 ? tripRow[col.raw_json] : null);
             if (loadedRaw) {
               console.log('[TripCard] loaded raw data', {
@@ -7707,6 +7708,7 @@
                 selected_location_name = raw?.selected_location_name || null;
                 selected_location_lat = Number.isFinite(Number(raw?.selected_location_lat)) ? Number(raw.selected_location_lat) : null;
                 selected_location_lng = Number.isFinite(Number(raw?.selected_location_lng)) ? Number(raw.selected_location_lng) : null;
+                raw_catches = Array.isArray(raw?.catches) ? raw.catches : [];
               }
             } catch (e) {
               // パース失敗時は既定値を維持
@@ -7719,7 +7721,29 @@
               selected_location_name = null;
               selected_location_lat = null;
               selected_location_lng = null;
+              raw_catches = [];
             }
+
+            const rawCatchById = new Map();
+            let hasRawCatchId = false;
+            raw_catches.forEach((c, idx) => {
+              const key = String(c?.id || c?.catchId || '').trim();
+              if (key) {
+                hasRawCatchId = true;
+                rawCatchById.set(key, c);
+              }
+              rawCatchById.set(`__idx__${idx}`, c);
+            });
+
+            const rebuiltCatches = tripCatches.map((rowCatch, idx) => {
+              const normalized = normalizeCatch(rowCatch, colCatchForEdit);
+              const normalizedId = String(normalized?.id || '').trim();
+              const fallbackById = normalizedId ? rawCatchById.get(normalizedId) : null;
+              const useIndexFallback = !normalizedId || !hasRawCatchId;
+              const fallbackByIndex = useIndexFallback ? (rawCatchById.get(`__idx__${idx}`) || null) : null;
+              const fallback = fallbackById || fallbackByIndex;
+              return mergeCatchWithFallback(normalized, fallback);
+            });
             
             draft = {
               tripId: tripRow[col.tripId] || '',
@@ -7770,7 +7794,7 @@
                   })()
                 : null,  // ★補完用：潮位
               // ★修正：既存釣果を配列形式からオブジェクト形式に正規化
-              catches: tripCatches.map(c => normalizeCatch(c, colCatchForEdit)),
+              catches: rebuiltCatches,
               start_tide: start_tide,  // ★追加：raw_json から取得した潮汐データ
               tide_chart_images: tide_chart_images,
               weather_timeline: weather_timeline,
@@ -8814,38 +8838,95 @@
       // オブジェクト形式に変換して返す
       // colMap に存在しないキーは undefined を返すので、それを null に置き換える
       const getValue = (key) => {
-        const idx = colMap[key];
-        return (idx !== undefined && idx !== -1) ? catchRow[idx] : null;
+        if (Array.isArray(catchRow)) {
+          const idx = colMap[key];
+          return (idx !== undefined && idx !== -1) ? catchRow[idx] : null;
+        }
+        if (catchRow && typeof catchRow === 'object') {
+          return catchRow[key] ?? null;
+        }
+        return null;
       };
+
+      const toNullableNumber = (value) => {
+        if (value === null || value === undefined || value === '') return null;
+        const n = Number(value);
+        return Number.isFinite(n) ? n : null;
+      };
+
+      const catchLatRaw = getValue('location_lat') ?? getValue('catch_lat');
+      const catchLngRaw = getValue('location_lng') ?? getValue('catch_lng');
       
       return {
         id: getValue('catchId') || uuid(),
         tripId: getValue('tripId') || '',
         timestamp: normalizeTimestampSeconds(getValue('timestamp')) || null,  // ★修正（v1.5.2b）：秒を 00 に正規化
         species: getValue('species') || '',
-        size_cm: getValue('size_cm') ? parseFloat(getValue('size_cm')) : null,
-        weight_g: getValue('weight_g') ? parseFloat(getValue('weight_g')) : null,
+        size_cm: toNullableNumber(getValue('size_cm')),
+        weight_g: toNullableNumber(getValue('weight_g')),
         method: getValue('method') || '',
         weather: null,  // 既存釣果には weather オブジェクトはない（フラットキーのみ）
         photoFileId: getValue('photo_file_id') || null,
         photoDriveUrl: getValue('photo_view_url') || null,
         photoDriveThumbUrl: getValue('photo_thumb_url') || null,
-        tide_level_cm: getValue('tide_level_cm') ? parseFloat(getValue('tide_level_cm')) : null,
+        tide_level_cm: toNullableNumber(getValue('tide_level_cm')),
         tide_trend: getValue('tide_trend') || null,
         tide_name: getValue('tide_name') || null,
         tide_harbor_name: getValue('tide_harbor_name') || null,
         tide_high_times: getValue('tide_high_times') || null,
         tide_low_times: getValue('tide_low_times') || null,
         water_temp: null,  // 既存釣果には water_temp オブジェクトはない
-        water_temp_c: getValue('water_temp_c') ? parseFloat(getValue('water_temp_c')) : null,
+        water_temp_c: toNullableNumber(getValue('water_temp_c')),
         water_temp_point: getValue('water_temp_point') || null,
         water_temp_time: getValue('water_temp_time') || null,
-        wx_temp: getValue('wx_temp') ? parseFloat(getValue('wx_temp')) : null,
-        wx_wind_speed: getValue('wx_wind_speed') ? parseFloat(getValue('wx_wind_speed')) : null,
-        wx_wind_deg: getValue('wx_wind_deg') ? parseFloat(getValue('wx_wind_deg')) : null,
+        wx_temp: toNullableNumber(getValue('wx_temp')),
+        wx_wind_speed: toNullableNumber(getValue('wx_wind_speed')),
+        wx_wind_deg: toNullableNumber(getValue('wx_wind_deg')),
         wx_main: getValue('wx_main') || null,
-        wx_desc: getValue('wx_desc') || null
+        wx_desc: getValue('wx_desc') || null,
+        exif_date: getValue('exif_date') || null,
+        exif_date_formatted: getValue('exif_date_formatted') || null,
+        exif_lat: toNullableNumber(getValue('exif_lat')),
+        exif_lng: toNullableNumber(getValue('exif_lng')),
+        location_name: getValue('location_name') || getValue('water_temp_point') || null,
+        location_source: getValue('location_source') || null,
+        location_lat: toNullableNumber(catchLatRaw),
+        location_lng: toNullableNumber(catchLngRaw)
       };
+    }
+
+    function mergeCatchWithFallback(primaryCatch, fallbackCatch) {
+      if (!primaryCatch || !fallbackCatch || typeof fallbackCatch !== 'object') return primaryCatch;
+
+      const hasValue = (value) => {
+        if (value === null || value === undefined) return false;
+        if (typeof value === 'string') return true;
+        if (typeof value === 'number') return Number.isFinite(value);
+        return true;
+      };
+
+      const merged = { ...primaryCatch };
+      const keysToFallback = [
+        'location_name', 'location_source', 'location_lat', 'location_lng',
+        'exif_date', 'exif_date_formatted', 'exif_lat', 'exif_lng',
+        'water_temp_c', 'water_temp_point', 'water_temp_time',
+        'wx_temp', 'wx_wind_speed', 'wx_wind_deg', 'wx_main', 'wx_desc',
+        'tide_level_cm', 'tide_trend', 'tide_name', 'tide_harbor_name',
+        'tide_high_times', 'tide_low_times',
+        'photoFileId', 'photoDriveUrl', 'photoDriveThumbUrl'
+      ];
+
+      for (const key of keysToFallback) {
+        if (!hasValue(merged[key]) && hasValue(fallbackCatch[key])) {
+          merged[key] = fallbackCatch[key];
+        }
+      }
+
+      if (!hasValue(merged.water_temp) && hasValue(fallbackCatch.water_temp)) {
+        merged.water_temp = fallbackCatch.water_temp;
+      }
+
+      return merged;
     }
 
     function openAddCatch(){
@@ -10448,6 +10529,17 @@
         catches: validCatches.map(c => {
           // ★補完：既存釣果から不足フィールドを補完
           const sw = c.weather || d.start_weather || {};
+          const hasNum = (v) => typeof v === 'number' && isFinite(v);
+          const catchLat = hasNum(c.location_lat)
+            ? c.location_lat
+            : (hasNum(c.exif_lat)
+              ? c.exif_lat
+              : (hasNum(d.selected_location_lat) ? d.selected_location_lat : null));
+          const catchLng = hasNum(c.location_lng)
+            ? c.location_lng
+            : (hasNum(c.exif_lng)
+              ? c.exif_lng
+              : (hasNum(d.selected_location_lng) ? d.selected_location_lng : null));
           const tide = c.tide_name && c.tide_harbor_name ? {
             tide_name: c.tide_name,
             tide_harbor_name: c.tide_harbor_name,
@@ -10467,8 +10559,8 @@
             wx_temp: (c.wx_temp !== undefined && c.wx_temp !== null) ? c.wx_temp : (sw.temp ?? null),
             wx_wind_speed: (c.wx_wind_speed !== undefined && c.wx_wind_speed !== null) ? c.wx_wind_speed : (sw.wind_speed ?? null),
             wx_wind_deg: (c.wx_wind_deg !== undefined && c.wx_wind_deg !== null) ? c.wx_wind_deg : (sw.wind_deg ?? null),
-            wx_main: c.wx_main || (sw.weather_main ?? null),
-            wx_desc: c.wx_desc || (sw.weather_description ?? null),
+            wx_main: c.wx_main ?? (sw.weather_main ?? null),
+            wx_desc: c.wx_desc ?? (sw.weather_description ?? null),
             
             // ★追加：潮汐情報
             tide_level_cm: c.tide_level_cm ?? null,
@@ -10480,18 +10572,24 @@
             
             // ★追加：水温情報
             water_temp_c: (c.water_temp_c !== undefined && c.water_temp_c !== null) ? c.water_temp_c : (d.start_water_temp?.temperature_c ?? null),
-            water_temp_point: c.water_temp_point || (d.start_water_temp?.point_name ?? null),
-            water_temp_time: c.water_temp_time || (d.start_water_temp?.date ?? null),
+            water_temp_point: c.water_temp_point ?? (d.start_water_temp?.point_name ?? null),
+            water_temp_time: c.water_temp_time ?? (d.start_water_temp?.date ?? null),
             
             // ★追加：EXIF情報
-            exif_date: c.exif_date || null,
-            exif_date_formatted: c.exif_date_formatted || null,
-            exif_lat: c.exif_lat || null,
-            exif_lng: c.exif_lng || null,
+            exif_date: c.exif_date ?? null,
+            exif_date_formatted: c.exif_date_formatted ?? null,
+            exif_lat: c.exif_lat ?? null,
+            exif_lng: c.exif_lng ?? null,
             
             // ★追加：釣場位置情報
-            location_name: c.location_name || null,
-            location_source: c.location_source || null,
+            location_name: (c.location_name !== undefined && c.location_name !== null)
+              ? c.location_name
+              : ((c.water_temp_point !== undefined && c.water_temp_point !== null)
+                ? c.water_temp_point
+                : (d.selected_location_name ?? null)),
+            location_source: c.location_source ?? null,
+            location_lat: catchLat,
+            location_lng: catchLng,
             
             // 写真情報
             photoFileId: c.photoFileId || null,
@@ -13925,6 +14023,59 @@
         }
       }
 
+      // catches は更新ペイロード優先だが、欠損値は baseRaw.catches から補完する。
+      if (Array.isArray(baseRaw?.catches) && Array.isArray(merged?.catches)) {
+        const hasValue = (value) => {
+          if (value === null || value === undefined) return false;
+          if (typeof value === 'string') return true;
+          if (typeof value === 'number') return Number.isFinite(value);
+          return true;
+        };
+
+        const baseCatchById = new Map();
+        let hasBaseCatchId = false;
+        baseRaw.catches.forEach((c, idx) => {
+          const key = String(c?.id || c?.catchId || '').trim();
+          if (key) {
+            hasBaseCatchId = true;
+            baseCatchById.set(key, c);
+          }
+          baseCatchById.set(`__idx__${idx}`, c);
+        });
+
+        merged.catches = merged.catches.map((editedCatch, idx) => {
+          const key = String(editedCatch?.id || editedCatch?.catchId || '').trim();
+          const byId = key ? baseCatchById.get(key) : null;
+          const useIndexFallback = !key || !hasBaseCatchId;
+          const byIndex = useIndexFallback ? baseCatchById.get(`__idx__${idx}`) : null;
+          const baseCatch = byId || byIndex;
+          if (!baseCatch || typeof baseCatch !== 'object') return editedCatch;
+
+          const patched = { ...editedCatch };
+          const fallbackKeys = [
+            'location_name', 'location_source', 'location_lat', 'location_lng',
+            'exif_date', 'exif_date_formatted', 'exif_lat', 'exif_lng',
+            'water_temp_c', 'water_temp_point', 'water_temp_time',
+            'wx_temp', 'wx_wind_speed', 'wx_wind_deg', 'wx_main', 'wx_desc',
+            'tide_level_cm', 'tide_trend', 'tide_name', 'tide_harbor_name',
+            'tide_high_times', 'tide_low_times',
+            'photoFileId', 'photoDriveUrl', 'photoDriveThumbUrl'
+          ];
+
+          for (const field of fallbackKeys) {
+            if (!hasValue(patched[field]) && hasValue(baseCatch[field])) {
+              patched[field] = baseCatch[field];
+            }
+          }
+
+          if (!hasValue(patched.water_temp) && hasValue(baseCatch.water_temp)) {
+            patched.water_temp = baseCatch.water_temp;
+          }
+
+          return patched;
+        });
+      }
+
       return merged;
     }
 
@@ -14042,7 +14193,7 @@
 
   <!-- ★修正：バージョン情報フッター（ホーム画面でのみ表示） -->
   <footer id="versionFooter" class="fixed bottom-0 left-0 right-0 z-0 bg-slate-950/95 border-t border-slate-800 text-xs text-slate-400 text-center py-2 pb-safe">
-    <span id="versionInfo">Fishing_Log_dev | v3.1.0</span>
+    <span id="versionInfo">Fishing_Log_dev | v3.1.1</span>
   </footer>
 
   <!-- ★追加：エラー・通知表示エリア -->
