@@ -4,7 +4,7 @@
  */
 
 const CACHE_VERSION = `fishlog-${Date.now()}`;
-const APP_SHELL_URL = './index.html?v=3.0.1';
+const APP_SHELL_URL = './index.html?v=3.1.0';
 const ASSETS_TO_CACHE = [
   APP_SHELL_URL,
   './manifest.json',
@@ -59,8 +59,21 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
+  // 非GETはキャッシュ対象外（POSTをcache.putすると例外になる）
+  if (request.method !== 'GET') {
+    event.respondWith(
+      fetch(request).catch(() => {
+        return new Response(
+          JSON.stringify({ ok: false, error: 'Offline - request not available' }),
+          { status: 503, headers: { 'Content-Type': 'application/json' } }
+        );
+      })
+    );
+    return;
+  }
+
   // HTML は常に最新を優先（PWA での旧版固定を防止）
-  if (request.method === 'GET' && (request.mode === 'navigate' || (request.headers.get('accept') || '').includes('text/html'))) {
+  if (request.mode === 'navigate' || (request.headers.get('accept') || '').includes('text/html')) {
     event.respondWith(
       fetch(APP_SHELL_URL, { cache: 'no-store' })
         .then((response) => {
@@ -77,25 +90,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  // GAS への POST リクエストはネットワーク優先
-  if (request.method === 'POST' && request.url.includes('script.google.com')) {
-    event.respondWith(
-      fetch(request)
-        .then(response => {
-          console.log('[SW] POST request successful:', request.url);
-          return response;
-        })
-        .catch(err => {
-          console.warn('[SW] POST request failed, offline:', request.url);
-          return new Response(
-            JSON.stringify({ ok: false, error: 'Offline - POST not available' }),
-            { status: 503, headers: { 'Content-Type': 'application/json' } }
-          );
-        })
-    );
-    return;
-  }
-
   // GET リクエストはキャッシュファースト
   event.respondWith(
     caches.match(request).then((cachedResponse) => {

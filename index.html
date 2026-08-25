@@ -5,16 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#0f172a" />
   <meta name="description" content="釣行の記録、釣果の管理、潮汐情報の自動取得ができるPWAアプリケーション" />
-  <link rel="manifest" href="./manifest.json?v=3.0.1">
+  <link rel="manifest" href="./manifest.json?v=3.1.0">
   <link rel="apple-touch-icon" href="./icon-192.png">
   <link rel="icon" type="image/png" href="./icon-192.png" sizes="192x192">
   <link rel="icon" type="image/png" href="./icon-512.png" sizes="512x512">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Fishing Log">
-  <!-- ★Version: 3.0.1 - 2026-08-06 -->
+  <!-- ★Version: 3.1.0 - 2026-08-25 -->
   <!-- ★Updates: 潮流画像の複数海域フレーム（鳴門）とデバッグログを追加 -->
-  <title>釣行記録 v3.0.1（PWAフロント / コンパクトUI）</title>
+  <title>釣行記録 v3.1.0（PWAフロント / コンパクトUI）</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* ★追加：入力フォーム自動ズーム抑制 */
@@ -152,7 +152,7 @@
               <div class="text-sm text-slate-300">GPSトラック（GPX）</div>
               <div id="editTripGpsStatus" class="text-xs text-slate-400">未設定</div>
             </div>
-            <div class="text-xs text-slate-400 mb-2">カヤック釣行後にGPXファイルを追加できます（UI先行実装）。</div>
+            <div class="text-xs text-slate-400 mb-2">GPXファイルを追加できます。</div>
             <input id="editTripGpsFile" type="file" accept=".gpx,.xml,application/gpx+xml" class="hidden" />
             <div class="grid grid-cols-2 gap-2">
               <button id="btnSelectEditTripGps" type="button" class="py-2 rounded-lg bg-sky-700 hover:bg-sky-600 text-xs font-semibold">GPXを選択</button>
@@ -3857,7 +3857,7 @@
     // ===== PWA: Service Worker 登録 =====
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=3.0.1', {
+        navigator.serviceWorker.register('./sw.js?v=3.1.0', {
           scope: './'
         })
           .then(registration => {
@@ -12273,7 +12273,13 @@
       }
 
       const isPersisted = !!gps.r2_key;
-      editTripGpsStatus.textContent = isPersisted ? '保存済み' : '未保存（選択済み）';
+      if (gps.upload_status === 'uploading') {
+        editTripGpsStatus.textContent = 'アップロード中...';
+      } else if (gps.upload_status === 'upload_failed') {
+        editTripGpsStatus.textContent = '保存失敗';
+      } else {
+        editTripGpsStatus.textContent = isPersisted ? '保存済み' : '未保存（選択済み）';
+      }
       editTripGpsMeta.classList.remove('hidden');
       if (editTripGpsFileName) editTripGpsFileName.textContent = gps.file_name || '不明';
       if (editTripGpsFileSize) editTripGpsFileSize.textContent = formatGpsFileSize(gps.file_size);
@@ -12375,15 +12381,93 @@
           return;
         }
 
-        draft.gps_track = {
-          source_format: 'gpx',
-          file_name: file.name,
-          file_size: file.size,
-          uploaded_at: new Date().toISOString(),
-          upload_status: 'pending_ui_only'
-        };
-        await saveDraft(draft);
-        updateEditTripGpsDisplay();
+        const latestToken = await configStorage.getItem('WORKERS_AUTH_TOKEN');
+        if (latestToken) {
+          CONFIG.API.WORKERS_AUTH_TOKEN = latestToken;
+        }
+
+        const workerBase = (CONFIG.API.FISHING_TRIP_API_WORKER || '').replace(/\/$/, '');
+        if (!workerBase) {
+          alert('Worker エンドポイントが設定されていません');
+          editTripGpsFile.value = '';
+          return;
+        }
+        if (!CONFIG.API.WORKERS_AUTH_TOKEN) {
+          alert('WORKERS_AUTH_TOKEN が設定されていません');
+          editTripGpsFile.value = '';
+          return;
+        }
+        if (!draft?.tripId) {
+          alert('tripId が取得できませんでした');
+          editTripGpsFile.value = '';
+          return;
+        }
+
+        try {
+          draft.gps_track = {
+            source_format: 'gpx',
+            file_name: file.name,
+            file_size: file.size,
+            uploaded_at: new Date().toISOString(),
+            upload_status: 'uploading'
+          };
+          await saveDraft(draft);
+          updateEditTripGpsDisplay();
+
+          const base64Data = await fileToDataURL(file);
+          const response = await fetch(`${workerBase}/api/gpsTrack`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Auth-Token': CONFIG.API.WORKERS_AUTH_TOKEN || ''
+            },
+            body: JSON.stringify({
+              tripId: draft.tripId,
+              fileName: file.name,
+              base64Data
+            })
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText.slice(0, 200)}`);
+          }
+
+          const result = await response.json();
+          if (!result?.ok) {
+            throw new Error(result?.error || 'Upload failed');
+          }
+
+          draft.gps_track = {
+            source_format: 'gpx',
+            file_name: file.name,
+            file_size: file.size,
+            uploaded_at: new Date().toISOString(),
+            upload_status: 'uploaded',
+            r2_key: result.key || null,
+            r2_history_key: result.historyKey || null,
+            public_url: result.publicUrl || null,
+            content_type: result.contentType || 'application/gpx+xml',
+            bytes: Number.isFinite(result.bytes) ? result.bytes : file.size
+          };
+          await saveDraft(draft);
+          updateEditTripGpsDisplay();
+        } catch (e) {
+          console.error('[GPX] upload failed:', e);
+          draft.gps_track = {
+            source_format: 'gpx',
+            file_name: file.name,
+            file_size: file.size,
+            uploaded_at: new Date().toISOString(),
+            upload_status: 'upload_failed',
+            upload_error: String(e?.message || e || 'Upload failed')
+          };
+          await saveDraft(draft);
+          updateEditTripGpsDisplay();
+          alert(`GPXの保存に失敗しました: ${e?.message || e}`);
+        } finally {
+          editTripGpsFile.value = '';
+        }
       };
     }
 
@@ -13958,7 +14042,7 @@
 
   <!-- ★修正：バージョン情報フッター（ホーム画面でのみ表示） -->
   <footer id="versionFooter" class="fixed bottom-0 left-0 right-0 z-0 bg-slate-950/95 border-t border-slate-800 text-xs text-slate-400 text-center py-2 pb-safe">
-    <span id="versionInfo">Fishing_Log_dev | v3.0.1</span>
+    <span id="versionInfo">Fishing_Log_dev | v3.1.0</span>
   </footer>
 
   <!-- ★追加：エラー・通知表示エリア -->
