@@ -647,12 +647,11 @@
 
       <div id="bottomBar" class="hidden fixed bottom-0 left-0 right-0 z-20 border-t border-slate-800 bg-slate-950/80 backdrop-blur pb-12">
         <div class="max-w-4xl mx-auto px-4 py-3 flex flex-col gap-2">
-          <!-- ★追加：トピック記録ボタン（4つ） -->
-          <div class="grid grid-cols-2 gap-2">
-            <button id="btnTopicOceanCondition" class="py-2 rounded-2xl bg-cyan-600 hover:bg-cyan-500 font-semibold text-sm">🌊 海況変化</button>
-            <button id="btnTopicBait" class="py-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 font-semibold text-sm">🐟 ベイト流入</button>
-            <button id="btnTopicBoil" class="py-2 rounded-2xl bg-amber-600 hover:bg-amber-500 font-semibold text-sm">💥 ボイル・ナブラ</button>
+          <!-- ★修正：トピック記録ボタン（3項目に集約） -->
+          <div class="grid grid-cols-3 gap-2">
+            <button id="btnTopicSituation" class="py-2 rounded-2xl bg-cyan-600 hover:bg-cyan-500 font-semibold text-sm">🌊 状況変化</button>
             <button id="btnTopicCatch" class="py-2 rounded-2xl bg-orange-600 hover:bg-orange-500 font-semibold text-sm">🎣 周囲の釣果</button>
+            <button id="btnTopicLureChange" class="py-2 rounded-2xl bg-amber-600 hover:bg-amber-500 font-semibold text-sm">🎯 ルアーチェンジ</button>
           </div>
           <button id="btnAddCatchBottom" class="w-full py-3 rounded-2xl bg-sky-600 hover:bg-sky-500 font-semibold text-lg">＋釣果</button>
           <div class="grid grid-cols-2 gap-2">
@@ -771,13 +770,13 @@
         <button id="btnCloseTopicModal" class="text-slate-400 hover:text-slate-200">×</button>
       </div>
       <div class="space-y-3">
-        <label class="block overflow-hidden">
+        <label class="block">
           <span class="text-sm text-slate-300">時刻</span>
-          <input id="inpTopicTime" type="time" class="mt-1 w-full min-w-0 max-w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" />
+          <input id="inpTopicTime" type="time" class="mt-1 w-full min-w-0 max-w-full bg-slate-950 border border-slate-700 rounded-xl px-3" style="padding-top:0.4rem;padding-bottom:0.4rem;" />
         </label>
         <label class="block">
           <span class="text-sm text-slate-300">カテゴリ</span>
-          <input id="inpTopicCategory" type="text" readonly class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-slate-400" />
+          <input id="inpTopicCategory" type="text" readonly class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 text-slate-400" style="padding-top:0.4rem;padding-bottom:0.4rem;" />
         </label>
         <label class="block">
           <span class="text-sm text-slate-300">内容</span>
@@ -6934,10 +6933,13 @@
           header.className = 'flex items-center justify-between gap-2';
           
           const catEmoji = {
+            '状況変化': '🌊',
+            '周囲の釣果': '🎣',
+            'ルアーチェンジ': '🎯',
+            // 旧データ表示の後方互換
             '海況変化': '🌊',
             'ベイト流入': '🐟',
-            'ボイル・ナブラ': '💥',
-            '周囲の釣果': '🎣'
+            'ボイル・ナブラ': '💥'
           }[topic.category] || '📝';
           
           const cat = document.createElement('span');
@@ -12230,10 +12232,9 @@
 
     // ★追加：トピックボタンハンドラ
     const topicCategories = {
-      'btnTopicOceanCondition': '海況変化',
-      'btnTopicBait': 'ベイト流入',
-      'btnTopicBoil': 'ボイル・ナブラ',
-      'btnTopicCatch': '周囲の釣果'
+      'btnTopicSituation': '状況変化',
+      'btnTopicCatch': '周囲の釣果',
+      'btnTopicLureChange': 'ルアーチェンジ'
     };
 
     Object.entries(topicCategories).forEach(([btnId, category]) => {
