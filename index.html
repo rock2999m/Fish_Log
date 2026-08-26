@@ -93,124 +93,7 @@
       animation: slideOut 0.3s ease-in-out;
     }
 
-    /* ===== 釣行中ステータス/タイムライン（モック反映） ===== */
-    .record-status-card {
-      margin-top: 10px;
-      border-radius: 14px;
-      background: linear-gradient(170deg, #0f172a, #111827);
-      border: 1px solid #1e293b;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-      padding: 9px;
-      display: grid;
-      gap: 6px;
-      margin-bottom: 12px;
-    }
-
-    .record-row {
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .record-row > div {
-      min-width: 0;
-    }
-
-    .record-label {
-      font-size: 13px;
-      color: #94a3b8;
-      letter-spacing: 0.02em;
-    }
-
-    .record-value {
-      font-size: 15px;
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .record-status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      border-radius: 999px;
-      border: 1px solid rgba(16, 185, 129, 0.5);
-      color: #6ee7b7;
-      background: rgba(16, 185, 129, 0.14);
-      padding: 2px 8px;
-      font-size: 14px;
-      font-weight: 700;
-      line-height: 1.2;
-    }
-
-    .record-status-side {
-      text-align: right;
-      font-size: 13px;
-      color: #94a3b8;
-      line-height: 1.35;
-      overflow-wrap: anywhere;
-    }
-
-    .record-meta,
-    .record-chips {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 7px;
-    }
-
-    .record-chip {
-      border: 1px solid #1e293b;
-      border-radius: 12px;
-      background: rgba(15, 23, 42, 0.88);
-      padding: 6px 8px;
-      min-width: 0;
-    }
-
-    .record-chip .record-label {
-      font-size: 12px;
-    }
-
-    .record-chip .record-value {
-      font-size: 14px;
-      margin-top: 2px;
-      white-space: normal;
-      overflow-wrap: anywhere;
-    }
-
-    .record-timeline-section {
-      margin-top: 14px;
-      border: 1px solid #1e293b;
-      border-radius: 14px;
-      background: rgba(15, 23, 42, 0.9);
-      overflow: hidden;
-      margin-bottom: 24px;
-    }
-
-    .record-timeline-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-      padding: 9px 10px;
-      border-bottom: 1px solid rgba(30, 41, 59, 0.9);
-      background: rgba(2, 6, 23, 0.8);
-    }
-
-    .record-timeline-title {
-      font-size: 15px;
-      font-weight: 700;
-      letter-spacing: 0.02em;
-    }
-
-    .record-timeline-count {
-      font-size: 14px;
-      color: #94a3b8;
-      min-width: 0;
-      text-align: right;
-      overflow-wrap: anywhere;
-    }
+    /* ===== 釣行中タイムライン ===== */
 
     .timeline-list {
       list-style: none;
@@ -387,30 +270,8 @@
     }
 
     @media (max-width: 520px) {
-      .record-row {
-        align-items: flex-start;
-      }
-
-      .record-meta,
-      .record-chips {
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      }
-
       .timeline-item {
         grid-template-columns: 54px 42px 1fr 10px;
-      }
-
-      .record-status-side {
-        font-size: 12px;
-      }
-
-      .record-timeline-head {
-        flex-wrap: wrap;
-      }
-
-      .record-timeline-count {
-        width: 100%;
-        font-size: 12px;
       }
     }
   </style>
@@ -917,38 +778,38 @@
         </div>
       </div>
     <section id="recordView" class="hidden pb-[260px]">
-      <div class="record-status-card">
-        <div class="record-row">
-          <div>
-            <div class="record-label">現在のステータス</div>
-            <div id="txtStatus" class="record-status-badge">未開始</div>
+      <div class="rounded-2xl bg-slate-900 border border-slate-800 p-3 flex flex-col gap-1.5 mb-3 mt-2 shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0">
+            <div class="text-slate-400 text-[13px] tracking-[0.02em]">現在のステータス</div>
+            <div id="txtStatus" class="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/50 bg-emerald-500/15 text-emerald-300 px-2 py-0.5 text-sm font-bold leading-tight">未開始</div>
           </div>
-          <div class="record-status-side">
+          <div class="min-w-0 text-right text-[13px] text-slate-400 leading-[1.35] break-all">
             <div>Trip ID: <span id="txtTripId">—</span></div>
             <div id="txtPos" class="hidden">位置: <span id="txtLat"></span>, <span id="txtLng"></span></div>
           </div>
         </div>
 
-        <div class="record-meta">
-          <div class="record-chip">
-            <div class="record-label">開始</div>
-            <div id="txtStartedAt" class="record-value break-all">—</div>
+        <div class="grid grid-cols-2 gap-[7px]">
+          <div class="rounded-xl border border-slate-800 bg-slate-800/40 p-2 min-w-0">
+            <div class="text-slate-400 text-xs">開始</div>
+            <div id="txtStartedAt" class="text-slate-200 text-sm mt-0.5 break-all">—</div>
           </div>
-          <div id="tripWeatherBoxTop" class="record-chip">
-            <div class="record-label">天気</div>
-            <div id="tripWeatherTop" class="record-value">—</div>
+          <div id="tripWeatherBoxTop" class="rounded-xl border border-slate-800 bg-slate-800/40 p-2 min-w-0">
+            <div class="text-slate-400 text-xs">天気</div>
+            <div id="tripWeatherTop" class="text-slate-200 text-sm mt-0.5 break-words">—</div>
           </div>
         </div>
 
-        <div id="tripWeatherRow" class="record-chips"></div>
+        <div id="tripWeatherRow" class="grid grid-cols-2 gap-[7px]"></div>
 
         <div id="buttonRow" class="flex gap-2"></div>
       </div>
 
-      <section class="record-timeline-section">
-        <div class="record-timeline-head">
-          <h2 class="record-timeline-title">トピック・釣果 タイムライン</h2>
-          <div class="record-timeline-count">
+      <section class="mb-6 mt-3 rounded-2xl border border-slate-800 bg-slate-900/90 overflow-hidden">
+        <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-b border-slate-800 bg-slate-950/60">
+          <h2 class="text-[15px] font-semibold tracking-[0.02em]">トピック・釣果 タイムライン</h2>
+          <div class="w-full sm:w-auto text-right text-sm text-slate-400">
             <span>トピック <span id="txtTopicCount">0</span> 件</span>
             <span class="mx-1">/</span>
             <span>釣果 <span id="txtCatchCount">0</span> 件</span>
@@ -7175,9 +7036,9 @@
       tripWeatherRow.innerHTML = '';
       const box = (label, val) => {
         const d=document.createElement('div');
-        d.className='record-chip';
-        d.innerHTML = `<div class="record-label">${label}</div>
-                       <div class="record-value">${val || '—'}</div>`;
+        d.className='rounded-xl border border-slate-800 bg-slate-800/40 p-2 min-w-0';
+        d.innerHTML = `<div class="text-slate-400 text-xs">${label}</div>
+                       <div class="text-slate-200 text-sm mt-0.5 break-words">${val || '—'}</div>`;
         return d;
       };
 
