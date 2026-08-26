@@ -92,6 +92,174 @@
     .notification.removing {
       animation: slideOut 0.3s ease-in-out;
     }
+
+    /* ===== 釣行中タイムライン（本実装） ===== */
+    .timeline-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 6px;
+    }
+
+    .timeline-item {
+      display: grid;
+      grid-template-columns: 56px 46px 1fr 12px;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 0;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      width: 100%;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .timeline-item.start {
+      cursor: default;
+      min-height: 30px;
+      padding: 0;
+    }
+
+    .timeline-time {
+      font-size: 14px;
+      font-weight: 700;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+    }
+
+    .timeline-item.start .timeline-time {
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .timeline-track {
+      position: relative;
+      width: 46px;
+      min-height: 58px;
+      --line-color: rgb(148, 163, 184);
+      --dot-color: rgb(8, 145, 178);
+    }
+
+    .timeline-item.start .timeline-track {
+      min-height: 30px;
+    }
+
+    .timeline-track::before {
+      content: "";
+      position: absolute;
+      top: -14px;
+      bottom: -14px;
+      left: 20px;
+      width: 4px;
+      border-radius: 2px;
+      background: var(--line-color);
+    }
+
+    .timeline-item.start .timeline-track::before {
+      top: 50%;
+    }
+
+    .timeline-dot {
+      position: absolute;
+      top: 50%;
+      left: 17px;
+      width: 11px;
+      height: 11px;
+      transform: translateY(-50%);
+      border-radius: 999px;
+      background: var(--dot-color);
+    }
+
+    .timeline-dot::after {
+      content: "";
+      position: absolute;
+      inset: -4px;
+      border: 2px solid var(--line-color);
+      border-radius: 999px;
+      background: transparent;
+      pointer-events: none;
+    }
+
+    .timeline-item.start .timeline-dot {
+      left: 18px;
+      width: 8px;
+      height: 8px;
+      background: rgb(16, 185, 129);
+    }
+
+    .timeline-item.catch .timeline-dot {
+      left: 11px;
+      width: 22px;
+      height: 22px;
+      background: rgb(2, 132, 199);
+    }
+
+    .timeline-item.topic-situation .timeline-dot {
+      background: rgb(8, 145, 178);
+    }
+
+    .timeline-item.topic-around .timeline-dot {
+      background: rgb(234, 88, 12);
+    }
+
+    .timeline-item.topic-lure .timeline-dot {
+      background: rgb(217, 119, 6);
+    }
+
+    .timeline-content {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 2px;
+    }
+
+    .timeline-main {
+      font-size: 14px;
+      color: #e2e8f0;
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .timeline-item.start .timeline-main {
+      font-size: 12px;
+      color: #cbd5e1;
+    }
+
+    .timeline-catch-main {
+      display: grid;
+      grid-template-columns: 44px 1fr;
+      gap: 8px;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .timeline-catch-thumb {
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      border: 1px solid rgba(71, 85, 105, 0.9);
+      object-fit: cover;
+      background: #0b1220;
+    }
+
+    .timeline-nav {
+      color: #64748b;
+      font-size: 14px;
+      line-height: 1;
+      text-align: right;
+    }
+
+    .timeline-item.start .timeline-nav {
+      visibility: hidden;
+    }
   </style>
 <body class="min-h-screen bg-slate-950 text-slate-50">
   <header class="sticky top-0 z-10 backdrop-blur bg-slate-950/70 border-b border-slate-800 pt-[var(--pwa-header-pt)]">
@@ -626,23 +794,17 @@
         <div id="buttonRow" class="flex gap-2 mt-2"></div>
       </div>
 
-      <!-- ★追加：トピック記録セクション -->
-      <section id="topicsSection" class="mb-6">
-        <div class="flex items-baseline gap-3 mb-2">
-          <h2 class="text-base font-semibold">トピック</h2>
-          <div id="txtTopicCount" class="text-sm text-slate-400">0 件</div>
+      <section class="mb-6">
+        <div class="flex items-baseline justify-between gap-3 mb-2">
+          <h2 class="text-base font-semibold">トピック・釣果 タイムライン</h2>
+          <div class="text-sm text-slate-400">
+            <span>トピック <span id="txtTopicCount">0</span> 件</span>
+            <span class="mx-1">/</span>
+            <span>釣果 <span id="txtCatchCount">0</span> 件</span>
+          </div>
         </div>
-        <div id="topicListEmpty" class="text-slate-400 text-sm">トピックはまだ記録されていません</div>
-        <ul id="topicList" class="space-y-2"></ul>
-      </section>
-
-      <section>
-        <div class="flex items-baseline gap-3 mb-2">
-          <h2 class="text-base font-semibold">釣果</h2>
-          <div id="txtCatchCount" class="text-2xl font-bold text-sky-300">0 件</div>
-        </div>
-        <div id="catchListEmpty" class="text-slate-400 text-sm">まだ登録がありません。<span id="hintAddWhenActive" class="hidden">「＋釣果」から追加できます。</span></div>
-        <ul id="catchList" class="space-y-2"></ul>
+        <div id="timelineEmpty" class="text-slate-400 text-sm">まだ記録がありません。<span id="hintAddWhenActive" class="hidden">下のボタンから記録できます。</span></div>
+        <ul id="timelineList" class="timeline-list"></ul>
       </section>
 
       <div id="bottomBar" class="hidden fixed bottom-0 left-0 right-0 z-20 border-t border-slate-800 bg-slate-950/80 backdrop-blur pb-12">
@@ -786,6 +948,21 @@
       <div class="flex gap-2 mt-4">
         <button id="btnCancelTopic" class="flex-1 py-2 rounded-xl border border-slate-700 hover:bg-slate-800">キャンセル</button>
         <button id="btnSaveTopic" class="flex-1 py-2 rounded-2xl bg-sky-600 hover:bg-sky-500 font-semibold">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="timelineDetailModal" class="hidden fixed inset-0 z-40 bg-black/60 grid place-items-center p-4">
+    <div class="w-full max-w-md rounded-2xl bg-slate-900 border border-slate-800 p-4" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between mb-2">
+        <h3 id="timelineDetailTitle" class="font-semibold">詳細</h3>
+        <button id="btnCloseTimelineDetail" class="text-slate-400 hover:text-slate-200">×</button>
+      </div>
+      <div id="timelineDetailBody" class="text-sm text-slate-200 whitespace-pre-wrap break-words min-h-[3rem]"></div>
+      <div class="flex gap-2 mt-4">
+        <button id="btnTimelineDetailEdit" class="flex-1 py-2 rounded-xl border border-slate-700 hover:bg-slate-800">編集</button>
+        <button id="btnTimelineDetailDelete" class="flex-1 py-2 rounded-xl border border-slate-700 hover:bg-slate-800">削除</button>
+        <button id="btnTimelineDetailClose" class="flex-1 py-2 rounded-xl bg-slate-700 hover:bg-slate-600">閉じる</button>
       </div>
     </div>
   </div>
@@ -4137,6 +4314,7 @@
     const txtLat=document.getElementById('txtLat');
     const txtLng=document.getElementById('txtLng');
     const txtStartedAt=document.getElementById('txtStartedAt');
+    const txtTopicCount=document.getElementById('txtTopicCount');
     const txtCatchCount=document.getElementById('txtCatchCount');
     const tripWeatherRow=document.getElementById('tripWeatherRow');
     const buttonRow=document.getElementById('buttonRow');
@@ -4144,9 +4322,18 @@
     const btnAddCatchBottom=document.getElementById('btnAddCatchBottom');
     const btnEndBottom=document.getElementById('btnEndBottom');
 
-    const catchListEmpty=document.getElementById('catchListEmpty');
+    const timelineList=document.getElementById('timelineList');
+    const timelineEmpty=document.getElementById('timelineEmpty');
     const hintAddWhenActive=document.getElementById('hintAddWhenActive');
-    const catchList=document.getElementById('catchList');
+
+    const timelineDetailModal=document.getElementById('timelineDetailModal');
+    const timelineDetailTitle=document.getElementById('timelineDetailTitle');
+    const timelineDetailBody=document.getElementById('timelineDetailBody');
+    const btnCloseTimelineDetail=document.getElementById('btnCloseTimelineDetail');
+    const btnTimelineDetailClose=document.getElementById('btnTimelineDetailClose');
+    const btnTimelineDetailEdit=document.getElementById('btnTimelineDetailEdit');
+    const btnTimelineDetailDelete=document.getElementById('btnTimelineDetailDelete');
+    let timelineDetailState = null;
 
     const catchModal=document.getElementById('catchModal');
     const btnCloseModal=document.getElementById('btnCloseModal');
@@ -6913,183 +7100,140 @@
         hintAddWhenActive.classList.add('hidden'); 
       }
 
-      // ★追加：トピックリスト
-      const topicList = document.getElementById('topicList');
-      const topicListEmpty = document.getElementById('topicListEmpty');
-      const txtTopicCount = document.getElementById('txtTopicCount');
-      topicList.innerHTML = '';
-      const hasTopics = draft.topics && draft.topics.length > 0;
-      topicListEmpty.classList.toggle('hidden', hasTopics);
-      txtTopicCount.textContent = (draft.topics?.length || 0) + ' 件';
-      if (hasTopics) {
-        draft.topics.forEach((topic, idx) => {
-          const li = document.createElement('li');
-          li.className = 'rounded-xl bg-slate-900 border border-slate-800 p-3 flex justify-between items-start gap-3';
-          
-          const content = document.createElement('div');
-          content.className = 'flex-1 min-w-0';
-          
-          const header = document.createElement('div');
-          header.className = 'flex items-center justify-between gap-2';
-          
-          const catEmoji = {
-            '状況変化': '🌊',
-            '周囲の釣果': '🎣',
-            'ルアーチェンジ': '🎯',
-            // 旧データ表示の後方互換
-            '海況変化': '🌊',
-            'ベイト流入': '🐟',
-            'ボイル・ナブラ': '💥'
-          }[topic.category] || '📝';
-          
-          const cat = document.createElement('span');
-          cat.className = 'font-semibold text-sm';
-          cat.textContent = `${catEmoji} ${topic.category}`;
-          
-          const time = document.createElement('span');
-          time.className = 'text-xs text-slate-400';
-          time.textContent = topic.time || '—';
-          
-          header.appendChild(cat);
-          header.appendChild(time);
-          content.appendChild(header);
-          
-          if (topic.content) {
-            const text = document.createElement('div');
-            text.className = 'text-sm text-slate-300 mt-1 break-words';
-            text.textContent = topic.content;
-            content.appendChild(text);
-          }
-          
-          li.appendChild(content);
-          
-          // ★修正：編集・削除ボタンを2つに分割
-          const btnGroup = document.createElement('div');
-          btnGroup.className = 'flex gap-1 shrink-0';
-          
-          const btnEdit = document.createElement('button');
-          btnEdit.className = 'px-2 py-1 text-xs rounded-lg border border-slate-700 hover:bg-slate-800';
-          btnEdit.textContent = '編集';
-          btnEdit.onclick = () => openTopicEditModal(idx);
-          
-          const btnDel = document.createElement('button');
-          btnDel.className = 'px-2 py-1 text-xs rounded-lg border border-slate-700 hover:bg-slate-800';
-          btnDel.textContent = '削除';
-          btnDel.onclick = async () => {
-            if (confirm('このトピックを削除しますか？')) {
-              draft.topics.splice(idx, 1);
-              await saveDraft(draft);
-              render();
-            }
-          };
-          
-          btnGroup.appendChild(btnEdit);
-          btnGroup.appendChild(btnDel);
-          li.appendChild(btnGroup);
-          
-          topicList.appendChild(li);
+      txtTopicCount.textContent = String(draft.topics?.length || 0);
+      txtCatchCount.textContent = String(draft.catches?.length || 0);
+
+      const entries = [];
+      const startedAtDate = draft.startedAt ? new Date(draft.startedAt) : null;
+
+      if (startedAtDate && !Number.isNaN(startedAtDate.getTime())) {
+        entries.push({
+          kind: 'start',
+          sortMs: startedAtDate.getTime(),
+          timeLabel: startedAtDate.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', hour12: false }),
+          main: '釣行開始'
         });
       }
 
-      // 釣果リスト
-      catchList.innerHTML='';
-      const has = draft.catches && draft.catches.length>0;
-      catchListEmpty.classList.toggle('hidden', has);
-      if (has){
-        draft.catches.forEach(c=>{
-          const li=document.createElement('li'); li.className='rounded-xl bg-slate-900 border border-slate-800 p-3 flex gap-3';
-          const thumbSrc = c.photoDriveThumbUrl || c.photoDriveUrl || c.photoPreviewUrl || "";
+      const topicVariant = (category) => {
+        if (category === '状況変化' || category === '海況変化') return 'topic-situation';
+        if (category === '周囲の釣果') return 'topic-around';
+        if (category === 'ルアーチェンジ') return 'topic-lure';
+        return 'topic-situation';
+      };
+
+      const resolveTopicSortMs = (topic) => {
+        if (topic?.recordedAt) {
+          const ms = Date.parse(topic.recordedAt);
+          if (!Number.isNaN(ms)) return ms;
+        }
+        if (topic?.time && startedAtDate) {
+          const m = String(topic.time).match(/^(\d{1,2}):(\d{2})$/);
+          if (m) {
+            const d = new Date(startedAtDate);
+            d.setHours(Number(m[1]), Number(m[2]), 0, 0);
+            return d.getTime();
+          }
+        }
+        return Number.MAX_SAFE_INTEGER;
+      };
+
+      (draft.topics || []).forEach((topic, idx) => {
+        entries.push({
+          kind: 'topic',
+          variant: topicVariant(topic?.category),
+          topicIdx: idx,
+          sortMs: resolveTopicSortMs(topic),
+          timeLabel: topic?.time || '—',
+          main: topic?.content || topic?.category || 'トピック'
+        });
+      });
+
+      (draft.catches || []).forEach((c) => {
+        const ms = c?.timestamp ? Date.parse(c.timestamp) : Number.MAX_SAFE_INTEGER;
+        const tm = Number.isNaN(ms)
+          ? '—'
+          : new Date(ms).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', hour12: false });
+        entries.push({
+          kind: 'catch',
+          catchId: c?.id,
+          catchData: c,
+          sortMs: Number.isNaN(ms) ? Number.MAX_SAFE_INTEGER : ms,
+          timeLabel: tm,
+          main: c?.species || '(魚種未設定)'
+        });
+      });
+
+      entries.sort((a, b) => a.sortMs - b.sortMs);
+      timelineList.innerHTML = '';
+      timelineEmpty.classList.toggle('hidden', entries.length > 0);
+
+      entries.forEach((entry) => {
+        const li = document.createElement('li');
+        li.className = `timeline-item ${entry.kind === 'start' ? 'start' : ''} ${entry.variant || ''} ${entry.kind === 'catch' ? 'catch' : ''}`;
+
+        const time = document.createElement('div');
+        time.className = 'timeline-time';
+        time.textContent = entry.timeLabel;
+
+        const track = document.createElement('div');
+        track.className = 'timeline-track';
+        const dot = document.createElement('span');
+        dot.className = 'timeline-dot';
+        track.appendChild(dot);
+
+        const content = document.createElement('div');
+        content.className = 'timeline-content';
+
+        if (entry.kind === 'catch') {
+          const wrap = document.createElement('div');
+          wrap.className = 'timeline-catch-main';
+          const thumbSrc = entry.catchData?.photoDriveThumbUrl || entry.catchData?.photoDriveUrl || entry.catchData?.photoPreviewUrl || '';
           let thumb;
-          if (thumbSrc){
-            thumb=document.createElement('img'); thumb.src=thumbSrc; thumb.alt='catch'; thumb.className='w-20 h-20 object-cover rounded-lg border border-slate-800';
+          if (thumbSrc) {
+            thumb = document.createElement('img');
+            thumb.src = thumbSrc;
+            thumb.alt = 'catch';
+            thumb.className = 'timeline-catch-thumb';
           } else {
-            thumb=document.createElement('div'); thumb.className='w-20 h-20 rounded-lg border border-dashed border-slate-700 grid place-items-center text-xs text-slate-500'; thumb.textContent='No Photo';
+            thumb = document.createElement('div');
+            thumb.className = 'timeline-catch-thumb';
           }
-          li.appendChild(thumb);
+          const main = document.createElement('div');
+          main.className = 'timeline-main';
+          main.textContent = entry.main;
+          wrap.appendChild(thumb);
+          wrap.appendChild(main);
+          content.appendChild(wrap);
+        } else {
+          const main = document.createElement('div');
+          main.className = 'timeline-main';
+          main.textContent = entry.main;
+          content.appendChild(main);
+        }
 
-          const info=document.createElement('div'); info.className='flex-1 min-w-0';
-          const row1=document.createElement('div'); row1.className='flex items-center justify-between';
-          const title=document.createElement('div'); title.className='font-semibold truncate'; title.textContent=c.species||'(魚種未設定)';
-          const tm=document.createElement('div'); tm.className='text-xs text-slate-400 ml-2'; try{ tm.textContent=new Date(c.timestamp).toLocaleTimeString(); }catch{ tm.textContent=''; }
-          row1.appendChild(title); row1.appendChild(tm);
+        const nav = document.createElement('div');
+        nav.className = 'timeline-nav';
+        nav.textContent = entry.kind === 'start' ? '' : '›';
 
-          const row2=document.createElement('div'); row2.className='text-sm text-slate-300 mt-1 flex flex-wrap gap-x-3 gap-y-1';
-          if (c.size_cm!=null){ const sp=document.createElement('span'); sp.textContent='サイズ: '+c.size_cm+' cm'; row2.appendChild(sp); }
-          if (c.weight_g!=null){ const sp=document.createElement('span'); sp.textContent='重量: '+c.weight_g+' g'; row2.appendChild(sp); }
-          if (c.method){ const sp=document.createElement('span'); sp.textContent='方法: '+c.method; row2.appendChild(sp); }
+        li.appendChild(time);
+        li.appendChild(track);
+        li.appendChild(content);
+        li.appendChild(nav);
 
-          if (c.weather) {
-            const rowWx = document.createElement('div');
-            rowWx.className = 'text-xs text-slate-400 mt-1';
-            rowWx.textContent = formatWeatherBrief(c.weather);
-            info.appendChild(rowWx);
-          }
-
-          info.appendChild(row1); info.appendChild(row2);
-
-          const ops=document.createElement('div'); ops.className='flex flex-col gap-1 shrink-0';
-          const btnEdit=document.createElement('button'); btnEdit.className='px-2 py-1 text-xs rounded-lg border border-slate-700 hover:bg-slate-800'; btnEdit.textContent='編集';
-          btnEdit.onclick=()=>openEditCatch(c.id);
-          const btnDel=document.createElement('button'); btnDel.className='px-2 py-1 text-xs rounded-lg border border-slate-700 hover:bg-slate-800'; btnDel.textContent='削除';
-          btnDel.onclick = async () =>{ 
-            console.log('[DEBUG-Delete] 1. Delete button clicked');
-            if (confirm('この釣果を削除しますか？')) {
-              console.log('[DEBUG-Delete] 2. Confirmed delete');
-              // ★修正：削除対象の釣果から photoFileId を取得
-              const photoFileIdStatus = c?.photoFileId;
-              console.log('[DEBUG-Delete] 3. photoFileId:', photoFileIdStatus);
-              
-              console.log('[DEBUG-Delete] 4. Before splice, catches count:', draft.catches.length);
-              draft.catches = draft.catches.filter(x=>x.id!==c.id); 
-              console.log('[DEBUG-Delete] 5. After splice, catches count:', draft.catches.length);
-              
-              console.log('[DEBUG-Delete] 6. Starting saveDraft...');
-              await saveDraft(draft);
-              console.log('[DEBUG-Delete] 7. saveDraft completed');
-              
-              // ★修正②: 削除後に補完ロジックを実行（手動釣行時のみ）
-              if (draft.manualStarted) {
-                console.log('[DEBUG-Delete] 8. Manual started, recalculating times...');
-                // 手動釣行時は削除後に時刻を再計算してから画面更新
-                const validTimes = draft.catches
-                  .map(c => c.timestamp)
-                  .filter(ts => !!ts);
-                
-                console.log('[DEBUG-Delete] 9. Valid times count:', validTimes.length);
-                if (validTimes.length > 0) {
-                  const earliestTime = validTimes.reduce((a, b) => a < b ? a : b);
-                  const latestTime = validTimes.reduce((a, b) => a > b ? a : b);
-                  draft.startedAt = earliestTime;
-                  draft.endedAt = latestTime;
-                  console.log('[DEBUG-Delete] 10. Updated times, saving...');
-                  await saveDraft(draft);
-                  console.log('[DEBUG-Delete] 11. Time save completed');
-                } else {
-                  // 釣果が全て削除された場合
-                  draft.startedAt = null;
-                  draft.endedAt = null;
-                  console.log('[DEBUG-Delete] 12. All catches deleted, saving empty times...');
-                  await saveDraft(draft);
-                  console.log('[DEBUG-Delete] 13. Empty save completed');
-                }
-              }
-              
-              // ★修正③：即座に画面更新（長時間処理の _complementTripDataOnly は呼ばない）
-              console.log('[DEBUG-Delete] 14. Starting render...');
-              render();
-              console.log('[DEBUG-Delete] 15. Render completed');
-              
-              // ★注記：画像削除は GAS の定期実行で自動削除（フロント側では何もしない）
-              console.log('[DEBUG-Delete] 16. Photo will be cleaned up by GAS scheduled trigger');
-              console.log('[DEBUG-Delete] 17. Delete process fully completed');
+        if (entry.kind !== 'start') {
+          li.tabIndex = 0;
+          li.onclick = () => openTimelineDetail(entry);
+          li.onkeydown = (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              openTimelineDetail(entry);
             }
           };
-          ops.appendChild(btnEdit); ops.appendChild(btnDel);
+        }
 
-          li.appendChild(info); li.appendChild(ops);
-          catchList.appendChild(li);
-        });
-      }
+        timelineList.appendChild(li);
+      });
     }
         // ===== 釣行の確認（Trips） =====
     const tripListEl = document.getElementById('tripList');
@@ -12326,6 +12470,97 @@
       closeTopicModal();
       render();
     };
+
+    function closeTimelineDetailModal() {
+      timelineDetailModal.classList.add('hidden');
+      timelineDetailState = null;
+    }
+
+    function openTimelineDetail(entry) {
+      if (!entry || entry.kind === 'start') return;
+
+      if (entry.kind === 'topic') {
+        const topic = draft.topics?.[entry.topicIdx];
+        if (!topic) return;
+        timelineDetailState = { kind: 'topic', topicIdx: entry.topicIdx };
+        timelineDetailTitle.textContent = `${topic.time || '—'} / ${topic.category || 'トピック'}`;
+        timelineDetailBody.textContent = topic.content || '（内容なし）';
+      } else if (entry.kind === 'catch') {
+        const c = draft.catches?.find(x => x.id === entry.catchId);
+        if (!c) return;
+        timelineDetailState = { kind: 'catch', catchId: c.id };
+        const label = c.species || '(魚種未設定)';
+        let time = '—';
+        try { time = new Date(c.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', hour12: false }); } catch {}
+        timelineDetailTitle.textContent = `${time} / ${label}`;
+        timelineDetailBody.textContent = '詳細を編集・削除できます。';
+      }
+
+      timelineDetailModal.classList.remove('hidden');
+    }
+
+    async function deleteCatchById(catchId) {
+      const c = draft.catches.find(x => x.id === catchId);
+      if (!c) return;
+
+      if (!confirm('この釣果を削除しますか？')) return;
+
+      draft.catches = draft.catches.filter(x => x.id !== catchId);
+      await saveDraft(draft);
+
+      if (draft.manualStarted) {
+        const validTimes = draft.catches.map(x => x.timestamp).filter(Boolean);
+        if (validTimes.length > 0) {
+          draft.startedAt = validTimes.reduce((a, b) => a < b ? a : b);
+          draft.endedAt = validTimes.reduce((a, b) => a > b ? a : b);
+        } else {
+          draft.startedAt = null;
+          draft.endedAt = null;
+        }
+        await saveDraft(draft);
+      }
+
+      render();
+    }
+
+    if (btnCloseTimelineDetail) btnCloseTimelineDetail.onclick = closeTimelineDetailModal;
+    if (btnTimelineDetailClose) btnTimelineDetailClose.onclick = closeTimelineDetailModal;
+    if (timelineDetailModal) {
+      timelineDetailModal.addEventListener('click', (e) => {
+        if (e.target === timelineDetailModal) closeTimelineDetailModal();
+      });
+    }
+
+    if (btnTimelineDetailEdit) {
+      btnTimelineDetailEdit.onclick = async () => {
+        if (!timelineDetailState) return;
+        if (timelineDetailState.kind === 'topic') {
+          closeTimelineDetailModal();
+          openTopicEditModal(timelineDetailState.topicIdx);
+        } else if (timelineDetailState.kind === 'catch') {
+          closeTimelineDetailModal();
+          await openEditCatch(timelineDetailState.catchId);
+        }
+      };
+    }
+
+    if (btnTimelineDetailDelete) {
+      btnTimelineDetailDelete.onclick = async () => {
+        if (!timelineDetailState) return;
+        if (timelineDetailState.kind === 'topic') {
+          if (confirm('このトピックを削除しますか？')) {
+            draft.topics.splice(timelineDetailState.topicIdx, 1);
+            await saveDraft(draft);
+            closeTimelineDetailModal();
+            render();
+          }
+        } else if (timelineDetailState.kind === 'catch') {
+          const catchId = timelineDetailState.catchId;
+          closeTimelineDetailModal();
+          await deleteCatchById(catchId);
+        }
+      };
+    }
 
     // 初期表示
     render();
