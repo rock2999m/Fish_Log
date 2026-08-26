@@ -113,6 +113,10 @@
       align-items: center;
     }
 
+    .record-row > div {
+      min-width: 0;
+    }
+
     .record-label {
       font-size: 13px;
       color: #94a3b8;
@@ -146,6 +150,7 @@
       font-size: 13px;
       color: #94a3b8;
       line-height: 1.35;
+      overflow-wrap: anywhere;
     }
 
     .record-meta,
@@ -170,6 +175,8 @@
     .record-chip .record-value {
       font-size: 14px;
       margin-top: 2px;
+      white-space: normal;
+      overflow-wrap: anywhere;
     }
 
     .record-timeline-section {
@@ -185,6 +192,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 8px;
       padding: 9px 10px;
       border-bottom: 1px solid rgba(30, 41, 59, 0.9);
       background: rgba(2, 6, 23, 0.8);
@@ -199,6 +207,9 @@
     .record-timeline-count {
       font-size: 14px;
       color: #94a3b8;
+      min-width: 0;
+      text-align: right;
+      overflow-wrap: anywhere;
     }
 
     .timeline-list {
@@ -376,11 +387,29 @@
     }
 
     @media (max-width: 520px) {
+      .record-row {
+        align-items: flex-start;
+      }
+
+      .record-meta,
+      .record-chips {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      }
+
       .timeline-item {
         grid-template-columns: 54px 42px 1fr 10px;
       }
 
       .record-status-side {
+        font-size: 12px;
+      }
+
+      .record-timeline-head {
+        flex-wrap: wrap;
+      }
+
+      .record-timeline-count {
+        width: 100%;
         font-size: 12px;
       }
     }
