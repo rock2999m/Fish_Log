@@ -278,17 +278,15 @@
 <body class="min-h-screen bg-slate-950 text-slate-50">
   <header class="sticky top-0 z-10 backdrop-blur bg-slate-950/70 border-b border-slate-800 pt-[var(--pwa-header-pt)]">
     <div class="max-w-4xl mx-auto px-4 py-3">
-      <div class="mb-3 text-center">
-        <h1 class="text-3xl font-bold">Fishing_Log</h1>
+      <div class="mb-2 flex items-center justify-between">
+        <button id="navHome" class="h-8 w-8 rounded-xl border border-slate-700 hover:bg-slate-800 text-base leading-none" aria-label="ホーム">⌂</button>
+        <h1 class="text-[25px] font-bold">Fishing_Log</h1>
+        <button id="navSettings" class="h-8 w-8 rounded-xl hover:bg-slate-700 text-lg leading-none" aria-label="設定">⚙️</button>
       </div>
-      <nav class="flex gap-2 text-sm items-center justify-between">
-        <div class="flex gap-2">
-          <button id="navHome" class="px-3 py-1.5 rounded-xl border border-slate-700 hover:bg-slate-800">ホーム</button>
-          <button id="navRecord" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-semibold">釣行の記録</button>
-          <button id="navTrips" class="px-3 py-1.5 rounded-xl bg-amber-700 hover:bg-amber-600 font-semibold">釣行の確認</button>
-          <button id="navCatches" class="px-3 py-1.5 rounded-xl bg-sky-700 hover:bg-sky-600 font-semibold">釣果の確認</button>
-        </div>
-        <button id="navSettings" class="px-3 py-1.5 rounded-xl hover:bg-slate-700 text-xl">⚙️</button>
+      <nav class="grid grid-cols-3 gap-2 text-sm">
+        <button id="navRecord" class="w-full px-2 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-semibold">釣行の記録</button>
+        <button id="navTrips" class="w-full px-2 py-1 rounded-xl bg-amber-700 hover:bg-amber-600 font-semibold">釣行の確認</button>
+        <button id="navCatches" class="w-full px-2 py-1 rounded-xl bg-sky-700 hover:bg-sky-600 font-semibold">釣果の確認</button>
       </nav>
     </div>
   </header>
@@ -778,13 +776,10 @@
         </div>
       </div>
     <section id="recordView" class="hidden pb-[260px]">
-      <div class="rounded-2xl bg-slate-900 border border-slate-800 p-3 flex flex-col gap-1.5 mb-3 mt-2 shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+      <div class="rounded-2xl bg-slate-900 border border-slate-800 p-3 flex flex-col gap-1.5 mb-2 mt-1 shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
         <div class="flex items-start justify-between gap-2">
-          <div class="min-w-0">
-            <div class="text-slate-400 text-[13px] tracking-[0.02em]">現在のステータス</div>
-            <div id="txtStatus" class="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/50 bg-emerald-500/15 text-emerald-300 px-2 py-0.5 text-sm font-bold leading-tight">未開始</div>
-          </div>
-          <div class="min-w-0 text-right text-[13px] text-slate-400 leading-[1.35] break-all">
+          <div id="txtStatus" class="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/50 bg-emerald-500/15 text-emerald-300 px-2 py-0.5 text-sm font-bold leading-tight">未開始</div>
+          <div class="min-w-0 flex items-center gap-3 text-[13px] text-slate-400 leading-[1.35] break-all">
             <div>Trip ID: <span id="txtTripId">—</span></div>
             <div id="txtPos" class="hidden">位置: <span id="txtLat"></span>, <span id="txtLng"></span></div>
           </div>
@@ -793,11 +788,11 @@
         <div class="grid grid-cols-2 gap-[7px]">
           <div class="rounded-xl border border-slate-800 bg-slate-800/40 p-2 min-w-0">
             <div class="text-slate-400 text-xs">開始</div>
-            <div id="txtStartedAt" class="text-slate-200 text-sm mt-0.5 break-all">—</div>
+            <div id="txtStartedAt" class="text-slate-200 text-[17px] font-bold mt-0.5 break-all">—</div>
           </div>
           <div id="tripWeatherBoxTop" class="rounded-xl border border-slate-800 bg-slate-800/40 p-2 min-w-0">
             <div class="text-slate-400 text-xs">天気</div>
-            <div id="tripWeatherTop" class="text-slate-200 text-sm mt-0.5 break-words">—</div>
+            <div id="tripWeatherTop" class="text-slate-200 text-[17px] font-bold mt-0.5 break-words">—</div>
           </div>
         </div>
 
@@ -806,9 +801,8 @@
         <div id="buttonRow" class="flex gap-2"></div>
       </div>
 
-      <section class="mb-6 mt-3 rounded-2xl border border-slate-800 bg-slate-900/90 overflow-hidden">
+      <section class="mb-6 mt-1 rounded-2xl border border-slate-800 bg-slate-900/90 overflow-hidden">
         <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-b border-slate-800 bg-slate-950/60">
-          <h2 class="text-[15px] font-semibold tracking-[0.02em]">トピック・釣果 タイムライン</h2>
           <div class="w-full sm:w-auto text-right text-sm text-slate-400">
             <span>トピック <span id="txtTopicCount">0</span> 件</span>
             <span class="mx-1">/</span>
@@ -823,14 +817,14 @@
         <div class="max-w-4xl mx-auto px-4 py-3 flex flex-col gap-2">
           <!-- ★修正：トピック記録ボタン（3項目に集約） -->
           <div class="grid grid-cols-3 gap-2">
-            <button id="btnTopicSituation" class="py-2 rounded-2xl bg-cyan-600 hover:bg-cyan-500 font-semibold text-sm">🌊 状況変化</button>
-            <button id="btnTopicCatch" class="py-2 rounded-2xl bg-orange-600 hover:bg-orange-500 font-semibold text-sm">🎣 周囲の釣果</button>
-            <button id="btnTopicLureChange" class="py-2 rounded-2xl bg-amber-600 hover:bg-amber-500 font-semibold text-sm">🎯 ルアーチェンジ</button>
+            <button id="btnTopicSituation" class="h-10 rounded-2xl bg-cyan-600 hover:bg-cyan-500 font-semibold text-sm">🌊 状況変化</button>
+            <button id="btnTopicCatch" class="h-10 rounded-2xl bg-orange-600 hover:bg-orange-500 font-semibold text-sm">🎣 周囲の釣果</button>
+            <button id="btnTopicLureChange" class="h-10 rounded-2xl bg-amber-600 hover:bg-amber-500 font-semibold text-sm">🎯 ルアーチェンジ</button>
           </div>
-          <button id="btnAddCatchBottom" class="w-full py-3 rounded-2xl bg-sky-600 hover:bg-sky-500 font-semibold text-lg">＋釣果</button>
+          <button id="btnAddCatchBottom" class="w-full h-10 rounded-2xl bg-sky-600 hover:bg-sky-500 font-semibold text-sm">＋釣果</button>
           <div class="grid grid-cols-2 gap-2">
-            <button id="btnCancelTrip" class="py-2 rounded-2xl bg-slate-700 hover:bg-slate-600 font-semibold">キャンセル</button>
-            <button id="btnEndBottom" class="py-2 rounded-2xl bg-rose-600 hover:bg-rose-500 font-semibold">釣行終了</button>
+            <button id="btnCancelTrip" class="h-7 rounded-2xl bg-slate-700 hover:bg-slate-600 font-semibold text-sm">キャンセル</button>
+            <button id="btnEndBottom" class="h-7 rounded-2xl bg-rose-600 hover:bg-rose-500 font-semibold text-sm">釣行終了</button>
           </div>
         </div>
       </div>
@@ -7038,7 +7032,7 @@
         const d=document.createElement('div');
         d.className='rounded-xl border border-slate-800 bg-slate-800/40 p-2 min-w-0';
         d.innerHTML = `<div class="text-slate-400 text-xs">${label}</div>
-                       <div class="text-slate-200 text-sm mt-0.5 break-words">${val || '—'}</div>`;
+                       <div class="text-slate-200 text-[17px] font-bold mt-0.5 break-words">${val || '—'}</div>`;
         return d;
       };
 
