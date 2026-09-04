@@ -5,16 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#0f172a" />
   <meta name="description" content="釣行の記録、釣果の管理、潮汐情報の自動取得ができるPWAアプリケーション" />
-  <link rel="manifest" href="./manifest.json?v=3.1.1">
+  <link rel="manifest" href="./manifest.json?v=3.1.2">
   <link rel="apple-touch-icon" href="./icon-192.png">
   <link rel="icon" type="image/png" href="./icon-192.png" sizes="192x192">
   <link rel="icon" type="image/png" href="./icon-512.png" sizes="512x512">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Fishing Log">
-  <!-- ★Version: 3.1.1 - 2026-08-25 -->
-  <!-- ★Updates: 潮流画像の複数海域フレーム（鳴門）とデバッグログを追加 -->
-  <title>釣行記録 v3.1.1（PWAフロント / コンパクトUI）</title>
+  <!-- ★Version: 3.1.2 - 2026-09-04 -->
+  <!-- ★Updates: 釣行ステータスUI再構成、潮汐グラフ表示、現在ライン強調表示 -->
+  <title>釣行記録 v3.1.2（PWAフロント / コンパクトUI）</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* ★追加：入力フォーム自動ズーム抑制 */
@@ -490,28 +490,18 @@
     <section id="settingsView" class="hidden">
       <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4 mb-4">
         <h2 class="text-xl font-semibold">設定</h2>
-        <p class="text-sm text-slate-400 mt-1">スプレッドシートの設定</p>
-      </div>
-
-      <!-- スプレッドシート ID 設定（統合） -->
-      <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4 mb-4">
-        <h3 class="text-base font-semibold mb-3">スプレッドシート ID</h3>
-        <div class="space-y-3">
-          <label class="block">
-            <span class="text-xs text-slate-400">スプレッドシートID（Trips/Catches 両方で使用）</span>
-            <input id="sheetId" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm" placeholder="スプレッドシートID を入力してください" />
-          </label>
-          <div class="flex gap-2">
-            <button id="btnSaveSheetConfig" class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-semibold text-sm">保存</button>
-            <div id="sheetConfigStatus" class="text-sm text-slate-300 self-center"></div>
-          </div>
-        </div>
+        <p class="text-sm text-slate-400 mt-1">各設定項目</p>
       </div>
       
       <!-- 列マッピング（設定画面に移動） -->
       <details class="rounded-2xl bg-slate-900 border border-slate-800 p-4 mb-4">
         <summary class="cursor-pointer text-base font-semibold">列マッピング設定</summary>
         <div class="mt-3">
+          <div class="text-xs text-slate-400 mb-3 space-y-1">
+            <p>使い方: 最初に「読込」で列一覧を取得し、各項目に対応する列を選択して「マッピングを保存」を押してください。</p>
+            <p>迷った場合: 日付・時刻・魚種・サイズ・地点名の5項目から先に合わせると、記録と一覧が確認しやすくなります。</p>
+            <p>変更後: 反映を確かめたいときは保存後に一覧を再読込してください。</p>
+          </div>
           <div class="grid sm:grid-cols-3 gap-3">
             <label class="block text-sm">写真<select id="mapPhoto" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm"></select></label>
             <label class="block text-sm">日付<select id="mapDate" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm"></select></label>
@@ -541,9 +531,9 @@
       </details>
 
       <!-- ★追加：秘密情報設定（トークン・キー） -->
-      <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4 mb-4">
-        <h3 class="text-base font-semibold mb-3">認証情報</h3>
-        <p class="text-xs text-slate-400 mb-3">API 認証に必要な秘密情報を設定してください</p>
+      <details class="rounded-2xl bg-slate-900 border border-slate-800 p-4 mb-4">
+        <summary class="cursor-pointer text-base font-semibold">認証情報</summary>
+        <p class="text-xs text-slate-400 mt-3 mb-3">API 認証に必要な秘密情報を設定してください</p>
         <div class="space-y-3">
           <!-- Worker 認証トークン -->
           <label class="block">
@@ -556,12 +546,16 @@
             <div id="secretsStatus" class="text-sm text-slate-300 self-center"></div>
           </div>
         </div>
-      </div>
+      </details>
 
       <!-- ★追加：水温取得ロジックの選択 -->
-      <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4 mb-4">
-        <h3 class="text-base font-semibold mb-3">水温取得ロジック</h3>
-        <p class="text-xs text-slate-400 mb-3">水温データを取得する際の処理を選択します（既定は従来ロジック）。</p>
+      <details class="rounded-2xl bg-slate-900 border border-slate-800 p-4 mb-4">
+        <summary class="cursor-pointer text-base font-semibold">水温取得ロジック</summary>
+        <div class="text-xs text-slate-400 mt-3 mb-3 space-y-1">
+          <p>使い方: 「取得方法」で選んだ項目が、そのまま水温の取得元として使われます。設定は保存され、次回以降も引き継がれます。</p>
+          <p>「従来：気象庁ポイント」を選ぶと、気象庁ポイントをもとにした水温取得になります。</p>
+          <p>「GAS：MUR SST」を選ぶと、MUR SSTデータを使った海面水温の取得になります。</p>
+        </div>
         <label class="block text-sm">
           <span class="text-xs text-slate-400">取得方法</span>
           <select id="waterTempProviderSelect" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm">
@@ -570,7 +564,7 @@
           </select>
         </label>
         <div id="waterTempProviderStatus" class="text-sm text-slate-300 mt-2"></div>
-      </div>
+      </details>
     </section>
 
     <!-- 釣行の確認（Trips / GViz） -->
@@ -786,17 +780,17 @@
         </div>
 
         <div class="grid grid-cols-2 gap-[7px]">
-          <div class="rounded-xl border border-slate-800 bg-slate-800/40 p-2 min-w-0">
-            <div class="text-slate-400 text-xs">開始</div>
-            <div id="txtStartedAt" class="text-slate-200 text-[17px] font-bold mt-0.5 break-all">—</div>
-          </div>
           <div id="tripWeatherBoxTop" class="rounded-xl border border-slate-800 bg-slate-800/40 p-2 min-w-0">
             <div class="text-slate-400 text-xs">天気</div>
             <div id="tripWeatherTop" class="text-slate-200 text-[17px] font-bold mt-0.5 break-words">—</div>
           </div>
+          <div id="tripWaterBoxTop" class="rounded-xl border border-slate-800 bg-slate-800/40 p-2 min-w-0">
+            <div class="text-slate-400 text-xs">水温</div>
+            <div id="tripWaterTop" class="text-slate-200 text-[17px] font-bold mt-0.5 break-words">—</div>
+          </div>
         </div>
 
-        <div id="tripWeatherRow" class="grid grid-cols-2 gap-[7px]"></div>
+        <div id="tripWeatherRow" class="grid grid-cols-1 gap-[7px]"></div>
 
         <div id="buttonRow" class="flex gap-2"></div>
       </div>
@@ -4039,7 +4033,7 @@
     // ===== PWA: Service Worker 登録 =====
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=3.1.1', {
+        navigator.serviceWorker.register('./sw.js?v=3.1.2', {
           scope: './'
         })
           .then(registration => {
@@ -6181,10 +6175,18 @@
       return (isFinite(h)?h:0)*60 + (isFinite(m)?m:0);
     }
 
-    function drawTideChartOnCanvas(canvas, chart, catches = [], startedAt = null, endedAt = null){
+    function drawTideChartOnCanvas(canvas, chart, catches = [], startedAt = null, endedAt = null, nowMarkerAt = null, options = {}){
       const ctx = canvas.getContext('2d');
       const W = 720, H = 320;
       canvas.width = W; canvas.height = H;
+
+      const gridStepHours = Number.isFinite(options.gridStepHours) ? options.gridStepHours : 3;
+      const xLabelStepHours = Number.isFinite(options.xLabelStepHours) ? options.xLabelStepHours : 6;
+      const showYAxisLabels = options.showYAxisLabels !== false;
+      const nowMarkerLineWidth = Number.isFinite(options.nowMarkerLineWidth) ? options.nowMarkerLineWidth : 2;
+      const nowMarkerDashed = options.nowMarkerDashed === true;
+      const nowMarkerPulse = options.nowMarkerPulse === true;
+      const nowMarkerPulsePhase = Number.isFinite(options.nowMarkerPulsePhase) ? options.nowMarkerPulsePhase : 0;
 
       const padding = { left: 56, right: 20, top: 28, bottom: 40 };
       const innerW = W - padding.left - padding.right;
@@ -6248,7 +6250,7 @@
       ctx.strokeStyle = "#1e293b";
       ctx.lineWidth = 1;
       ctx.beginPath();
-      for (let h=0; h<=24; h+=3){
+      for (let h=0; h<=24; h+=gridStepHours){
         const x = mapX(h*60);
         ctx.moveTo(x, padding.top);
         ctx.lineTo(x, H - padding.bottom);
@@ -6290,23 +6292,121 @@
       ctx.font = "13px sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
-      [0,6,12,18,24].forEach(h=>{
+      for (let h = 0; h <= 24; h += xLabelStepHours) {
         const x = mapX(h*60);
         ctx.fillText(`${String(h).padStart(2,"0")}:00`, x, H - padding.bottom + 8);
-      });
+      }
 
-      ctx.textAlign = "right";
-      ctx.textBaseline = "middle";
-      ctx.font = "13px sans-serif";
-      ctx.fillText(`${Math.round(maxY)} cm`, padding.left - 8, mapY(maxY));
-      ctx.fillText(`0 cm`,              padding.left - 8, yZero);
-      ctx.fillText(`${Math.round(minY)} cm`, padding.left - 8, mapY(minY));
+      if (showYAxisLabels) {
+        ctx.textAlign = "right";
+        ctx.textBaseline = "middle";
+        ctx.font = "13px sans-serif";
+        ctx.fillText(`${Math.round(maxY)} cm`, padding.left - 8, mapY(maxY));
+        ctx.fillText(`0 cm`,              padding.left - 8, yZero);
+        ctx.fillText(`${Math.round(minY)} cm`, padding.left - 8, mapY(minY));
+      }
+
+      // 現在時刻のマーカー（当日グラフ表示用）
+      if (nowMarkerAt instanceof Date && !isNaN(nowMarkerAt.getTime())) {
+        const nowMinutes = nowMarkerAt.getHours() * 60 + nowMarkerAt.getMinutes();
+        const nowX = mapX(Math.max(0, Math.min(1440, nowMinutes)));
+        const pulseScale = nowMarkerPulse ? (1 + 0.28 * Math.sin(nowMarkerPulsePhase * Math.PI * 2)) : 1;
+        const pulseAlpha = nowMarkerPulse ? (0.7 + 0.3 * ((Math.sin(nowMarkerPulsePhase * Math.PI * 2) + 1) / 2)) : 1;
+        const glowWidth = (nowMarkerLineWidth * 2.4) * pulseScale;
+
+        // 脈動の視認性を上げるため、先にグローを描画
+        ctx.save();
+        ctx.strokeStyle = `rgba(239,68,68,${0.22 * pulseAlpha})`;
+        ctx.shadowColor = "rgba(239,68,68,0.85)";
+        ctx.shadowBlur = 10 + (10 * (pulseScale - 1));
+        ctx.lineWidth = glowWidth;
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(nowX, padding.top);
+        ctx.lineTo(nowX, H - padding.bottom);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.strokeStyle = `rgba(239,68,68,${pulseAlpha})`;
+        ctx.lineWidth = nowMarkerLineWidth * pulseScale;
+        ctx.setLineDash(nowMarkerDashed ? [4, 3] : []);
+        ctx.beginPath();
+        ctx.moveTo(nowX, padding.top);
+        ctx.lineTo(nowX, H - padding.bottom);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        if (nowMarkerPulse) {
+          ctx.fillStyle = `rgba(239,68,68,${Math.min(1, pulseAlpha + 0.1)})`;
+          ctx.beginPath();
+          ctx.arc(nowX, padding.top + 3, 4.3 + (2.6 * (pulseScale - 1)), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
 
       // ★修正：catches が渡された場合のみ釣果マーカーを描画
       if (Array.isArray(catches) && catches.length > 0) {
         drawCatchMarkers(ctx, catches, mapX, mapY, H, padding);
       }
     }
+
+    let statusTideRenderSeq = 0;
+
+    function setStatusTideMeta(metaEl, tideName = '—', levelText = '—', trendText = '—') {
+      if (!metaEl) return;
+      metaEl.innerHTML = `<span class="inline-block px-2 py-0.5 rounded-full bg-cyan-700/60 border border-cyan-500/40 text-cyan-100">${tideName}</span><span>潮位: ${levelText}</span><span>傾向: ${trendText}</span>`;
+    }
+
+    async function renderStatusTideChart(){
+      const canvas = document.getElementById('statusTideCanvas');
+      const meta = document.getElementById('statusTideMeta');
+      if (!canvas) return;
+
+      const seq = ++statusTideRenderSeq;
+      const startTide = draft.start_tide;
+      const chart = startTide?.chart || null;
+      const chartAll = startTide?.chartAll || null;
+      const chartDateKey = startTide?.chartDateKey || null;
+      const tideName = startTide?.tideName || chart?.moon?.title || '—';
+
+      if (!chart) {
+        setStatusTideMeta(meta, '—', '—', '—');
+        drawTideChartOnCanvas(canvas, { tide: [] });
+        return;
+      }
+
+      try {
+        if (seq !== statusTideRenderSeq) return;
+
+        const nowIso = nowIsoLocal();
+        const info = tideInfoFromChart(chart, nowIso, chartAll, chartDateKey);
+        const levelText = Number.isFinite(info?.level_cm) ? `${info.level_cm} cm` : '—';
+        const trendText = info?.trend_text || '—';
+        setStatusTideMeta(meta, tideName, levelText, trendText);
+
+        const pulsePhase = (Date.now() % 1200) / 1200;
+        drawTideChartOnCanvas(canvas, chart, [], null, null, new Date(), {
+          showYAxisLabels: false,
+          gridStepHours: 6,
+          xLabelStepHours: 6,
+          nowMarkerLineWidth: 5,
+          nowMarkerDashed: false,
+          nowMarkerPulse: true,
+          nowMarkerPulsePhase: pulsePhase
+        });
+      } catch (e) {
+        console.warn('[renderStatusTideChart] failed:', e?.message || e);
+        if (seq !== statusTideRenderSeq) return;
+        setStatusTideMeta(meta, '—', '—', '—');
+        drawTideChartOnCanvas(canvas, { tide: [] });
+      }
+    }
+    setInterval(() => {
+      const recordViewEl = document.getElementById('recordView');
+      if (recordViewEl && !recordViewEl.classList.contains('hidden')) {
+        renderStatusTideChart();
+      }
+    }, 300000);
 
     // ★新規：釣果時刻をグラフ上にマークする関数
     function drawCatchMarkers(ctx, catches, mapX, mapY, canvasHeight, padding) {
@@ -7014,7 +7114,7 @@
       }
       txtTripId.textContent = draft.tripId.slice(0,8);
       txtStatus.textContent = draft.status==='idle' ? '未開始' : (draft.status==='active' ? '釣行中' : '終了');
-      txtStartedAt.textContent = draft.startedAt ? fmtLocal(draft.startedAt) : '—';
+      if (txtStartedAt) txtStartedAt.textContent = draft.startedAt ? fmtLocal(draft.startedAt) : '—';
       txtCatchCount.textContent = (draft.catches?.length||0)+' 件';
 
       if(typeof draft.lat==='number' && typeof draft.lng==='number'){
@@ -7028,17 +7128,15 @@
       document.getElementById('tripWeatherTop').textContent = wxBrief || '—';
 
       tripWeatherRow.innerHTML = '';
-      const box = (label, val) => {
-        const d=document.createElement('div');
-        d.className='rounded-xl border border-slate-800 bg-slate-800/40 p-2 min-w-0';
-        d.innerHTML = `<div class="text-slate-400 text-xs">${label}</div>
-                       <div class="text-slate-200 text-[17px] font-bold mt-0.5 break-words">${val || '—'}</div>`;
-        return d;
-      };
+      const graphBox = document.createElement('div');
+      graphBox.className = 'rounded-xl border border-slate-800 bg-slate-800/40 p-2.5 min-w-0';
+      graphBox.innerHTML = `
+        <div id="statusTideMeta" class="text-[13px] leading-[1.3] text-slate-300 mb-1 flex items-center gap-2 flex-wrap"></div>
+        <canvas id="statusTideCanvas" class="w-full h-[128px] bg-slate-950 rounded-lg"></canvas>
+      `;
+      tripWeatherRow.appendChild(graphBox);
 
       // ★修正：潮汐情報と水温を1つのブロックにまとめる
-      const tideName = draft.start_tide?.tideName || '—';
-      const tideTrend = draft.start_tide?.trendText || '—';
       const wt = draft.start_water_temp;
       console.log('[render] water_temp raw:', { temperature_c: wt?.temperature_c, point_name: wt?.point_name, date: wt?.date });
       // 水温地点名から @HH:mm 以降を削除
@@ -7053,10 +7151,10 @@
         ? `${wt.temperature_c}℃${cleanPointName ? `（${cleanPointName}）` : ''}`
         : null;
       console.log('[render] wtBrief:', wtBrief);
+      const tripWaterTopEl = document.getElementById('tripWaterTop');
+      if (tripWaterTopEl) tripWaterTopEl.textContent = wtBrief || '—';
 
-      const tideVal = (tideName !== '—' || tideTrend !== '—') ? `${tideName} / ${tideTrend}` : '—';
-      tripWeatherRow.appendChild(box('潮汐', tideVal));
-      tripWeatherRow.appendChild(box('水温', wtBrief || '—'));
+      renderStatusTideChart();
 
       // ★修正：状態に応じてボタンを表示
       buttonRow.innerHTML='';
@@ -14429,7 +14527,7 @@
 
   <!-- ★修正：バージョン情報フッター（ホーム画面でのみ表示） -->
   <footer id="versionFooter" class="fixed bottom-0 left-0 right-0 z-0 bg-slate-950/95 border-t border-slate-800 text-xs text-slate-400 text-center py-2 pb-safe">
-    <span id="versionInfo">Fishing_Log_dev | v3.1.1</span>
+    <span id="versionInfo">Fishing_Log_dev | v3.1.2</span>
   </footer>
 
   <!-- ★追加：エラー・通知表示エリア -->
