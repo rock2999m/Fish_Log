@@ -25,19 +25,33 @@
     /* iOS Safari: topic time input clipping workaround */
     @supports (-webkit-touch-callout: none) {
       #topicModal .topic-time-wrap {
-        padding-right: 3px;
+        padding-right: 0;
+      }
+
+      #topicModal .topic-time-shell {
+        margin-top: 0.25rem;
+        border: 1px solid rgb(51 65 85);
+        border-radius: 0.75rem;
+        background: rgb(2 6 23);
+        overflow: hidden;
+        padding-right: 4px;
       }
 
       #topicModal #inpTopicTime[type="time"] {
-        box-sizing: border-box;
+        -webkit-appearance: none;
+        appearance: none;
         display: block;
+        box-sizing: border-box;
+        width: -webkit-fill-available;
         width: 100%;
-        max-width: 100%;
+        max-width: 100% !important;
         min-width: 0;
         min-inline-size: 0;
         margin-right: 0;
-        overflow: hidden;
-        padding-right: 0.5rem;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        padding-right: 1rem;
         font-variant-numeric: tabular-nums;
       }
 
@@ -52,7 +66,7 @@
 
       #topicModal #inpTopicTime[type="time"]::-webkit-calendar-picker-indicator {
         margin: 0;
-        padding-left: 4px;
+        padding-left: 2px;
       }
     }
     
@@ -968,7 +982,9 @@
       <div class="space-y-3">
         <label class="block topic-time-wrap">
           <span class="text-sm text-slate-300">時刻</span>
-          <input id="inpTopicTime" type="time" class="mt-1 w-full min-w-0 max-w-full bg-slate-950 border border-slate-700 rounded-xl px-3" style="padding-top:0.4rem;padding-bottom:0.4rem;" />
+          <div class="topic-time-shell">
+            <input id="inpTopicTime" type="time" class="w-full min-w-0 max-w-full px-3" style="padding-top:0.4rem;padding-bottom:0.4rem;" />
+          </div>
         </label>
         <label class="block">
           <span class="text-sm text-slate-300">カテゴリ</span>
