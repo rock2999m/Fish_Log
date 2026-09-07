@@ -635,6 +635,9 @@
 
       <!-- 一覧 -->
       <div class="grid grid-cols-1 gap-3" id="tripList"></div>
+      <div class="mt-2 text-center">
+        <button id="btnLoadMoreTrips" class="hidden text-sm text-sky-400 hover:text-sky-300">さらに読み込む</button>
+      </div>
 
       <!-- 詳細 -->
       <div id="tripDetail" class="hidden mt-4 rounded-2xl bg-slate-900 border border-slate-800 p-4">
@@ -711,6 +714,9 @@
 
       <!-- 一覧 -->
       <div class="grid grid-cols-1 gap-3" id="remoteCatchList"></div>
+      <div class="mt-2 text-center">
+        <button id="btnLoadMoreCatches" class="hidden text-sm text-sky-400 hover:text-sky-300">さらに読み込む</button>
+      </div>
 
         <!-- 詳細パネル -->
         <div id="remoteCatchDetail" class="hidden mt-4 rounded-2xl bg-slate-900 border border-slate-800 p-4">
@@ -2839,6 +2845,7 @@
     const tripRawMemoryCache = new Map();
     
     const remoteCatchList = document.getElementById('remoteCatchList');
+    const btnLoadMoreCatches = document.getElementById('btnLoadMoreCatches');
     const detailWrap = document.getElementById('remoteCatchDetail');
     const btnCloseDetail = document.getElementById('btnCloseDetail');
 
@@ -2863,6 +2870,9 @@
     
     // 全釣果データ（フィルター前）
     let allCatchItems = [];
+    const CATCHES_PAGE_SIZE = 10;
+    let currentCatchListItems = [];
+    let visibleCatchCount = CATCHES_PAGE_SIZE;
 
     function gvizPayloadToRows(payload){
       const cols = (payload?.table?.cols || []).map(c => c.label || c.id || '');
@@ -3622,7 +3632,18 @@
     // ★追加：リモート一覧複䔺用
     let remoteListItems = [];
 
-    function renderRemoteList(items){
+    function renderRemoteList(items, options = {}){
+      const reset = options.reset !== false;
+      const increment = Number(options.increment || 0);
+      if (reset) {
+        currentCatchListItems = Array.isArray(items) ? items.slice() : [];
+        visibleCatchCount = CATCHES_PAGE_SIZE;
+      } else {
+        if (increment > 0) visibleCatchCount += increment;
+      }
+
+      const visibleItems = currentCatchListItems.slice(0, visibleCatchCount);
+
       // 一覧を折りたたみ(details)にし、展開中はhover無効・枠線は外枠のみ・閉じるボタン付き
       remoteCatchList.innerHTML = '';
       detailWrap.classList.add('hidden'); // 既存の独立詳細パネルは使わない
@@ -3631,9 +3652,9 @@
       setupRemoteCatchListDelegates();
 
       // ★追加：renderCatchTideGraph 用に一時保存
-      remoteListItems = items;
+      remoteListItems = visibleItems;
 
-      items.forEach((it, idx)=>{
+      visibleItems.forEach((it, idx)=>{
         // ===== 外枠（折りたたみ） =====
         const wrap = document.createElement('details');
         wrap.className = 'rounded-2xl bg-slate-900 border border-slate-800 mb-2';
@@ -3778,7 +3799,16 @@
 
         remoteCatchList.appendChild(wrap);
       });
+
+      if (btnLoadMoreCatches) {
+        const hasMore = visibleItems.length < currentCatchListItems.length;
+        btnLoadMoreCatches.classList.toggle('hidden', !hasMore);
+      }
     }
+
+    btnLoadMoreCatches && (btnLoadMoreCatches.onclick = () => {
+      renderRemoteList(currentCatchListItems, { reset: false, increment: CATCHES_PAGE_SIZE });
+    });
 
     // ★追加：フィルター条件をUIから読み込む
     function getFilterConditionsFromUI() {
@@ -3945,6 +3975,18 @@
         const date = new Date(dateStr);
         if (!isNaN(date.getTime())) return date;
       } catch (e) {}
+      const s = String(dateStr || '').trim();
+      const m = s.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+      if (m) {
+        const y = Number(m[1]);
+        const mo = Number(m[2]) - 1;
+        const d = Number(m[3]);
+        const hh = Number(m[4] || 0);
+        const mi = Number(m[5] || 0);
+        const ss = Number(m[6] || 0);
+        const dt = new Date(y, mo, d, hh, mi, ss);
+        if (!isNaN(dt.getTime())) return dt;
+      }
       return null;
     }
 
@@ -7153,6 +7195,25 @@
 
     // ===== UIレンダリング =====
     const DEBUG = false;  // デバッグログ制御フラグ（本番時は false）
+    function parseLooseDateMs(value) {
+      if (!value) return Number.NaN;
+      const direct = Date.parse(String(value));
+      if (!Number.isNaN(direct)) return direct;
+
+      const s = String(value).trim();
+      const m = s.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+      if (!m) return Number.NaN;
+
+      const y = Number(m[1]);
+      const mo = Number(m[2]) - 1;
+      const d = Number(m[3]);
+      const hh = Number(m[4] || 0);
+      const mi = Number(m[5] || 0);
+      const ss = Number(m[6] || 0);
+      const dt = new Date(y, mo, d, hh, mi, ss);
+      return dt.getTime();
+    }
+
     function render(){
       if (DEBUG) {
         LOG.app('[render] state', {
@@ -7264,7 +7325,7 @@
 
       const resolveTopicSortMs = (topic) => {
         if (topic?.recordedAt) {
-          const ms = Date.parse(topic.recordedAt);
+          const ms = parseLooseDateMs(topic.recordedAt);
           if (!Number.isNaN(ms)) return ms;
         }
         if (topic?.time && startedAtDate) {
@@ -7290,7 +7351,7 @@
       });
 
       (draft.catches || []).forEach((c) => {
-        const ms = c?.timestamp ? Date.parse(c.timestamp) : Number.MAX_SAFE_INTEGER;
+        const ms = c?.timestamp ? parseLooseDateMs(c.timestamp) : Number.MAX_SAFE_INTEGER;
         const tm = Number.isNaN(ms)
           ? '—'
           : new Date(ms).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -7377,6 +7438,7 @@
     }
         // ===== 釣行の確認（Trips） =====
     const tripListEl = document.getElementById('tripList');
+    const btnLoadMoreTrips = document.getElementById('btnLoadMoreTrips');
     const tripStatus = document.getElementById('tripStatus');
     const tripDetailWrap = document.getElementById('tripDetail');
     const tripDetailBody = document.getElementById('tripDetailBody');
@@ -7411,6 +7473,10 @@
     const tripsFilterDateEnd = document.getElementById('tripsFilterDateEnd');
 
     let allTripsItems = [];
+    const TRIPS_PAGE_SIZE = 10;
+    let currentTripsRows = [];
+    let currentTripsHeader = [];
+    let visibleTripsCount = TRIPS_PAGE_SIZE;
 
     // モーダルを開く
     if (btnShowTripsFilter) {
@@ -7584,7 +7650,11 @@
     document.getElementById('btnClearTrips').onclick = () => { 
       tripsCache = null; 
       allTripsItems = []; 
+      currentTripsRows = [];
+      currentTripsHeader = [];
+      visibleTripsCount = TRIPS_PAGE_SIZE;
       tripListEl.innerHTML = ''; 
+      if (btnLoadMoreTrips) btnLoadMoreTrips.classList.add('hidden');
       tripDetailWrap.classList.add('hidden'); 
       tripStatus.textContent = '';
     };
@@ -7637,7 +7707,25 @@
       return i >= 0 ? i : -1;
     }
 
-  async function renderTripsList(rows){
+  async function renderTripsList(rows, options = {}){
+      const reset = options.reset !== false;
+      const increment = Number(options.increment || 0);
+      if (!Array.isArray(rows) || rows.length < 2) {
+        tripListEl.innerHTML = '';
+        if (btnLoadMoreTrips) btnLoadMoreTrips.classList.add('hidden');
+        return;
+      }
+
+      if (reset) {
+        currentTripsHeader = rows[0];
+        currentTripsRows = rows.slice(1);
+        visibleTripsCount = TRIPS_PAGE_SIZE;
+      } else {
+        if (increment > 0) visibleTripsCount += increment;
+      }
+
+      const pagedRows = [currentTripsHeader, ...currentTripsRows.slice(0, visibleTripsCount)];
+
       // --- helpers（この関数内だけ） ---
       const pad2 = n => String(n).padStart(2,'0');
       const fmtYMD = iso => {
@@ -7673,7 +7761,7 @@
       };
       const hIdx = (hs, key) => hs.findIndex(h => String(h||'').trim() === key);
 
-      const headers = rows[0];
+      const headers = pagedRows[0];
       const col = {
         tripId:     hIdx(headers,'tripId'),
         startedAt:  hIdx(headers,'startedAt'),
@@ -7689,8 +7777,8 @@
 
       tripListEl.innerHTML = '';
 
-      for (let i=1;i<rows.length;i++){
-        const r = rows[i];
+      for (let i=1;i<pagedRows.length;i++){
+        const r = pagedRows[i];
 
         const thisTripId = col.tripId>=0 ? (r[col.tripId] || '') : '';
         // ★修正（v1.5.2b）：シートから読み込んだタイムスタンプを正規化
@@ -8756,7 +8844,17 @@
 
         tripListEl.appendChild(wrap);
       }
+
+      if (btnLoadMoreTrips) {
+        const hasMore = visibleTripsCount < currentTripsRows.length;
+        btnLoadMoreTrips.classList.toggle('hidden', !hasMore);
+      }
     }
+
+    btnLoadMoreTrips && (btnLoadMoreTrips.onclick = async () => {
+      if (!currentTripsHeader.length) return;
+      await renderTripsList([currentTripsHeader, ...currentTripsRows], { reset: false, increment: TRIPS_PAGE_SIZE });
+    });
 
     // 既存の一覧カード見た目に寄せて小さめカードを生成
     function renderCatchMiniCardsForTrip(tripId, catchesRows){
