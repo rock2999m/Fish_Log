@@ -21,6 +21,34 @@
     input, textarea, select {
       font-size: 16px !important;
     }
+
+    /* iOS Safari: topic time input clipping workaround */
+    @supports (-webkit-touch-callout: none) {
+      #topicModal #inpTopicTime[type="time"] {
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        min-inline-size: 0;
+        overflow: hidden;
+        padding-right: 0.5rem;
+        font-variant-numeric: tabular-nums;
+      }
+
+      #topicModal #inpTopicTime[type="time"]::-webkit-date-and-time-value {
+        text-align: left;
+      }
+
+      #topicModal #inpTopicTime[type="time"]::-webkit-datetime-edit,
+      #topicModal #inpTopicTime[type="time"]::-webkit-datetime-edit-fields-wrapper {
+        padding: 0;
+      }
+
+      #topicModal #inpTopicTime[type="time"]::-webkit-calendar-picker-indicator {
+        margin: 0;
+        padding-left: 4px;
+      }
+    }
     
     /* ★追加：ピンチズーム完全無効化 */
     body {
