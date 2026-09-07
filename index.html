@@ -26,10 +26,11 @@
     @supports (-webkit-touch-callout: none) {
       #topicModal #inpTopicTime[type="time"] {
         box-sizing: border-box;
-        width: 100%;
-        max-width: 100%;
+        width: calc(100% - 2px);
+        max-width: calc(100% - 2px);
         min-width: 0;
         min-inline-size: 0;
+        margin-right: 2px;
         overflow: hidden;
         padding-right: 0.5rem;
         font-variant-numeric: tabular-nums;
