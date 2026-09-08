@@ -5,16 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#0f172a" />
   <meta name="description" content="釣行の記録、釣果の管理、潮汐情報の自動取得ができるPWAアプリケーション" />
-  <link rel="manifest" href="./manifest.json?v=3.1.2">
+  <link rel="manifest" href="./manifest.json?v=3.1.3">
   <link rel="apple-touch-icon" href="./icon-192.png">
   <link rel="icon" type="image/png" href="./icon-192.png" sizes="192x192">
   <link rel="icon" type="image/png" href="./icon-512.png" sizes="512x512">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Fishing Log">
-  <!-- ★Version: 3.1.2 - 2026-09-04 -->
-  <!-- ★Updates: 釣行ステータスUI再構成、潮汐グラフ表示、現在ライン強調表示 -->
-  <title>釣行記録 v3.1.2（PWAフロント / コンパクトUI）</title>
+  <!-- ★Version: 3.1.3 - 2026-09-08 -->
+  <!-- ★Updates: 釣果一覧の取得最適化、Trip潮汐データの遅延取得化 -->
+  <title>釣行記録 v3.1.3（PWAフロント / コンパクトUI）</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* ★追加：入力フォーム自動ズーム抑制 */
@@ -3207,10 +3207,7 @@
         remoteCatchList.innerHTML=''; detailWrap.classList.add('hidden');
         if (!id || !sheet) throw new Error('シートID/シート名が空です');
 
-        // 1) Trips を先に読み、tripId → 月情報マップを作る
-        tripsById = await loadTripsMoonMap();
-
-        // 2) Catches を読み込む（SHEET_ID を明示的に渡す）
+        // 1) Catches を読み込む（SHEET_ID を明示的に渡す）
         catchesServerOffset = 0;
         catchesHasMore = false;
         catchesTotalCount = 0;
@@ -3532,6 +3529,9 @@
       const headers = rows[0].map(h=>String(h||'').trim());
       const tripIdx = headers.findIndex(h => h === 'tripId');
       const timestampIdx = headers.findIndex(h => h === 'timestamp');
+      const wtCIdx = headers.findIndex(h => h === 'water_temp_c');
+      const wtPIdx = headers.findIndex(h => h === 'water_temp_point');
+      const wtTIdx = headers.findIndex(h => h === 'water_temp_time');
 
       const get=(r,sel)=>{ const idx=Number(sel.value); return Number.isFinite(idx)&&r[idx]!==undefined ? r[idx] : ''; };
       const out=[];
@@ -3554,9 +3554,9 @@
         moon_age: tripMoon?.moon_age || '',
         moon_brightness: tripMoon?.moon_brightness || '',
         // ★追加: 水温（Trips 由来）
-        water_temp_c:     (tripMoon && 'water_temp_c'     in tripMoon) ? tripMoon.water_temp_c : '',
-        water_temp_point: (tripMoon && 'water_temp_point' in tripMoon) ? String(tripMoon.water_temp_point || '') : '',
-        water_temp_time:  (tripMoon && 'water_temp_time'  in tripMoon) ? tripMoon.water_temp_time  : ''
+        water_temp_c:     (wtCIdx >= 0 ? (r[wtCIdx] ?? '') : ((tripMoon && 'water_temp_c'     in tripMoon) ? tripMoon.water_temp_c : '')),
+        water_temp_point: (wtPIdx >= 0 ? String(r[wtPIdx] ?? '') : ((tripMoon && 'water_temp_point' in tripMoon) ? String(tripMoon.water_temp_point || '') : '')),
+        water_temp_time:  (wtTIdx >= 0 ? (r[wtTIdx] ?? '') : ((tripMoon && 'water_temp_time'  in tripMoon) ? tripMoon.water_temp_time  : ''))
       });
 
       }
@@ -4166,7 +4166,7 @@
     // ===== PWA: Service Worker 登録 =====
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=3.1.2', {
+        navigator.serviceWorker.register('./sw.js?v=3.1.3', {
           scope: './'
         })
           .then(registration => {
@@ -6586,7 +6586,7 @@
     }
 
     // ★追加：釣果詳細のグラフを描画する関数
-    function renderCatchTideGraph(idx, catchItem) {
+    async function renderCatchTideGraph(idx, catchItem) {
       const chartContainer = document.getElementById(`catch-tide-chart-${idx}`);
       const canvas = document.getElementById(`catch-tide-canvas-${idx}`);
       
@@ -6598,7 +6598,24 @@
       }
 
       // tripId から tripsById マップで start_tide データを取得
-      const tripData = tripsById?.[catchItem.tripId];
+      let tripData = tripsById?.[catchItem.tripId];
+
+      // 先読みはせず、必要時だけ tripRaw から start_tide を遅延取得
+      if ((!tripData || !tripData.start_tide || !tripData.start_tide.chart) && catchItem?.tripId) {
+        try {
+          const raw = await loadTripRawWithFallback(catchItem.tripId, null);
+          if (raw?.start_tide) {
+            tripsById = tripsById || {};
+            tripsById[catchItem.tripId] = {
+              ...(tripData || {}),
+              start_tide: raw.start_tide
+            };
+            tripData = tripsById[catchItem.tripId];
+          }
+        } catch (e) {
+          console.warn('[renderCatchTideGraph] lazy tripRaw fetch failed:', e?.message || e);
+        }
+      }
       
       if (!tripData || !tripData.start_tide || !tripData.start_tide.chart) {
         console.warn(`[renderCatchTideGraph] No tide data for tripId ${catchItem.tripId}`, { tripData: !!tripData, start_tide: !!tripData?.start_tide, chart: !!tripData?.start_tide?.chart });
@@ -14738,7 +14755,7 @@
 
   <!-- ★修正：バージョン情報フッター（ホーム画面でのみ表示） -->
   <footer id="versionFooter" class="fixed bottom-0 left-0 right-0 z-0 bg-slate-950/95 border-t border-slate-800 text-xs text-slate-400 text-center py-2 pb-safe">
-    <span id="versionInfo">Fishing_Log_dev | v3.1.2</span>
+    <span id="versionInfo">Fishing_Log_dev | v3.1.3</span>
   </footer>
 
   <!-- ★追加：エラー・通知表示エリア -->
