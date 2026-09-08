@@ -2872,7 +2872,11 @@
     let allCatchItems = [];
     const CATCHES_PAGE_SIZE = 10;
     let currentCatchListItems = [];
-    let visibleCatchCount = CATCHES_PAGE_SIZE;
+    let catchesServerOffset = 0;
+    let catchesHasMore = false;
+    let catchesTotalCount = 0;
+    let catchesPagingMode = true;
+    let catchesLoading = false;
 
     function gvizPayloadToRows(payload){
       const cols = (payload?.table?.cols || []).map(c => c.label || c.id || '');
@@ -2883,7 +2887,7 @@
       });
       return [cols, ...rows];
     }
-    async function loadSheetViaGAS(sheetName, sheetId = null) {
+    async function loadSheetViaGAS(sheetName, sheetId = null, options = {}) {
       try {
         // ★追加：API呼び出し時に最新のトークンを動的に読み込む
         const latestToken = await configStorage.getItem('WORKERS_AUTH_TOKEN');
@@ -2906,14 +2910,20 @@
           },
           body: JSON.stringify({
             sheetId: id,
-            sheetName: sheetName
+            sheetName: sheetName,
+            limit: options.limit,
+            offset: options.offset,
+            order: options.order
           })
         });
         
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
         if (!json.ok) throw new Error(json.error || 'Unknown error');
-        return json.data; // [[header...], [row1...], [row2...], ...]
+        return {
+          data: json.data || [],
+          meta: json.meta || null
+        }; // { data:[[header...],[row...]], meta:{total,hasMore,nextOffset} }
       } catch (err) {
         const msg = `シート読込み失敗: エラーが発生しました`;
         showError(msg);
@@ -3007,7 +3017,8 @@
 
     async function migrateLegacyRawJsonToExternal(limit = 200) {
       await configInitPromise;
-      const tripsRows = await loadSheetViaGAS(TRIPS_SHEET_NAME, SHEET_ID);
+      const tripsRowsResult = await loadSheetViaGAS(TRIPS_SHEET_NAME, SHEET_ID);
+      const tripsRows = tripsRowsResult?.data || [];
       if (!Array.isArray(tripsRows) || tripsRows.length < 2) {
         return { ok: true, scanned: 0, migrated: 0, cleared: 0 };
       }
@@ -3189,6 +3200,8 @@
 
     document.getElementById('btnLoadSheet').onclick = async () => {
       try {
+        if (catchesLoading) return;
+        catchesLoading = true;
         const id = SHEET_ID.trim(), sheet = SHEET_NAME.trim();
         sheetStatus.textContent = '読込中...';
         remoteCatchList.innerHTML=''; detailWrap.classList.add('hidden');
@@ -3198,20 +3211,33 @@
         tripsById = await loadTripsMoonMap();
 
         // 2) Catches を読み込む（SHEET_ID を明示的に渡す）
-        const rows = await loadSheetViaGAS(sheet, id);
-        if (!rows || rows.length < 2){ sheetStatus.textContent='データが見つかりません（ヘッダ+1行以上が必要）'; hasLoadedOnce=true; return; }
+        catchesServerOffset = 0;
+        catchesHasMore = false;
+        catchesTotalCount = 0;
+        catchesPagingMode = true;
+        currentCatchListItems = [];
+
+        const result = await loadSheetViaGAS(sheet, id, { limit: CATCHES_PAGE_SIZE, offset: catchesServerOffset, order: 'desc' });
+        const rows = result?.data || [];
+        if (!rows || rows.length < 2){
+          sheetStatus.textContent='データが見つかりません（ヘッダ+1行以上が必要）';
+          if (btnLoadMoreCatches) btnLoadMoreCatches.classList.add('hidden');
+          hasLoadedOnce=true;
+          return;
+        }
         lastRows = rows; lastHeaders = rows[0];
         setupMapping(lastHeaders);
-        
-        // ★修正：フィルター前のすべてのアイテムを保存
+
         const catchItems = mapRowsToItems(rows);
-        allCatchItems = catchItems;
-        
-        // ★追加：初期読み込み時もデフォルトソート（newest）を適用
-        const sortedItems = filterAndSortCatches(allCatchItems);
-        
-        renderRemoteList(sortedItems); // tripId 経由で月情報を付与して描画
-        updateCatchCount(catchItems.length, catchItems.length); // 初期表示時は全件
+        currentCatchListItems = catchItems;
+        allCatchItems = currentCatchListItems.slice();
+        catchesTotalCount = Number(result?.meta?.total || currentCatchListItems.length);
+        catchesHasMore = !!result?.meta?.hasMore;
+        catchesServerOffset = Number(result?.meta?.nextOffset ?? currentCatchListItems.length);
+
+        renderRemoteList(currentCatchListItems); // tripId 経由で月情報を付与して描画
+        updateCatchCount(catchesTotalCount, currentCatchListItems.length);
+        if (btnLoadMoreCatches) btnLoadMoreCatches.classList.toggle('hidden', !catchesHasMore);
         hasLoadedOnce = true;
 
       }catch(e){
@@ -3219,9 +3245,11 @@
         console.error('[btnLoadSheet] Stack:', e.stack);
         sheetStatus.textContent = `読込失敗: ${e.message||e}`;
         hasLoadedOnce = true;
+      } finally {
+        catchesLoading = false;
       }
     };
-    btnClearSheet && (btnClearSheet.onclick = ()=>{ remoteCatchList.innerHTML=''; detailWrap.classList.add('hidden'); sheetStatus.textContent=''; lastRows=null; lastHeaders=[]; hasLoadedOnce=false; tripsById={}; allCatchItems=[]; });
+    btnClearSheet && (btnClearSheet.onclick = ()=>{ remoteCatchList.innerHTML=''; detailWrap.classList.add('hidden'); sheetStatus.textContent=''; lastRows=null; lastHeaders=[]; hasLoadedOnce=false; tripsById={}; allCatchItems=[]; currentCatchListItems=[]; catchesServerOffset=0; catchesHasMore=false; catchesTotalCount=0; catchesPagingMode=true; catchesLoading=false; if (btnLoadMoreCatches) btnLoadMoreCatches.classList.add('hidden'); });
     btnCloseDetail.onclick = ()=> detailWrap.classList.add('hidden');
 
     // ★追加：フィルターモーダル開閉制御
@@ -3432,7 +3460,8 @@
           return {};
         }
         
-        const rows = await loadSheetViaGAS(TRIPS_SHEET_NAME, SHEET_ID);
+        const rowsResult = await loadSheetViaGAS(TRIPS_SHEET_NAME, SHEET_ID);
+        const rows = rowsResult?.data || [];
         if (!rows || rows.length < 2) return {};
         const headers = rows[0].map(h=>String(h||'').trim());
         const idxOf = name => headers.findIndex(h => h === name);
@@ -3632,18 +3661,7 @@
     // ★追加：リモート一覧複䔺用
     let remoteListItems = [];
 
-    function renderRemoteList(items, options = {}){
-      const reset = options.reset !== false;
-      const increment = Number(options.increment || 0);
-      if (reset) {
-        currentCatchListItems = Array.isArray(items) ? items.slice() : [];
-        visibleCatchCount = CATCHES_PAGE_SIZE;
-      } else {
-        if (increment > 0) visibleCatchCount += increment;
-      }
-
-      const visibleItems = currentCatchListItems.slice(0, visibleCatchCount);
-
+    function renderRemoteList(items){
       // 一覧を折りたたみ(details)にし、展開中はhover無効・枠線は外枠のみ・閉じるボタン付き
       remoteCatchList.innerHTML = '';
       detailWrap.classList.add('hidden'); // 既存の独立詳細パネルは使わない
@@ -3652,9 +3670,9 @@
       setupRemoteCatchListDelegates();
 
       // ★追加：renderCatchTideGraph 用に一時保存
-      remoteListItems = visibleItems;
+      remoteListItems = items;
 
-      visibleItems.forEach((it, idx)=>{
+      items.forEach((it, idx)=>{
         // ===== 外枠（折りたたみ） =====
         const wrap = document.createElement('details');
         wrap.className = 'rounded-2xl bg-slate-900 border border-slate-800 mb-2';
@@ -3799,15 +3817,38 @@
 
         remoteCatchList.appendChild(wrap);
       });
-
-      if (btnLoadMoreCatches) {
-        const hasMore = visibleItems.length < currentCatchListItems.length;
-        btnLoadMoreCatches.classList.toggle('hidden', !hasMore);
-      }
     }
+    btnLoadMoreCatches && (btnLoadMoreCatches.onclick = async () => {
+      try {
+        if (!catchesPagingMode || catchesLoading || !catchesHasMore) return;
+        catchesLoading = true;
+        sheetStatus.textContent = 'さらに読込中...';
 
-    btnLoadMoreCatches && (btnLoadMoreCatches.onclick = () => {
-      renderRemoteList(currentCatchListItems, { reset: false, increment: CATCHES_PAGE_SIZE });
+        const id = SHEET_ID.trim();
+        const result = await loadSheetViaGAS(SHEET_NAME, id, { limit: CATCHES_PAGE_SIZE, offset: catchesServerOffset, order: 'desc' });
+        const rows = result?.data || [];
+        if (rows.length < 2) {
+          catchesHasMore = false;
+          if (btnLoadMoreCatches) btnLoadMoreCatches.classList.add('hidden');
+          sheetStatus.textContent = `読み込み完了: ${currentCatchListItems.length} / ${catchesTotalCount} 件`;
+          return;
+        }
+
+        const appended = mapRowsToItems(rows);
+        currentCatchListItems = currentCatchListItems.concat(appended);
+        allCatchItems = currentCatchListItems.slice();
+        catchesHasMore = !!result?.meta?.hasMore;
+        catchesServerOffset = Number(result?.meta?.nextOffset ?? currentCatchListItems.length);
+
+        renderRemoteList(currentCatchListItems);
+        updateCatchCount(catchesTotalCount || currentCatchListItems.length, currentCatchListItems.length);
+        if (btnLoadMoreCatches) btnLoadMoreCatches.classList.toggle('hidden', !catchesHasMore);
+      } catch (e) {
+        console.error('[btnLoadMoreCatches] Error:', e);
+        sheetStatus.textContent = `追加読込失敗: ${e.message||e}`;
+      } finally {
+        catchesLoading = false;
+      }
     });
 
     // ★追加：フィルター条件をUIから読み込む
@@ -5723,7 +5764,8 @@
       
       // ★修正：シートから新規取得
       console.log('[📥 Harbor Cache] Fetching from GoogleSheets...');
-      const rows = await loadSheetViaGAS(HARBOR_SHEET_NAME, SHEET_ID);
+      const rowsResult = await loadSheetViaGAS(HARBOR_SHEET_NAME, SHEET_ID);
+      const rows = rowsResult?.data || [];
       if (!rows || rows.length < 2) throw new Error("港コード一覧のデータが見つかりません");
       const headers = rows[0].map(h=>String(h||'').trim());
       const findCol = (cands) => {
@@ -6601,7 +6643,8 @@
       
       if (DEBUG_WATER) LOG.wt("loadWaterTempPointsFromSheet: start", { SHEET_ID, POINTS_SHEET_NAME });
 
-      const rows = await loadSheetViaGAS(POINTS_SHEET_NAME, SHEET_ID);
+      const rowsResult = await loadSheetViaGAS(POINTS_SHEET_NAME, SHEET_ID);
+      const rows = rowsResult?.data || [];
       if (!rows || rows.length < 2) throw new Error("地点リストのデータが見つかりません");
 
       const headers = rows[0].map(h=>String(h||'').trim());
@@ -7476,7 +7519,10 @@
     const TRIPS_PAGE_SIZE = 10;
     let currentTripsRows = [];
     let currentTripsHeader = [];
-    let visibleTripsCount = TRIPS_PAGE_SIZE;
+    let tripsServerOffset = 0;
+    let tripsHasMore = false;
+    let tripsTotalCount = 0;
+    let tripsLoading = false;
 
     // モーダルを開く
     if (btnShowTripsFilter) {
@@ -7652,7 +7698,10 @@
       allTripsItems = []; 
       currentTripsRows = [];
       currentTripsHeader = [];
-      visibleTripsCount = TRIPS_PAGE_SIZE;
+      tripsServerOffset = 0;
+      tripsHasMore = false;
+      tripsTotalCount = 0;
+      tripsLoading = false;
       tripListEl.innerHTML = ''; 
       if (btnLoadMoreTrips) btnLoadMoreTrips.classList.add('hidden');
       tripDetailWrap.classList.add('hidden'); 
@@ -7661,44 +7710,43 @@
 
     async function loadTrips(){
       try{
+        if (tripsLoading) return;
+        tripsLoading = true;
         tripStatus.textContent = '読込中...';
         tripListEl.innerHTML = '';
         tripDetailWrap.classList.add('hidden');
-        
-        tripsCache = await loadSheetViaGAS(TRIPS_SHEET_NAME, SHEET_ID);
-        
-        // ★追加：釣果シートも読み込む
-        catchesCache = await loadSheetViaGAS(SHEET_NAME, SHEET_ID);
-        
+
+        tripsServerOffset = 0;
+        tripsHasMore = false;
+        tripsTotalCount = 0;
+        currentTripsRows = [];
+        currentTripsHeader = [];
+
+        const result = await loadSheetViaGAS(TRIPS_SHEET_NAME, SHEET_ID, { limit: TRIPS_PAGE_SIZE, offset: tripsServerOffset, order: 'desc' });
+        tripsCache = result?.data || [];
+
         if (!tripsCache || tripsCache.length < 2){
           tripStatus.textContent = 'Trips にデータが見つかりません';
+          if (btnLoadMoreTrips) btnLoadMoreTrips.classList.add('hidden');
           return;
         }
-        
-        // ★追加：フィルター前のすべての釣行を保存とデフォルトソート適用
-        const tripsDataRows = tripsCache.slice(1); // ヘッダー除外
-        allTripsItems = tripsDataRows;
-        
-        // ★追加：初期読み込み時用のシンプルなソート（デフォルト：newest）
-        // ヘッダーからstartedAtカラムのインデックスを取得
-        const headers = tripsCache[0];
-        const startedAtIdx = headers.findIndex(h => String(h||'').trim() === 'startedAt');
-        const columnIdx = startedAtIdx >= 0 ? startedAtIdx : 1; // デフォルトは1列目
-        
-        const sortedDataRows = tripsDataRows.slice().sort((a, b) => {
-          const dateA = parseTripsDate(a[columnIdx]) || new Date(0);
-          const dateB = parseTripsDate(b[columnIdx]) || new Date(0);
-          return dateB.getTime() - dateA.getTime(); // newest: 新しい順
-        });
-        
-        const sortedTripsCache = [tripsCache[0], ...sortedDataRows];
-        
-        await renderTripsList(sortedTripsCache);
-        tripStatus.textContent = `読み込み完了：${tripsCache.length-1}件`;
+
+        currentTripsHeader = tripsCache[0];
+        currentTripsRows = tripsCache.slice(1);
+        allTripsItems = currentTripsRows.slice();
+        tripsTotalCount = Number(result?.meta?.total || currentTripsRows.length);
+        tripsHasMore = !!result?.meta?.hasMore;
+        tripsServerOffset = Number(result?.meta?.nextOffset ?? currentTripsRows.length);
+
+        await renderTripsList([currentTripsHeader, ...currentTripsRows]);
+        tripStatus.textContent = `読み込み完了：${currentTripsRows.length} / ${tripsTotalCount}件`;
+        if (btnLoadMoreTrips) btnLoadMoreTrips.classList.toggle('hidden', !tripsHasMore);
       }catch(e){
         console.error('[loadTrips] Error:', e);
         console.error('[loadTrips] Stack:', e.stack);
         tripStatus.textContent = `読込失敗: ${e.message||e}`;
+      } finally {
+        tripsLoading = false;
       }
     }
 
@@ -7707,24 +7755,12 @@
       return i >= 0 ? i : -1;
     }
 
-  async function renderTripsList(rows, options = {}){
-      const reset = options.reset !== false;
-      const increment = Number(options.increment || 0);
+  async function renderTripsList(rows){
       if (!Array.isArray(rows) || rows.length < 2) {
         tripListEl.innerHTML = '';
         if (btnLoadMoreTrips) btnLoadMoreTrips.classList.add('hidden');
         return;
       }
-
-      if (reset) {
-        currentTripsHeader = rows[0];
-        currentTripsRows = rows.slice(1);
-        visibleTripsCount = TRIPS_PAGE_SIZE;
-      } else {
-        if (increment > 0) visibleTripsCount += increment;
-      }
-
-      const pagedRows = [currentTripsHeader, ...currentTripsRows.slice(0, visibleTripsCount)];
 
       // --- helpers（この関数内だけ） ---
       const pad2 = n => String(n).padStart(2,'0');
@@ -7761,7 +7797,7 @@
       };
       const hIdx = (hs, key) => hs.findIndex(h => String(h||'').trim() === key);
 
-      const headers = pagedRows[0];
+      const headers = rows[0];
       const col = {
         tripId:     hIdx(headers,'tripId'),
         startedAt:  hIdx(headers,'startedAt'),
@@ -7777,8 +7813,8 @@
 
       tripListEl.innerHTML = '';
 
-      for (let i=1;i<pagedRows.length;i++){
-        const r = pagedRows[i];
+      for (let i=1;i<rows.length;i++){
+        const r = rows[i];
 
         const thisTripId = col.tripId>=0 ? (r[col.tripId] || '') : '';
         // ★修正（v1.5.2b）：シートから読み込んだタイムスタンプを正規化
@@ -8743,7 +8779,8 @@
                     const endedAt = colMap.endedAt >= 0 ? tripRow[colMap.endedAt] : null;
 
                     // 釣果データを取得
-                    const rowsC = await loadSheetViaGAS('Catches', SHEET_ID);
+                    const rowsCResult = await loadSheetViaGAS('Catches', SHEET_ID);
+                    const rowsC = rowsCResult?.data || [];
                     const hs = rowsC[0].map(h=>String(h||'').trim());
                     const cTrip = hs.indexOf('tripId');
                     const cTime = hs.indexOf('timestamp');
@@ -8778,7 +8815,8 @@
           if (listEl.dataset.loaded === '1') return; // 二重ロード防止
 
           try{
-            const rowsC = await loadSheetViaGAS('Catches', SHEET_ID);
+            const rowsCResult = await loadSheetViaGAS('Catches', SHEET_ID);
+            const rowsC = rowsCResult?.data || [];
             const hs = rowsC[0].map(h=>String(h||'').trim());
             const cTrip   = hs.indexOf('tripId');
             const cSpec   = hs.indexOf('species');
@@ -8845,15 +8883,39 @@
         tripListEl.appendChild(wrap);
       }
 
-      if (btnLoadMoreTrips) {
-        const hasMore = visibleTripsCount < currentTripsRows.length;
-        btnLoadMoreTrips.classList.toggle('hidden', !hasMore);
-      }
     }
 
     btnLoadMoreTrips && (btnLoadMoreTrips.onclick = async () => {
-      if (!currentTripsHeader.length) return;
-      await renderTripsList([currentTripsHeader, ...currentTripsRows], { reset: false, increment: TRIPS_PAGE_SIZE });
+      try {
+        if (tripsLoading || !tripsHasMore) return;
+        tripsLoading = true;
+        tripStatus.textContent = 'さらに読込中...';
+
+        const result = await loadSheetViaGAS(TRIPS_SHEET_NAME, SHEET_ID, { limit: TRIPS_PAGE_SIZE, offset: tripsServerOffset, order: 'desc' });
+        const rows = result?.data || [];
+        if (!rows || rows.length < 2) {
+          tripsHasMore = false;
+          if (btnLoadMoreTrips) btnLoadMoreTrips.classList.add('hidden');
+          tripStatus.textContent = `読み込み完了：${currentTripsRows.length} / ${tripsTotalCount}件`;
+          return;
+        }
+
+        if (!currentTripsHeader.length) currentTripsHeader = rows[0];
+        const appended = rows.slice(1);
+        currentTripsRows = currentTripsRows.concat(appended);
+        allTripsItems = currentTripsRows.slice();
+        tripsHasMore = !!result?.meta?.hasMore;
+        tripsServerOffset = Number(result?.meta?.nextOffset ?? currentTripsRows.length);
+
+        await renderTripsList([currentTripsHeader, ...currentTripsRows]);
+        tripStatus.textContent = `読み込み完了：${currentTripsRows.length} / ${tripsTotalCount}件`;
+        if (btnLoadMoreTrips) btnLoadMoreTrips.classList.toggle('hidden', !tripsHasMore);
+      } catch (e) {
+        console.error('[btnLoadMoreTrips] Error:', e);
+        tripStatus.textContent = `追加読込失敗: ${e.message||e}`;
+      } finally {
+        tripsLoading = false;
+      }
     });
 
     // 既存の一覧カード見た目に寄せて小さめカードを生成
@@ -11999,7 +12061,8 @@
     // ===== Catches キャッシュ =====
     async function ensureCatchesCache(){
       if (catchesCache) return catchesCache;
-      catchesCache = await loadSheetViaGAS(SHEET_NAME, SHEET_ID);
+      const result = await loadSheetViaGAS(SHEET_NAME, SHEET_ID);
+      catchesCache = result?.data || [];
       return catchesCache;
     }
 
