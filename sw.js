@@ -4,7 +4,7 @@
  */
 
 const CACHE_VERSION = `fishlog-${Date.now()}`;
-const APP_SHELL_URL = './index.html?v=4.0.0';
+const APP_SHELL_URL = './index_v4.html?v=4.0.0';
 const ASSETS_TO_CACHE = [
   APP_SHELL_URL,
   './manifest.json',
@@ -85,7 +85,7 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         })
-        .catch(() => caches.match(APP_SHELL_URL).then((cached) => cached || caches.match('./index.html')))
+        .catch(() => caches.match(APP_SHELL_URL).then((cached) => cached || caches.match('./index_v4.html')))
     );
     return;
   }
@@ -116,7 +116,7 @@ self.addEventListener('fetch', (event) => {
         .catch((err) => {
           console.warn('[SW] Fetch failed, returning cached:', request.url);
           // フォールバック：キャッシュがなければオフラインページ
-          return caches.match(APP_SHELL_URL).then((cached) => cached || caches.match('./index.html'));
+          return caches.match(APP_SHELL_URL).then((cached) => cached || caches.match('./index_v4.html'));
         });
     })
   );
