@@ -5,16 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#0f172a" />
   <meta name="description" content="釣行の記録、釣果の管理、潮汐情報の自動取得ができるPWAアプリケーション" />
-  <link rel="manifest" href="./manifest.json?v=4.0.0">
+  <link rel="manifest" href="./manifest.json?v=4.0.1">
   <link rel="apple-touch-icon" href="./icon-192.png">
   <link rel="icon" type="image/png" href="./icon-192.png" sizes="192x192">
   <link rel="icon" type="image/png" href="./icon-512.png" sizes="512x512">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Fishing Log">
-  <!-- ★Version: 4.0.0 - 2026-09-25 -->
-  <!-- ★Updates: 釣行ステータスUIのアクション導線再構成、フッターナビ移設、トピック拡張 -->
-  <title>Fishing Log V4.0.0（PWAフロント / コンパクトUI）</title>
+  <!-- ★Version: 4.0.1 - 2026-09-29 -->
+  <!-- ★Updates: 釣行開始時刻導線改善、ステータス表示最適化、釣行詳細トピック表示強化 -->
+  <title>Fishing Log V4.0.1（PWAフロント / コンパクトUI）</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -186,8 +186,8 @@
     }
 
     .timeline-item.start .timeline-time {
-      font-size: 13px;
-      font-weight: 600;
+      font-size: 16px;
+      font-weight: 700;
     }
 
     .timeline-track {
@@ -218,6 +218,10 @@
       top: 50%;
     }
 
+    .timeline-item.end .timeline-track::before {
+      bottom: 50%;
+    }
+
     .timeline-dot {
       position: absolute;
       top: 50%;
@@ -245,6 +249,13 @@
       width: 8px;
       height: 8px;
       background: rgb(16, 185, 129);
+    }
+
+    .timeline-item.end .timeline-dot {
+      left: 18px;
+      width: 8px;
+      height: 8px;
+      background: rgb(244, 63, 94);
     }
 
     .timeline-item.topic-situation .timeline-dot {
@@ -708,7 +719,7 @@
         </div>
         <h1 class="absolute left-1/2 -translate-x-1/2 text-center text-[25px] font-bold whitespace-nowrap pointer-events-none">Fishing Log</h1>
         <div class="shrink-0 text-xs text-slate-500 font-semibold">
-          <span id="versionInfo">V4.0.0</span>
+          <span id="versionInfo">V4.0.1</span>
         </div>
       </div>
     </div>
@@ -1198,14 +1209,12 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-[7px]">
-          <div id="tripWeatherBoxTop" class="rounded-xl border border-slate-800 bg-slate-800/40 p-2 min-w-0">
-            <div class="text-slate-400 text-xs">天気</div>
-            <div id="tripWeatherTop" class="text-slate-200 text-[17px] font-bold mt-0.5 break-words">—</div>
-          </div>
+        <div class="grid grid-cols-1 gap-[7px]">
           <div id="tripWaterBoxTop" class="rounded-xl border border-slate-800 bg-slate-800/40 p-2 min-w-0">
-            <div class="text-slate-400 text-xs">水温</div>
-            <div id="tripWaterTop" class="text-slate-200 text-[17px] font-bold mt-0.5 break-words">—</div>
+            <div class="flex items-center justify-between gap-2">
+              <div class="text-slate-400 text-xs shrink-0">水温</div>
+              <div id="tripWaterTop" class="text-slate-200 text-[17px] font-bold text-right truncate">—</div>
+            </div>
           </div>
         </div>
 
@@ -1346,6 +1355,10 @@
       <div id="locationSelectionContent" class="space-y-2">
         <p class="text-sm text-slate-400">読込中...</p>
       </div>
+      <label class="block mt-3">
+        <span class="text-sm text-slate-300">釣行開始時刻</span>
+        <input id="inpLocationStartTime" type="time" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" />
+      </label>
       <div class="flex gap-2 mt-4">
         <button id="btnConfirmLocation" class="flex-1 py-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 font-semibold transition" type="button">確定</button>
       </div>
@@ -4048,6 +4061,15 @@
     // 画像URL正規化（一覧で使っているものを流用）
     const resolvePhotoUrlDetail = (raw) => resolvePhotoUrl(raw, 'detail');
 
+    // ★追加：同一URLの再代入を抑制（不要な再取得を防ぐ）
+    function setImageSrcIfChanged(img, nextUrl) {
+      if (!img) return;
+      const target = String(nextUrl || '');
+      const current = String(img.getAttribute('src') || '');
+      if (current === target) return;
+      img.src = target;
+    }
+
     // ★追加：リモート一覧複䔺用
     let remoteListItems = [];
 
@@ -4072,7 +4094,7 @@
         const img = document.createElement('img');
         img.className = 'w-24 h-24 object-cover rounded-xl bg-slate-950';
         img.alt = 'photo';
-        img.src = resolvePhotoUrl(it.photo) || '';
+        setImageSrcIfChanged(img, resolvePhotoUrl(it.photo) || '');
         summary.appendChild(img);
 
         const info = document.createElement('div');
@@ -4560,7 +4582,7 @@
     // ===== PWA: Service Worker 登録 =====
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=4.0.0', {
+        navigator.serviceWorker.register('./sw.js?v=4.0.1', {
           scope: './'
         })
           .then(registration => {
@@ -5203,6 +5225,11 @@
         showError(msg);
         throw new Error(j?.error || `HTTP ${res.status}`);
       }
+      console.log('[PhotoUpload] URLs received from upload API:', {
+        fileId: j?.fileId || null,
+        viewUrl: j?.viewUrl || null,
+        thumbUrl: j?.thumbUrl || null
+      });
       return j; // { ok:true, fileId, viewUrl, thumbUrl }
     }
 
@@ -6833,12 +6860,12 @@
       });
 
       ctx.fillStyle = "#cbd5e1";
-      ctx.font = "13px sans-serif";
+      ctx.font = "26px sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
       for (let h = 0; h <= 24; h += xLabelStepHours) {
         const x = mapX(h*60);
-        ctx.fillText(`${String(h).padStart(2,"0")}:00`, x, H - padding.bottom + 8);
+        ctx.fillText(`${String(h).padStart(2,"0")}`, x, H - padding.bottom + 8);
       }
 
       if (showYAxisLabels) {
@@ -7703,10 +7730,6 @@
         txtPosWrap.classList.add('hidden');
       }
 
-      // ★修正：開始時の天気を上部に表示
-      const wxBrief = draft.start_weather ? formatWeatherBrief(draft.start_weather) : null;
-      document.getElementById('tripWeatherTop').textContent = wxBrief || '—';
-
       tripWeatherRow.innerHTML = '';
       const graphBox = document.createElement('div');
       graphBox.className = 'rounded-xl border border-slate-800 bg-slate-800/40 p-2.5 min-w-0';
@@ -8311,6 +8334,8 @@
         let waterTempBrief = '';
         // ★追加: 天気の経過記録（カード詳細表示用）
         let weatherTimelineSectionHtml = '';
+        // ★追加: トピック表示（カード詳細表示用）
+        let topicTimelineSectionHtml = '';
         
         // ★追加：メモを取得（1行表示用）
         const memo = col.memo >= 0 ? (r[col.memo] || '') : '';
@@ -8325,6 +8350,89 @@
           }
           tideName = raw?.start_tide?.tideName || raw?.start_tide?.chart?.moon?.title || '';
           if (raw?.start_weather) startWeatherBrief = formatWeatherBrief(raw.start_weather);
+
+          const topics = Array.isArray(raw?.topics) ? raw.topics : [];
+          const startedMsForTripDetail = parseLooseDateMs(started);
+          const endedMsForTripDetail = parseLooseDateMs(ended);
+          if (topics.length > 0 || !Number.isNaN(startedMsForTripDetail) || !Number.isNaN(endedMsForTripDetail)) {
+            const baseStartedAt = started ? new Date(started) : null;
+            const topicVariantForTripDetail = (category) => {
+              if (category === '状況変化' || category === '海況変化') return 'topic-situation';
+              if (category === '周囲の釣果') return 'topic-around';
+              if (category === 'ルアーチェンジ') return 'topic-lure';
+              return 'topic-situation';
+            };
+            const formatTimeLabelForTripDetail = (ms) => Number.isNaN(ms)
+              ? '—'
+              : new Date(ms).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', hour12: false });
+            const resolveTopicSortMsForTripDetail = (topic) => {
+              if (topic?.time) {
+                const m = String(topic.time).match(/^(\d{1,2}):(\d{2})$/);
+                if (m) {
+                  const baseDate = (baseStartedAt && !Number.isNaN(baseStartedAt.getTime()))
+                    ? new Date(baseStartedAt)
+                    : (topic?.recordedAt ? new Date(topic.recordedAt) : new Date());
+                  if (!Number.isNaN(baseDate.getTime())) {
+                    baseDate.setHours(Number(m[1]), Number(m[2]), 0, 0);
+                    return baseDate.getTime();
+                  }
+                }
+              }
+              if (topic?.recordedAt) {
+                const ms = parseLooseDateMs(topic.recordedAt);
+                if (!Number.isNaN(ms)) return ms;
+              }
+              return Number.MAX_SAFE_INTEGER;
+            };
+
+            const topicEntries = topics.map((topic) => ({
+              kind: 'topic',
+              variant: topicVariantForTripDetail(topic?.category),
+              sortMs: resolveTopicSortMsForTripDetail(topic),
+              timeLabel: topic?.time || '—',
+              main: topic?.content || topic?.category || 'トピック'
+            }));
+
+            if (!Number.isNaN(startedMsForTripDetail)) {
+              topicEntries.push({
+                kind: 'event-start',
+                variant: '',
+                sortMs: startedMsForTripDetail,
+                timeLabel: formatTimeLabelForTripDetail(startedMsForTripDetail),
+                main: '釣行開始'
+              });
+            }
+
+            if (!Number.isNaN(endedMsForTripDetail)) {
+              topicEntries.push({
+                kind: 'event-end',
+                variant: '',
+                sortMs: endedMsForTripDetail,
+                timeLabel: formatTimeLabelForTripDetail(endedMsForTripDetail),
+                main: '釣行終了'
+              });
+            }
+
+            topicEntries.sort((a, b) => a.sortMs - b.sortMs);
+
+            const topicItemsHtml = topicEntries.map((entry) => `
+              <li class="timeline-item ${entry.kind === 'event-start' ? 'start' : ''} ${entry.kind === 'event-end' ? 'end' : ''} ${entry.variant}">
+                <div class="timeline-time">${escapeHtml(entry.timeLabel)}</div>
+                <div class="timeline-track"><span class="timeline-dot"></span></div>
+                <div class="timeline-content"><div class="timeline-main" title="${escapeHtml(entry.main)}">${escapeHtml(entry.main)}</div></div>
+                <div class="timeline-nav"></div>
+              </li>
+            `).join('');
+
+            topicTimelineSectionHtml = `
+              <div class="rounded-2xl border border-slate-800 bg-slate-900 p-3 mb-3 overflow-hidden">
+                <div class="text-sm text-slate-300 mb-2">トピック・イベント（${topicEntries.length}件）</div>
+                <div class="max-h-72 overflow-y-auto overflow-x-hidden pr-1">
+                  <ul class="timeline-list">${topicItemsHtml}</ul>
+                </div>
+              </div>
+            `;
+          }
 
           // ★追加: raw_json.weather_timeline をカード詳細に表示
           const weatherTimeline = Array.isArray(raw?.weather_timeline) ? raw.weather_timeline : [];
@@ -8491,6 +8599,7 @@
             </div>
           </div>
           ${weatherTimelineSectionHtml}
+          ${topicTimelineSectionHtml}
           <div class="rounded-2xl border border-slate-800 bg-slate-900 py-3 px-1.5 mb-3">
             <div class="flex items-center justify-between mt-1 mb-2">
               <div class="text-xs text-slate-400">この釣行の釣果</div>
@@ -9335,7 +9444,7 @@
                 card.className = 'rounded-lg bg-slate-900 border border-slate-800 py-3 px-1.5 flex gap-3 items-start';
                 const img = document.createElement('img');
                 img.className = 'w-20 h-20 object-cover rounded-lg bg-slate-950';
-                img.src = resolvePhotoUrl(c.photo) || '';
+                setImageSrcIfChanged(img, resolvePhotoUrl(c.photo) || '');
                 img.alt = 'photo';
                 card.appendChild(img);
 
@@ -9428,7 +9537,7 @@
         const img = document.createElement('img');
         img.className = 'w-20 h-20 object-cover rounded-lg border border-slate-800 bg-slate-950';
         img.alt = 'photo';
-        img.src = resolvePhotoUrl(r[cidx.photo] || '') || '';
+        setImageSrcIfChanged(img, resolvePhotoUrl(r[cidx.photo] || '') || '');
         card.appendChild(img);
 
         const info = document.createElement('div');
@@ -9644,6 +9753,13 @@
       // ★修正：最初の hideUploadingOverlay() を削除し、位置候補取得中もオーバーレイを表示
       showUploadingOverlay('位置を確認中...');
       console.log('[LocationModal] 🟦 START showLocationSelectionModal', { lat, lng });
+
+      if (inpLocationStartTime) {
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        inpLocationStartTime.value = `${hh}:${mm}`;
+      }
       
       try {
         // 位置候補を取得（水温APIの結果を利用）
@@ -11285,6 +11401,7 @@
     const tripModal   = document.getElementById('tripModal');
     const inpTripStart= document.getElementById('inpTripStart');
     const inpTripEnd  = document.getElementById('inpTripEnd');
+    const inpLocationStartTime = document.getElementById('inpLocationStartTime');
     const inpTripLat  = document.getElementById('inpTripLat');
     const inpTripLng  = document.getElementById('inpTripLng');
     const btnCloseTripModal = document.getElementById('btnCloseTripModal');
@@ -13320,6 +13437,19 @@
           alert('位置を選択してください');
           return;
         }
+
+        let startedAt = nowIsoLocal();
+        if (inpLocationStartTime && inpLocationStartTime.value) {
+          const parsedStart = parseDisplayDatetime(inpLocationStartTime.value.trim());
+          if (!parsedStart) {
+            alert('開始時刻の形式が正しくありません。hh:mm で入力してください。');
+            return;
+          }
+          startedAt = toOffsetIsoLocal(parsedStart);
+        }
+
+        draft.startedAt = startedAt;
+
         // draft に選択位置を保存
         draft.selected_location_name = selectedLocationCandidate.name;
         draft.selected_location_lat = selectedLocationCandidate.lat;
@@ -13329,10 +13459,12 @@
           lat: draft.selected_location_lat,
           lng: draft.selected_location_lng
         });
+        console.log('[LocationModal] ✅ Start time confirmed:', { startedAt: draft.startedAt });
         LOG.app('[LocationModal] Location selection confirmed', {
           name: draft.selected_location_name,
           lat: draft.selected_location_lat,
-          lng: draft.selected_location_lng
+          lng: draft.selected_location_lng,
+          startedAt: draft.startedAt
         });
         
         closeLocationSelectionModal();
