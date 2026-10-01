@@ -5,16 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#0f172a" />
   <meta name="description" content="釣行の記録、釣果の管理、潮汐情報の自動取得ができるPWAアプリケーション" />
-  <link rel="manifest" href="./manifest.json?v=4.0.1">
+  <link rel="manifest" href="./manifest.json?v=4.0.2">
   <link rel="apple-touch-icon" href="./icon-192.png">
   <link rel="icon" type="image/png" href="./icon-192.png" sizes="192x192">
   <link rel="icon" type="image/png" href="./icon-512.png" sizes="512x512">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Fishing Log">
-  <!-- ★Version: 4.0.1 - 2026-09-29 -->
-  <!-- ★Updates: 釣行開始時刻導線改善、ステータス表示最適化、釣行詳細トピック表示強化 -->
-  <title>Fishing Log V4.0.1（PWAフロント / コンパクトUI）</title>
+  <!-- ★Version: 4.0.2 - 2026-10-01 -->
+  <!-- ★Updates: フッター/設定/検索アイコン画像化、半透明ボタン統一、文字色調整 -->
+  <title>Fishing Log V4.0.2（PWAフロント / コンパクトUI）</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -614,6 +614,37 @@
       outline: none !important;
     }
 
+    #footerNavMenu #navTrips,
+    #footerNavMenu #navHome,
+    #footerNavMenu #navCatches {
+      background: rgba(148, 163, 184, 0.22) !important;
+      border: 1px solid rgba(148, 163, 184, 0.6) !important;
+      box-shadow: none !important;
+    }
+
+    #footerNavMenu #navTrips:hover,
+    #footerNavMenu #navHome:hover,
+    #footerNavMenu #navCatches:hover {
+      background: rgba(148, 163, 184, 0.3) !important;
+      filter: none !important;
+    }
+
+    #navSettings,
+    #btnShowTripsFilter,
+    #btnShowFilter {
+      background: rgba(148, 163, 184, 0.22) !important;
+      border: 1px solid rgba(148, 163, 184, 0.6) !important;
+      box-shadow: none !important;
+      color: #334155 !important;
+    }
+
+    #navSettings:hover,
+    #btnShowTripsFilter:hover,
+    #btnShowFilter:hover {
+      background: rgba(148, 163, 184, 0.3) !important;
+      filter: none !important;
+    }
+
     #footerNavMenu > div > div {
       border: 0 !important;
       background: transparent !important;
@@ -715,11 +746,13 @@
     <div class="max-w-4xl mx-auto px-4 py-3">
       <div class="relative mb-0 flex items-center justify-between gap-2 min-h-8">
         <div class="flex items-center gap-2 shrink-0">
-          <button id="navSettings" class="h-8 w-8 rounded-xl hover:bg-slate-700 text-lg leading-none" aria-label="設定">⚙️</button>
+          <button id="navSettings" class="h-8 w-8 rounded-xl text-lg leading-none flex items-center justify-center" aria-label="設定">
+            <img src="./assets/setting_icon.png" alt="" class="w-[22px] h-[22px] object-contain" aria-hidden="true" />
+          </button>
         </div>
         <h1 class="absolute left-1/2 -translate-x-1/2 text-center text-[25px] font-bold whitespace-nowrap pointer-events-none">Fishing Log</h1>
         <div class="shrink-0 text-xs text-slate-500 font-semibold">
-          <span id="versionInfo">V4.0.1</span>
+          <span id="versionInfo">V4.0.2</span>
         </div>
       </div>
     </div>
@@ -989,7 +1022,9 @@
             <div id="tripStatus" class="text-sm text-slate-400">0/0</div>
           </div>
           <div class="flex gap-2">
-            <button id="btnShowTripsFilter" class="px-3 py-2 rounded-xl border border-slate-700 hover:bg-slate-800 text-sm font-semibold" title="フィルター" aria-label="フィルター">🔍</button>
+            <button id="btnShowTripsFilter" class="h-8 w-10 rounded-xl text-sm font-semibold flex items-center justify-center" title="フィルター" aria-label="フィルター">
+              <img src="./assets/Search_icon.png" alt="" class="w-[19px] h-[19px] object-contain" aria-hidden="true" />
+            </button>
             <button id="btnLoadTrips" class="px-3 py-2 rounded-xl bg-amber-700 hover:bg-amber-600 font-semibold text-sm">読込</button>
           </div>
         </div>
@@ -1073,7 +1108,9 @@
             <div id="catchesStatus" class="text-sm text-slate-400">0/0</div>
           </div>
           <div class="flex gap-2">
-            <button id="btnShowFilter" class="px-3 py-2 rounded-xl border border-slate-700 hover:bg-slate-800 text-sm font-semibold" title="フィルター" aria-label="フィルター">🔍</button>
+            <button id="btnShowFilter" class="h-8 w-10 rounded-xl text-sm font-semibold flex items-center justify-center" title="フィルター" aria-label="フィルター">
+              <img src="./assets/Search_icon.png" alt="" class="w-[19px] h-[19px] object-contain" aria-hidden="true" />
+            </button>
             <button id="btnLoadSheet" class="px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 font-semibold text-sm">読込</button>
           </div>
         </div>
@@ -1248,7 +1285,7 @@
       <div id="actionButtonsOverlay" class="hidden fixed left-0 right-0 bottom-[calc(env(safe-area-inset-bottom)+8.6rem)] z-[21]">
         <div class="max-w-4xl mx-auto px-4">
           <div id="actionButtonsPanel" class="grid grid-cols-1 gap-2 rounded-2xl border border-slate-700 bg-slate-900/95 p-2 shadow-[0_18px_36px_rgba(15,23,42,0.45)]">
-            <button id="btnActionCatch" class="h-10 rounded-2xl bg-sky-600 hover:bg-sky-500 font-semibold text-sm">釣果</button>
+            <button id="btnActionCatch" class="h-10 rounded-2xl bg-sky-600 hover:bg-sky-500 font-semibold text-sm text-white">釣果</button>
             <div class="grid grid-cols-2 gap-2">
               <button id="btnTopicCatch" class="h-10 rounded-2xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 font-semibold text-sm">周囲の釣果</button>
               <button id="btnTopicLureChange" class="h-10 rounded-2xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 font-semibold text-sm">ルアーチェンジ</button>
@@ -1360,7 +1397,7 @@
         <input id="inpLocationStartTime" type="time" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" />
       </label>
       <div class="flex gap-2 mt-4">
-        <button id="btnConfirmLocation" class="flex-1 py-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 font-semibold transition" type="button">確定</button>
+        <button id="btnConfirmLocation" class="flex-1 py-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 font-semibold transition text-white" type="button">確定</button>
       </div>
     </div>
   </div>
@@ -1482,28 +1519,16 @@
   </div>
 
   <footer id="footerNavMenu" class="fixed bottom-0 left-0 right-0 z-10 border-t border-slate-800">
-    <div class="w-full px-2 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.35rem)]">
-      <div class="grid grid-cols-3 w-full items-center gap-1 rounded-2xl p-1.5">
-        <button id="navTrips" aria-label="釣行" title="釣行" class="w-1/2 justify-self-center min-w-0 h-6 px-2 rounded-xl bg-amber-700 hover:bg-amber-600 font-semibold text-xs leading-none whitespace-nowrap flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-[22px] h-[22px]" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M7 3.5h9.5a2 2 0 0 1 2 2V20.5H7.5A2.5 2.5 0 0 0 5 23V6a2.5 2.5 0 0 1 2-2.5Z"/>
-            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 23V8.5A1.5 1.5 0 0 1 9 7h9.5"/>
-            <path stroke-linecap="round" stroke-linejoin="round" d="M10 11h5M10 14h5"/>
-          </svg>
+    <div class="w-full px-2 pt-1 pb-[calc(env(safe-area-inset-bottom)+0.18rem)]">
+      <div class="grid grid-cols-3 w-full items-center gap-0.5 rounded-2xl p-[0.1875rem]">
+        <button id="navTrips" aria-label="釣行" title="釣行" class="w-2/3 justify-self-center min-w-0 h-8 px-2 rounded-xl bg-amber-700 hover:bg-amber-600 font-semibold text-xs leading-none whitespace-nowrap flex items-center justify-center">
+          <img src="./assets/trip_icon.png" alt="" class="w-[29px] h-[29px] object-contain" aria-hidden="true" />
         </button>
-        <button id="navHome" aria-label="ホーム" title="ホーム" class="w-1/2 justify-self-center min-w-0 h-6 px-2 rounded-xl bg-slate-700 hover:bg-slate-600 font-semibold text-xs leading-none whitespace-nowrap flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-[22px] h-[22px]" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3 11.5L12 4l9 7.5"/>
-            <path stroke-linecap="round" stroke-linejoin="round" d="M5.5 10.5V20h13V10.5"/>
-            <path stroke-linecap="round" stroke-linejoin="round" d="M10 20v-5h4v5"/>
-          </svg>
+        <button id="navHome" aria-label="ホーム" title="ホーム" class="w-2/3 justify-self-center min-w-0 h-8 px-2 rounded-xl bg-slate-700 hover:bg-slate-600 font-semibold text-xs leading-none whitespace-nowrap flex items-center justify-center">
+          <img src="./assets/home_icon.png" alt="" class="w-[29px] h-[29px] object-contain" aria-hidden="true" />
         </button>
-        <button id="navCatches" aria-label="釣果" title="釣果" class="w-1/2 justify-self-center min-w-0 h-6 px-2 rounded-xl bg-sky-700 hover:bg-sky-600 font-semibold text-xs leading-none whitespace-nowrap flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-[22px] h-[22px]" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 12c2.3-2.6 5.1-4 8-4 3.2 0 6.1 1.5 8 4-1.9 2.5-4.8 4-8 4-2.9 0-5.7-1.4-8-4Z"/>
-            <circle cx="13.2" cy="11.2" r="1" fill="currentColor" stroke="none"/>
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 12l-1.5-1.2M4 12l-1.5 1.2"/>
-          </svg>
+        <button id="navCatches" aria-label="釣果" title="釣果" class="w-2/3 justify-self-center min-w-0 h-8 px-2 rounded-xl bg-sky-700 hover:bg-sky-600 font-semibold text-xs leading-none whitespace-nowrap flex items-center justify-center">
+          <img src="./assets/catch_icon.png" alt="" class="w-[29px] h-[29px] object-contain" aria-hidden="true" />
         </button>
       </div>
     </div>
@@ -4582,7 +4607,7 @@
     // ===== PWA: Service Worker 登録 =====
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=4.0.1', {
+        navigator.serviceWorker.register('./sw.js?v=4.0.2', {
           scope: './'
         })
           .then(registration => {
@@ -7765,7 +7790,7 @@
         // 未開始時：釣行開始ボタン
         const b=document.createElement('button'); 
         b.textContent='Go Fishing';
-        b.className='w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-semibold';
+        b.className='w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-semibold text-white';
         b.onclick=startTrip; 
         buttonRow.appendChild(b);
       } else if (draft.status==='ended'){
