@@ -711,6 +711,29 @@
       backdrop-filter: blur(10px);
     }
 
+    #bottomBar.action-menu-open {
+      background: transparent !important;
+      border-top-color: transparent !important;
+      backdrop-filter: none !important;
+      padding-bottom: 0 !important;
+    }
+
+    #bottomBarInner > #btnAddCatchBottom,
+    #bottomBarInner > #bottomBarTripControls {
+      width: 90%;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    #actionButtonsOverlay.action-overlay-docked {
+      bottom: calc(env(safe-area-inset-bottom) + 3.4rem) !important;
+    }
+
+    #actionButtonsPanel {
+      background: var(--lf-bg) !important;
+      border-color: var(--lf-line) !important;
+    }
+
     /* Modals */
     #tripEditModal > div,
     #catchModal > div,
@@ -1281,7 +1304,7 @@
       </section>
 
       <div id="bottomBar" class="hidden fixed bottom-[calc(env(safe-area-inset-bottom)+3.4rem)] left-0 right-0 z-[22] border-t border-slate-800 bg-slate-950/80 backdrop-blur pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
-        <div class="max-w-4xl mx-auto px-4 py-3 flex flex-col gap-2">
+        <div id="bottomBarInner" class="max-w-4xl mx-auto px-4 py-3 flex flex-col gap-2">
           <button id="btnAddCatchBottom" class="w-full h-10 rounded-2xl bg-sky-600 hover:bg-sky-500 font-semibold text-sm leading-none" aria-expanded="false">+</button>
           <div id="bottomBarTripControls" class="grid grid-cols-2 gap-2">
             <button id="btnCancelTrip" class="h-7 rounded-2xl bg-slate-700 hover:bg-slate-600 font-semibold text-sm">キャンセル</button>
@@ -4903,6 +4926,7 @@
     const tripWeatherRow=document.getElementById('tripWeatherRow');
     const buttonRow=document.getElementById('buttonRow');
     const bottomBar=document.getElementById('bottomBar');
+    const bottomBarInner=document.getElementById('bottomBarInner');
     const btnAddCatchBottom=document.getElementById('btnAddCatchBottom');
     const btnEndBottom=document.getElementById('btnEndBottom');
     const bottomBarTripControls=document.getElementById('bottomBarTripControls');
@@ -7893,8 +7917,6 @@
         if (btnAddCatchBottom) btnAddCatchBottom.setAttribute('aria-expanded', 'false');
         if (btnAddCatchBottom) {
           btnAddCatchBottom.textContent = '+';
-          btnAddCatchBottom.classList.remove('text-sm');
-          btnAddCatchBottom.classList.add('text-2xl');
         }
       }
 
@@ -13696,27 +13718,56 @@
       if (!btnAddCatchBottom) return;
       btnAddCatchBottom.textContent = isOpen ? '閉じる' : '+';
       btnAddCatchBottom.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-      if (isOpen) {
-        btnAddCatchBottom.classList.remove('text-2xl');
-        btnAddCatchBottom.classList.add('text-sm');
-      } else {
-        btnAddCatchBottom.classList.remove('text-sm');
-        btnAddCatchBottom.classList.add('text-2xl');
-      }
+      btnAddCatchBottom.classList.remove('text-2xl');
+      btnAddCatchBottom.classList.add('text-sm');
     };
 
     const closeActionButtonsPanel = () => {
+      if (bottomBarInner && btnAddCatchBottom && btnAddCatchBottom.parentElement !== bottomBarInner) {
+        bottomBarInner.insertBefore(btnAddCatchBottom, bottomBarTripControls || null);
+      }
+      if (btnAddCatchBottom) {
+        btnAddCatchBottom.style.width = '';
+        btnAddCatchBottom.style.maxWidth = '';
+        btnAddCatchBottom.style.marginLeft = '';
+        btnAddCatchBottom.style.marginRight = '';
+      }
       if (actionButtonsOverlay) actionButtonsOverlay.classList.add('hidden');
+      if (actionButtonsOverlay) actionButtonsOverlay.classList.remove('action-overlay-docked');
+      if (actionButtonsOverlay) actionButtonsOverlay.style.transform = '';
       if (actionButtonsBackdrop) actionButtonsBackdrop.classList.add('hidden');
       if (bottomBarTripControls) bottomBarTripControls.classList.remove('hidden');
+      if (bottomBar) bottomBar.classList.remove('action-menu-open');
       setActionToggleButtonState(false);
     };
 
     const openActionButtonsPanel = () => {
+      const beforeRect = btnAddCatchBottom ? btnAddCatchBottom.getBoundingClientRect() : null;
+      if (actionButtonsPanel && btnAddCatchBottom && btnAddCatchBottom.parentElement !== actionButtonsPanel) {
+        actionButtonsPanel.appendChild(btnAddCatchBottom);
+      }
+      if (btnAddCatchBottom && beforeRect) {
+        const fixedWidth = Math.round(beforeRect.width);
+        btnAddCatchBottom.style.width = `${fixedWidth}px`;
+        btnAddCatchBottom.style.maxWidth = `${fixedWidth}px`;
+        btnAddCatchBottom.style.marginLeft = 'auto';
+        btnAddCatchBottom.style.marginRight = 'auto';
+      }
       if (actionButtonsOverlay) actionButtonsOverlay.classList.remove('hidden');
+      if (actionButtonsOverlay) actionButtonsOverlay.classList.add('action-overlay-docked');
+      if (actionButtonsOverlay) actionButtonsOverlay.style.transform = '';
       if (actionButtonsBackdrop) actionButtonsBackdrop.classList.remove('hidden');
       if (bottomBarTripControls) bottomBarTripControls.classList.add('hidden');
+      if (bottomBar) bottomBar.classList.add('action-menu-open');
       setActionToggleButtonState(true);
+
+      if (actionButtonsOverlay && btnAddCatchBottom && beforeRect) {
+        requestAnimationFrame(() => {
+          const afterRect = btnAddCatchBottom.getBoundingClientRect();
+          const deltaY = Math.round(beforeRect.top - afterRect.top);
+          actionButtonsOverlay.style.transform = `translateY(${deltaY}px)`;
+        });
+      }
     };
 
     setActionToggleButtonState(false);
