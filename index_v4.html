@@ -5,16 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#0f172a" />
   <meta name="description" content="釣行の記録、釣果の管理、潮汐情報の自動取得ができるPWAアプリケーション" />
-  <link rel="manifest" href="./manifest.json?v=4.0.3">
+  <link rel="manifest" href="./manifest.json?v=4.1.0">
   <link rel="apple-touch-icon" href="./icon-192.png">
   <link rel="icon" type="image/png" href="./icon-192.png" sizes="192x192">
   <link rel="icon" type="image/png" href="./icon-512.png" sizes="512x512">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Fishing Log">
-  <!-- ★Version: 4.0.3 - 2026-10-02 -->
-  <!-- ★Updates: 編集UIのトピック一覧を時系列化、開始/終了表示、トピック間追加導線を改善 -->
-  <title>Fishing Log V4.0.3（PWAフロント / コンパクトUI）</title>
+  <!-- ★Version: 4.1.0 - 2026-10-13 -->
+  <!-- ★Updates: 画像取得をview_urlへ統一、thumbフォールバック廃止、画像ロード再試行(2回)を共通化 -->
+  <title>Fishing Log V4.1.0（PWAフロント / コンパクトUI）</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -480,10 +480,15 @@
     }
 
     /* Primary navigation buttons */
-    #homeGoRecord {
+    #homeGoRecord,
+    .go-fishing-btn,
+    #btnSaveCatch {
       background: linear-gradient(180deg, #49cfa4 0%, #22b889 62%, #159f75 100%) !important;
       color: #ffffff !important;
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    }
+
+    #homeGoRecord {
       font-size: calc(1rem + 3px) !important;
     }
 
@@ -564,7 +569,6 @@
     #btnLoadSheet,
     #homeAddManualCatch,
     #btnAddCatchBottom,
-    #btnSaveCatch,
     #btnApplyFilter,
     #btnApplyTripsFilter {
       background: linear-gradient(180deg, #5d8ff2 0%, #3b6edb 62%, #2f58bd 100%) !important;
@@ -582,9 +586,14 @@
     #btnLoadSheet:hover,
     #homeAddManualCatch:hover,
     #btnAddCatchBottom:hover,
-    #btnSaveCatch:hover,
     #btnApplyFilter:hover,
     #btnApplyTripsFilter:hover {
+      filter: brightness(1.05);
+    }
+
+    #homeGoRecord:hover,
+    .go-fishing-btn:hover,
+    #btnSaveCatch:hover {
       filter: brightness(1.05);
     }
 
@@ -775,7 +784,7 @@
         </div>
         <h1 class="absolute left-1/2 -translate-x-1/2 text-center text-[25px] font-bold whitespace-nowrap pointer-events-none">Fishing Log</h1>
         <div class="shrink-0 text-xs text-slate-500 font-semibold">
-          <span id="versionInfo">V4.0.3</span>
+          <span id="versionInfo">V4.1.0</span>
         </div>
       </div>
     </div>
@@ -1041,6 +1050,17 @@
           </select>
         </label>
         <div id="waterTempProviderStatus" class="text-sm text-slate-300 mt-2"></div>
+      </details>
+
+      <details class="rounded-2xl bg-slate-900 border border-slate-800 p-4 mb-4">
+        <summary class="cursor-pointer text-base font-semibold">ルアー候補管理</summary>
+        <div class="text-xs text-slate-400 mt-3 mb-3">重複は正規化後の名称で上書きされます。最新使用時刻でTOP5を作成し、一覧は昇順で表示されます。</div>
+        <div class="flex gap-2">
+          <input id="inpLureMasterNew" type="text" placeholder="ルアー名を追加" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm" />
+          <button id="btnAddLureMaster" class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-semibold text-sm">追加</button>
+        </div>
+        <div id="lureMasterStatus" class="text-sm text-slate-300 mt-2"></div>
+        <div id="lureMasterList" class="mt-3 space-y-1"></div>
       </details>
     </section>
 
@@ -1328,6 +1348,10 @@
         </div>
       </div>
 
+      <button id="btnTopicLureQuick" class="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+8.2rem)] z-[23] w-14 h-14 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold leading-tight shadow-[0_12px_28px_rgba(5,150,105,0.45)] border border-emerald-400/40">
+        Quick<br>ルアー
+      </button>
+
     </section>
   </main>
 
@@ -1340,7 +1364,7 @@
       </div>
       <div class="space-y-3">
         <label class="block"><span class="text-sm text-slate-300">時刻</span>
-          <input id="inpCatchTime" type="text" placeholder="yyyy/mm/dd hh:mm" maxlength="16" inputmode="numeric" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" />
+          <input id="inpCatchTime" type="datetime-local" step="60" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" />
         </label>
         <label class="block"><span class="text-sm text-slate-300">魚種</span>
           <input id="inpSpecies" type="text" placeholder="例：アジ" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" />
@@ -1451,6 +1475,13 @@
           <span class="text-sm text-slate-300">カテゴリ</span>
           <input id="inpTopicCategory" type="text" readonly class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 text-slate-400" style="padding-top:0.4rem;padding-bottom:0.4rem;" />
         </label>
+        <label id="topicLureNameRow" class="hidden block">
+          <span class="text-sm text-slate-300">ルアー名</span>
+          <div class="mt-1 flex gap-2">
+            <input id="inpLureName" type="text" placeholder="ルアー名を入力または選択" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" />
+            <button id="btnPickLureName" type="button" class="px-3 py-2 rounded-xl border border-slate-700 hover:bg-slate-800 text-sm">選択</button>
+          </div>
+        </label>
         <label class="block">
           <span class="text-sm text-slate-300">内容</span>
           <textarea id="inpTopicContent" placeholder="具体的な内容を入力してください" class="mt-1 w-full h-24 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 resize-none"></textarea>
@@ -1478,6 +1509,25 @@
     </div>
   </div>
 
+  <div id="lurePickerModal" class="hidden fixed inset-0 z-50 bg-black/60 grid place-items-center p-4">
+    <div class="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-slate-900 border border-slate-800 p-4" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="font-semibold">ルアーを選択</h3>
+        <button id="btnCloseLurePicker" class="text-slate-400 hover:text-slate-200">×</button>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <div class="text-xs text-slate-400 mb-1">最近使用 TOP5</div>
+          <div id="lureTop5List" class="grid grid-cols-1 gap-1"></div>
+        </div>
+        <div>
+          <div class="text-xs text-slate-400 mb-1">全ルアー（昇順）</div>
+          <div id="lureAllList" class="grid grid-cols-1 gap-1"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="tripModal" class="hidden fixed inset-0 z-20 bg-black/60 grid place-items-center p-4">
     <div class="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-slate-900 border border-slate-800 p-4" onclick="event.stopPropagation()">
       <div class="flex items-center justify-between mb-2">
@@ -1486,22 +1536,25 @@
       </div>
       <div class="space-y-3">
         <label class="block"><span class="text-sm text-slate-300">開始日時（空ならEXIFから補完）</span>
-          <input id="inpTripStart" type="text" placeholder="yyyy/mm/dd hh:mm" maxlength="16" inputmode="numeric" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" />
+          <input id="inpTripStart" type="datetime-local" step="60" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" />
         </label>
         <label class="block"><span class="text-sm text-slate-300">終了日時（未入力の場合、終了時に再確認）</span>
-          <input id="inpTripEnd" type="text" placeholder="yyyy/mm/dd hh:mm" maxlength="16" inputmode="numeric" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" />
+          <input id="inpTripEnd" type="datetime-local" step="60" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" />
         </label>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <label class="block">
-            <span class="text-sm text-slate-300">緯度（任意）</span>
-            <input id="inpTripLat" type="number" step="any" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" />
-          </label>
-          <label class="block">
-            <span class="text-sm text-slate-300">経度（任意）</span>
-            <input id="inpTripLng" type="number" step="any" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" />
-          </label>
-        </div>
-        <p class="text-xs text-slate-400">※ 緯度・経度があると、開始天気・開始潮汐・水温を自動取得します。</p>
+        <details class="rounded-xl border border-slate-700 bg-slate-950 p-3">
+          <summary class="cursor-pointer text-sm text-slate-300 font-semibold">緯度・経度入力（任意）</summary>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+            <label class="block">
+              <span class="text-sm text-slate-300">緯度（任意）</span>
+              <input id="inpTripLat" type="number" step="any" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" />
+            </label>
+            <label class="block">
+              <span class="text-sm text-slate-300">経度（任意）</span>
+              <input id="inpTripLng" type="number" step="any" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" />
+            </label>
+          </div>
+          <p class="text-xs text-slate-400 mt-2">※ 緯度・経度があると、開始天気・開始潮汐・水温を自動取得します。</p>
+        </details>
         <!-- ★追加：マップから港選択ボタン -->
         <button type="button" onclick="(async () => { await openMapModalForManualTrip(parseFloat(inpTripLat.value) || 34.6165, parseFloat(inpTripLng.value) || 135.0224, (port) => { inpTripLat.value = port.lat; inpTripLng.value = port.lon; }); })()" class="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-semibold transition flex items-center justify-center gap-2">
           📍 マップから港を選択
@@ -2126,6 +2179,12 @@
       if (name === 'trips') {
         loadTripsFilterConditions();
       }
+
+      if (name === 'settings') {
+        renderLureMasterSettings().catch((err) => {
+          console.warn('[LureMaster] settings render failed:', err?.message || err);
+        });
+      }
       
       // ★追加：バージョン情報フッターはホーム画面でのみ表示
       const versionFooter = document.getElementById('versionFooter');
@@ -2157,6 +2216,12 @@
       if (!d || isNaN(d.getTime())) return '';
       const pad = n => String(n).padStart(2,'0');
       return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function toDatetimeLocalValue(d){
+      if (!d || isNaN(d.getTime())) return '';
+      const pad = n => String(n).padStart(2,'0');
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     }
 
     // ★追加（v1.5.2b）：ISO タイムスタンプ文字列の秒を 00 に正規化
@@ -3723,7 +3788,7 @@
         catchesHasMore = !!result?.meta?.hasMore;
         catchesServerOffset = Number(result?.meta?.nextOffset ?? currentCatchListItems.length);
 
-        renderRemoteList(currentCatchListItems); // tripId 経由で月情報を付与して描画
+        // setupMapping() の初回プレビュー描画で一覧は1回描画されるため、ここでは重複描画しない
         updateCatchCount(catchesTotalCount, currentCatchListItems.length);
         if (btnLoadMoreCatches) btnLoadMoreCatches.classList.toggle('hidden', !catchesHasMore);
         hasLoadedOnce = true;
@@ -4029,6 +4094,9 @@
       const headers = rows[0].map(h=>String(h||'').trim());
       const tripIdx = headers.findIndex(h => h === 'tripId');
       const timestampIdx = headers.findIndex(h => h === 'timestamp');
+      const methodIdx = headers.findIndex(h => h === 'method');
+      const photoThumbIdx = headers.findIndex(h => h === 'photo_thumb_url');
+      const photoViewIdx = headers.findIndex(h => h === 'photo_view_url');
       const wtCIdx = headers.findIndex(h => h === 'water_temp_c');
       const wtPIdx = headers.findIndex(h => h === 'water_temp_point');
       const wtTIdx = headers.findIndex(h => h === 'water_temp_time');
@@ -4040,15 +4108,18 @@
         const tripId = (tripIdx>=0) ? (r[tripIdx] ?? '') : '';
         const timestamp = (timestampIdx>=0) ? (r[timestampIdx] ?? '') : '';  // ★追加：timestamp を直接取得
         const tripMoon = tripsById && tripId ? (tripsById[String(tripId)] || null) : null;
+        const fallbackThumb = photoThumbIdx >= 0 ? (r[photoThumbIdx] ?? '') : '';
+        const fallbackView = photoViewIdx >= 0 ? (r[photoViewIdx] ?? '') : '';
+        const photoValue = String(fallbackThumb || fallbackView || '').trim();
 
         out.push({
         tripId,
         timestamp,  // ★追加：timestamp プロパティを含める
         // 既存マッピング
-        photo:get(r,mapPhoto), date:get(r,mapDate), time:get(r,mapTime), species:get(r,mapSpecies), size:get(r,mapSize),
+        photo:photoValue, date:get(r,mapDate), time:get(r,mapTime), species:get(r,mapSpecies), size:get(r,mapSize),
         place:get(r,mapPlace), lat:get(r,mapLat), lng:get(r,mapLng), tideName:get(r,mapTideName), tideLevel:get(r,mapTideLevel),
         tideTrend:get(r,mapTideTrend), tide_high_times:get(r,mapHighTide), tide_low_times:get(r,mapLowTide), notes:get(r,mapNotes),
-        weight:'', method:'',
+        weight:'', method:(methodIdx >= 0 ? (r[methodIdx] ?? '') : ''),
         // 追加: 月情報（Trips 由来）
         moon_visual: tripMoon?.moon_visual || '',
         moon_age: tripMoon?.moon_age || '',
@@ -4063,32 +4134,74 @@
       return out;
     }
 
+    const NO_PHOTO_THUMB = './assets/nophotoimage300.png';
+    const NO_PHOTO_DETAIL = './assets/nophotoimage300.png';
+
+    function isNoPhotoUrl(url) {
+      const s = String(url || '');
+      return s.includes('nophotoimage300.png');
+    }
+
+    function addImageRetryQuery(url, attempt) {
+      const s = String(url || '').trim();
+      if (!s || s.startsWith('data:')) return s;
+      try {
+        const u = new URL(s, window.location.href);
+        u.searchParams.set('_img_retry', `${attempt}-${Date.now()}`);
+        return u.toString();
+      } catch (_) {
+        return s;
+      }
+    }
+
     const DRIVE_THUMB_SZ = 'w1200';
+
+    function buildDriveViewUrl(id, resourceKey) {
+      let url = `https://drive.google.com/thumbnail?id=${id}&sz=${DRIVE_THUMB_SZ}`;
+      if (resourceKey) url += `&resourcekey=${resourceKey}`;
+      return url;
+    }
+
     function resolvePhotoUrl(raw, type = 'thumbnail'){
       if (!raw) {
         return type === 'detail' 
-          ? '/Fish_Log/assets/nophotoimame600.png'
-          : '/Fish_Log/assets/nophotoimame200.png';
+          ? NO_PHOTO_DETAIL
+          : NO_PHOTO_THUMB;
       }
       let s = String(raw).trim();
+      // HTMLエンティティ混在（&amp;）でもDriveのid抽出ができるように正規化
+      s = s.replace(/&amp;/gi, '&');
       const urlInText = s.match(/https?:\/\/[^\s")]+/i);
       if (urlInText) s = urlInText[0];
       if (/^https?:\/\/(?:lh\d+\.googleusercontent\.com|drive\.google\.com\/thumbnail)/i.test(s)) return s;
+
       let id = null, resourceKey = null;
+      // URL APIで取れる場合は最優先でid/resourcekeyを抽出
+      try {
+        const u = new URL(s);
+        if (/drive\.google\.com$/i.test(u.hostname)) {
+          const sid = u.searchParams.get('id');
+          const skey = u.searchParams.get('resourcekey');
+          if (sid) id = sid;
+          if (skey) resourceKey = skey;
+          if (!id) {
+            const pm = u.pathname.match(/\/file\/d\/([^/]+)/i);
+            if (pm) id = pm[1];
+          }
+        }
+      } catch (_) {}
+
       const mFile = s.match(/https?:\/\/drive\.google\.com\/file\/d\/([^/]+)/i);
-      if (mFile) id = mFile[1];
+      if (!id && mFile) id = mFile[1];
       const mId = s.match(/[?&]id=([^&]+)/i);
       if (!id && mId) id = mId[1];
       const mKey = s.match(/[?&]resourcekey=([^&]+)/i);
-      if (mKey) resourceKey = mKey[1];
+      if (!resourceKey && mKey) resourceKey = mKey[1];
       if (!id && /^[A-Za-z0-9_-]{10,}$/.test(s) && s.indexOf('http') !== 0) id = s;
-      if (id){
-        let url = `https://drive.google.com/thumbnail?id=${id}&sz=${DRIVE_THUMB_SZ}`;
-        if (resourceKey) url += `&resourcekey=${resourceKey}`;
-        return url;
-      }
+      if (id) return buildDriveViewUrl(id, resourceKey);
+
       if (s.startsWith('http') || s.startsWith('data:')) return s;
-      return '';
+      return type === 'detail' ? NO_PHOTO_DETAIL : NO_PHOTO_THUMB;
     }
 
     // バッジ（一覧と同じトーン）
@@ -4125,6 +4238,150 @@
       if (current === target) return;
       img.src = target;
     }
+    // ★追加：サムネイル読み込み診断ログ
+    function setImageSrcWithDiagnostics(img, nextUrl, context = {}, options = {}) {
+      if (!img) return;
+      const target = String(nextUrl || '').trim();
+      const current = String(img.getAttribute('src') || '').trim();
+      const maxRetries = Number.isFinite(options.maxRetries) ? Math.max(0, Number(options.maxRetries)) : 2;
+      const placeholderUrl = options.placeholderUrl || NO_PHOTO_THUMB;
+
+      const logResourceTiming = (label, effectiveUrl) => {
+        try {
+          const key = String(effectiveUrl || target || '').trim();
+          if (!key || !window.performance || typeof performance.getEntriesByName !== 'function') {
+            return;
+          }
+          setTimeout(() => {
+            const entries = performance.getEntriesByName(key);
+            const last = entries && entries.length ? entries[entries.length - 1] : null;
+            if (!last) {
+              console.log('[ThumbDiag] timing not found', { ...context, label, url: key });
+              return;
+            }
+            console.log('[ThumbDiag] timing', {
+              ...context,
+              label,
+              name: last.name,
+              initiatorType: last.initiatorType,
+              duration: last.duration,
+              transferSize: last.transferSize,
+              encodedBodySize: last.encodedBodySize,
+              decodedBodySize: last.decodedBodySize,
+              redirectStart: last.redirectStart,
+              redirectEnd: last.redirectEnd,
+              responseStart: last.responseStart,
+              responseEnd: last.responseEnd
+            });
+          }, 0);
+        } catch (e) {
+          console.warn('[ThumbDiag] timing read failed', { ...context, error: e?.message || e });
+        }
+      };
+
+      if (!target) {
+        console.warn('[ThumbDiag] empty url -> fallback no_photo', context);
+        setImageSrcIfChanged(img, placeholderUrl);
+        return;
+      }
+      if (current === target) {
+        console.log('[ThumbDiag] skip same url', { ...context, url: target });
+        return;
+      }
+
+      let attempt = 0;
+      const run = () => {
+        const attemptUrl = attempt === 0 ? target : addImageRetryQuery(target, attempt);
+        const attemptContext = { ...context, attempt: attempt + 1, maxAttempts: maxRetries + 1, url: attemptUrl };
+
+        const onLoad = () => {
+          delete img.dataset.imageLoadError;
+          console.log('[ThumbDiag] load success', {
+            ...attemptContext,
+            currentSrc: img.currentSrc || img.src || '',
+            naturalWidth: img.naturalWidth || 0,
+            naturalHeight: img.naturalHeight || 0
+          });
+          logResourceTiming('load', img.currentSrc || img.src || attemptUrl);
+        };
+
+        const onError = () => {
+          logResourceTiming('error', img.currentSrc || img.src || attemptUrl);
+          if (!isNoPhotoUrl(target) && attempt < maxRetries) {
+            console.warn('[ThumbDiag] load error retry', attemptContext);
+            attempt++;
+            run();
+            return;
+          }
+
+          img.dataset.imageLoadError = '1';
+          console.error('[ThumbDiag] load error final', {
+            ...attemptContext,
+            currentSrc: img.currentSrc || img.src || ''
+          });
+
+          if (isNoPhotoUrl(target)) {
+            return;
+          }
+
+          // 画像ロード失敗後も処理継続（UIは no_photo を表示）
+          setImageSrcIfChanged(img, placeholderUrl);
+        };
+
+        img.addEventListener('load', onLoad, { once: true });
+        img.addEventListener('error', onError, { once: true });
+
+        console.log('[ThumbDiag] set src', attemptContext);
+        setImageSrcIfChanged(img, attemptUrl);
+      };
+
+      run();
+    }
+
+    // ★追加：詳細表示時の画像ロードを同時4件までに制限
+    function createImageLoadQueue(maxConcurrent = 4) {
+      const limit = Math.max(1, Number(maxConcurrent) || 4);
+      const queue = [];
+      let active = 0;
+
+      const pump = () => {
+        while (active < limit && queue.length > 0) {
+          const task = queue.shift();
+          active++;
+          Promise.resolve()
+            .then(task)
+            .catch(() => {})
+            .finally(() => {
+              active--;
+              pump();
+            });
+        }
+      };
+
+      return {
+        enqueue(img, nextUrl, context = {}, options = {}) {
+          const item = {
+            fn: () => {
+              console.log('[ThumbDiag] queue start', { ...context, url: String(nextUrl || '') });
+              setImageSrcWithDiagnostics(img, nextUrl, context, options);
+            },
+            context,
+            url: String(nextUrl || '')
+          };
+          console.log('[ThumbDiag] queue enqueue', {
+            ...context,
+            url: item.url,
+            active,
+            queued: queue.length + 1,
+            limit
+          });
+          queue.push(() => {
+            item.fn();
+          });
+          pump();
+        }
+      };
+    }
 
     // ★追加：リモート一覧複䔺用
     let remoteListItems = [];
@@ -4133,6 +4390,7 @@
       // 一覧カードをタップでモーダル表示
       remoteCatchList.innerHTML = '';
       closeCatchDetailModal();
+      const summaryImageQueue = createImageLoadQueue(3);
 
       // ★追加：renderCatchTideGraph 用に一時保存
       remoteListItems = items;
@@ -4150,7 +4408,19 @@
         const img = document.createElement('img');
         img.className = 'w-24 h-24 object-cover rounded-xl bg-slate-950';
         img.alt = 'photo';
-        setImageSrcIfChanged(img, resolvePhotoUrl(it.photo) || '');
+        summaryImageQueue.enqueue(
+          img,
+          resolvePhotoUrl(it.photo) || '',
+          {
+            section: 'catches-list-summary',
+            itemIndex: idx,
+            species: it.species || ''
+          },
+          {
+            maxRetries: 2,
+            placeholderUrl: NO_PHOTO_THUMB
+          }
+        );
         summary.appendChild(img);
 
         const info = document.createElement('div');
@@ -4209,7 +4479,7 @@
           <div class="grid sm:grid-cols-2 gap-4 mt-1">
             <div>
               <img
-                src="${resolvePhotoUrlDetail(it.photo) || ''}"
+                src="${NO_PHOTO_DETAIL}"
                 alt="photo"
                 class="w-full h-auto max-h-[70vh] object-contain rounded-xl bg-slate-900"
               />
@@ -4268,6 +4538,22 @@
         `;
         wrap.addEventListener('click', () => {
           openCatchDetailModal(detail);
+          const detailImg = detail.querySelector('img[alt="photo"]');
+          if (detailImg) {
+            setImageSrcWithDiagnostics(
+              detailImg,
+              resolvePhotoUrlDetail(it.photo) || '',
+              {
+                section: 'catches-detail-photo',
+                itemIndex: idx,
+                species: it.species || ''
+              },
+              {
+                maxRetries: 2,
+                placeholderUrl: NO_PHOTO_DETAIL
+              }
+            );
+          }
           setTimeout(() => {
             renderCatchTideGraph(idx, it);
           }, 100);
@@ -4545,7 +4831,7 @@
 
       const img = `
         <img
-          src="${resolvePhotoUrlDetail(it.photo) || ''}"
+          src="${NO_PHOTO_DETAIL}"
           alt="photo"
           class="w-full h-auto max-h-[70vh] object-contain rounded-xl border border-slate-800 bg-slate-900"
         />
@@ -4615,6 +4901,22 @@
         ${notesCard}
       `;
 
+      const detailImg = body.querySelector('img[alt="photo"]');
+      if (detailImg) {
+        setImageSrcWithDiagnostics(
+          detailImg,
+          resolvePhotoUrlDetail(it.photo) || '',
+          {
+            section: 'catches-modal-photo',
+            species: it.species || ''
+          },
+          {
+            maxRetries: 2,
+            placeholderUrl: NO_PHOTO_DETAIL
+          }
+        );
+      }
+
       wrap.classList.remove('hidden');
     }
 
@@ -4638,7 +4940,7 @@
     // ===== PWA: Service Worker 登録 =====
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=4.0.3', {
+        navigator.serviceWorker.register('./sw.js?v=4.1.0', {
           scope: './'
         })
           .then(registration => {
@@ -4727,6 +5029,7 @@
 
     // ===== 釣行ドラフト =====
     const LS_KEY='fishtrip_draft_v1';
+    const TRIP_EDIT_SESSION_KEY = 'fishtrip_trip_edit_session_v1';
     // ★修正：UUID 生成を堅牢化（crypto.randomUUID 利用可能なら優先、fallback は UUIDv4 パターン）
     const uuid = () => {
       if (crypto?.randomUUID) return crypto.randomUUID();
@@ -4843,11 +5146,101 @@
           console.warn('[Draft] IndexedDB save failed:', err.message);
         }
       }
+
+      if (tripEditSessionActive) {
+        saveTripEditSessionState();
+      }
     };
     // ★修正（v1.5.2b）：秒を表示しない（分までとする）
     const fmtLocal = iso => { try{return new Date(iso).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });}catch{return '—'}; };
 
     let draft = loadDraft();
+    let tripEditSessionActive = false;
+    let tripEditSessionSaveTimer = null;
+
+    function scheduleTripEditSessionSave() {
+      if (!tripEditSessionActive) return;
+      if (tripEditSessionSaveTimer) clearTimeout(tripEditSessionSaveTimer);
+      tripEditSessionSaveTimer = setTimeout(() => {
+        tripEditSessionSaveTimer = null;
+        saveTripEditSessionState();
+      }, 250);
+    }
+
+    function hideTripEditBottomButtons() {
+      const btnCancelTripEditBtn = document.getElementById('btnCancelTripEdit');
+      const btnSaveTripEditBtn = document.getElementById('btnSaveTripEdit');
+      if (btnCancelTripEditBtn) btnCancelTripEditBtn.style.cssText = 'display: none !important;';
+      if (btnSaveTripEditBtn) btnSaveTripEditBtn.style.cssText = 'display: none !important;';
+    }
+
+    function showTripEditBottomButtons() {
+      const btnCancelTripEditBtn = document.getElementById('btnCancelTripEdit');
+      const btnSaveTripEditBtn = document.getElementById('btnSaveTripEdit');
+      if (btnCancelTripEditBtn) btnCancelTripEditBtn.style.cssText = '';
+      if (btnSaveTripEditBtn) btnSaveTripEditBtn.style.cssText = '';
+    }
+
+    function readTripEditSessionState() {
+      try {
+        const raw = localStorage.getItem(TRIP_EDIT_SESSION_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return null;
+        return parsed;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function clearTripEditSessionState() {
+      try {
+        localStorage.removeItem(TRIP_EDIT_SESSION_KEY);
+      } catch (_) {}
+    }
+
+    function saveTripEditSessionState() {
+      if (!tripEditSessionActive || !draft?.tripId) return;
+      try {
+        const payload = {
+          version: 1,
+          savedAt: new Date().toISOString(),
+          tripId: String(draft.tripId),
+          draft: draft,
+          tripEditOriginalRaw: tripEditOriginalRaw || null,
+          form: {
+            startedAt: editTripStarted ? String(editTripStarted.value || '') : '',
+            endedAt: editTripEnded ? String(editTripEnded.value || '') : '',
+            lat: editTripLat ? String(editTripLat.value || '') : '',
+            lng: editTripLng ? String(editTripLng.value || '') : '',
+            memo: document.getElementById('editTripMemo') ? String(document.getElementById('editTripMemo').value || '') : ''
+          }
+        };
+        localStorage.setItem(TRIP_EDIT_SESSION_KEY, JSON.stringify(payload));
+      } catch (err) {
+        console.warn('[TripEditSession] save failed:', err?.message || err);
+      }
+    }
+
+    function restoreTripEditSessionStateIfAny() {
+      const saved = readTripEditSessionState();
+      if (!saved || String(saved.tripId || '') !== String(draft?.tripId || '')) return;
+
+      if (saved.draft && typeof saved.draft === 'object') {
+        draft = normalizeDraftTopics(saved.draft);
+      }
+      if (saved.tripEditOriginalRaw && typeof saved.tripEditOriginalRaw === 'object') {
+        tripEditOriginalRaw = saved.tripEditOriginalRaw;
+      }
+
+      const f = saved.form || {};
+      if (editTripStarted && typeof f.startedAt === 'string') editTripStarted.value = f.startedAt;
+      if (editTripEnded && typeof f.endedAt === 'string') editTripEnded.value = f.endedAt;
+      if (editTripLat && typeof f.lat === 'string') editTripLat.value = f.lat;
+      if (editTripLng && typeof f.lng === 'string') editTripLng.value = f.lng;
+      const editTripMemoEl = document.getElementById('editTripMemo');
+      if (editTripMemoEl && typeof f.memo === 'string') editTripMemoEl.value = f.memo;
+    }
     
     // ★追加：アップロード状態管理
     let isUploading = false;
@@ -5176,7 +5569,7 @@
       // 既存の“追加モーダル”をそのまま利用
       editMode=false; editingId=null; 
       catchForm={ id:uuid(), timestamp:nowIsoLocal(), species:'', size_cm:null, weight_g:null, method:'', photoPreviewUrl:undefined };
-      try{ inpCatchTime.value = toLocalInputValue(new Date(catchForm.timestamp)); }catch{ inpCatchTime.value=''; }
+      try{ inpCatchTime.value = toDatetimeLocalValue(new Date(catchForm.timestamp)); }catch{ inpCatchTime.value=''; }
       inpSpecies.value=''; inpSize.value=''; inpWeight.value=''; inpMethod.value=''; inpPhoto.value='';
       imgPreview.src=''; imgPreview.classList.add('hidden');
       openManualPhotoUploadModal();
@@ -7885,7 +8278,7 @@
         // 未開始時：釣行開始ボタン
         const b=document.createElement('button'); 
         b.textContent='Go Fishing';
-        b.className='w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-semibold text-white';
+        b.className='go-fishing-btn w-full py-2 rounded-xl font-semibold text-white';
         b.onclick=startTrip; 
         buttonRow.appendChild(b);
       } else if (draft.status==='ended'){
@@ -8022,13 +8415,25 @@
         if (entry.kind === 'catch') {
           const wrap = document.createElement('div');
           wrap.className = 'timeline-catch-main';
-          const thumbSrc = entry.catchData?.photoDriveThumbUrl || entry.catchData?.photoDriveUrl || entry.catchData?.photoPreviewUrl || '';
+          const thumbSrc = entry.catchData?.photoDriveUrl || '';
           let thumb;
           if (thumbSrc) {
             thumb = document.createElement('img');
-            thumb.src = thumbSrc;
             thumb.alt = 'catch';
             thumb.className = 'timeline-catch-thumb';
+            setImageSrcWithDiagnostics(
+              thumb,
+              resolvePhotoUrl(thumbSrc) || '',
+              {
+                section: 'record-timeline-catch',
+                catchId: entry?.catchData?.id || '',
+                species: entry?.catchData?.species || ''
+              },
+              {
+                maxRetries: 2,
+                placeholderUrl: NO_PHOTO_THUMB
+              }
+            );
           } else {
             thumb = document.createElement('div');
             thumb.className = 'timeline-catch-thumb';
@@ -9300,7 +9705,7 @@
             console.log('[uploadReviewModal] 🔓 Body overflow state managed (tripCard click)');
             
             // ★強制的に display を設定（inline style で上書き）
-            tripEditModal.style.display = 'grid';
+            tripEditModal.style.display = '';
             
             // ★スクロール位置をモーダルに合わせる
             tripEditModal.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -9403,6 +9808,7 @@
         // タップ時にモーダルを開き、Catches シートから tripId で該当釣果を読み込み
         wrap.addEventListener('click', async () => {
           openTripDetailModal(detail);
+          const detailImageQueue = createImageLoadQueue(4);
 
           // ★追加：潮汐グラフを描画（釣果読み込みの前）
           try {
@@ -9417,6 +9823,22 @@
               try {
                 const raw = await loadTripRawWithFallback(thisTripId, colMap.raw_json >= 0 ? tripRow[colMap.raw_json] : null);
                 const startTide = raw?.start_tide;
+
+                const tripRawThumbUrls = Array.isArray(raw?.catches)
+                  ? raw.catches.map((c, idx) => ({
+                      idx,
+                      id: c?.id || null,
+                      photoDriveThumbUrl: c?.photoDriveThumbUrl || null,
+                      photoDriveUrl: c?.photoDriveUrl || null,
+                      photoFileId: c?.photoFileId || null
+                    }))
+                  : [];
+                console.log('[ThumbDiag] trip_raw thumbnail urls', {
+                  tripId: thisTripId,
+                  totalCatches: Array.isArray(raw?.catches) ? raw.catches.length : 0,
+                  urlCount: tripRawThumbUrls.filter(x => x.photoDriveThumbUrl || x.photoDriveUrl || x.photoFileId).length,
+                  items: tripRawThumbUrls
+                });
 
                 if (startTide && startTide.chart) {
                   const canvas = detail.querySelector('[data-role="trip-tide-canvas"]');
@@ -9578,7 +10000,7 @@
 
             eventsScrollEl.classList.remove('hidden');
 
-            entries.forEach((entry) => {
+            entries.forEach((entry, entryIndex) => {
               const li = document.createElement('li');
               li.className = `timeline-item ${entry.kind === 'event-start' ? 'start' : ''} ${entry.kind === 'event-end' ? 'end' : ''} ${entry.kind === 'catch' ? 'catch' : ''} ${entry.variant || ''}`;
               li.style.cursor = 'default';
@@ -9602,7 +10024,18 @@
                 const thumb = document.createElement('img');
                 thumb.className = 'timeline-catch-thumb';
                 thumb.alt = 'catch';
-                setImageSrcIfChanged(thumb, resolvePhotoUrl(entry.photo || '') || '');
+                const resolvedThumbUrl = resolvePhotoUrl(entry.photo || '') || '';
+                detailImageQueue.enqueue(
+                  thumb,
+                  resolvedThumbUrl,
+                  {
+                    tripId: thisTripId,
+                    section: 'trip-events-timeline',
+                    kind: entry.kind,
+                    index: entryIndex,
+                    species: entry.main || ''
+                  }
+                );
                 const main = document.createElement('div');
                 main.className = 'timeline-main';
                 main.textContent = entry.main;
@@ -9657,21 +10090,37 @@
               });
             }
 
+            console.log('[ThumbDiag] sheet thumbnail source rows', {
+              tripId: thisTripId,
+              count: items.length,
+              photos: items.map((x, idx) => ({ idx, species: x.species || '', photo: x.photo || '' }))
+            });
+
             renderTripEventsTimeline(items);
 
-            loadingEl.remove();
+            if (loadingEl) loadingEl.remove();
             if (!items.length){
               const empty = document.createElement('div');
               empty.className = 'text-sm text-slate-500';
               empty.textContent = '該当する釣果はありません。';
               listEl.appendChild(empty);
             }else{
-              items.forEach(c=>{
+              items.forEach((c, itemIndex)=>{
                 const card = document.createElement('div');
                 card.className = 'rounded-lg bg-slate-900 border border-slate-800 py-3 px-1.5 flex gap-3 items-start';
                 const img = document.createElement('img');
                 img.className = 'w-20 h-20 object-cover rounded-lg bg-slate-950';
-                setImageSrcIfChanged(img, resolvePhotoUrl(c.photo) || '');
+                const resolvedCardUrl = resolvePhotoUrl(c.photo) || '';
+                detailImageQueue.enqueue(
+                  img,
+                  resolvedCardUrl,
+                  {
+                    tripId: thisTripId,
+                    section: 'trip-catches-card-list',
+                    index: itemIndex,
+                    species: c.species || ''
+                  }
+                );
                 img.alt = 'photo';
                 card.appendChild(img);
 
@@ -9694,7 +10143,11 @@
             }
           }catch(e){
             renderTripEventsTimeline([]);
-            loadingEl.textContent = '読み込みに失敗しました。';
+            if (loadingEl) {
+              loadingEl.textContent = '読み込みに失敗しました。';
+            } else {
+              console.warn('[TripCard] loadingEl is missing while handling error:', e?.message || e);
+            }
           }
         });
 
@@ -9745,8 +10198,8 @@
         ts:     hIdx(headers,'timestamp'),
         sp:     hIdx(headers,'species'),
         size:   hIdx(headers,'size_cm'),
-        photo:  hIdx(headers,'photo_thumb_url') >=0 ? hIdx(headers,'photo_thumb_url')
-              : (hIdx(headers,'photo_view_url') >=0 ? hIdx(headers,'photo_view_url') : hIdx(headers,'photo_file_id')),
+            photo:  hIdx(headers,'photo_thumb_url') >=0 ? hIdx(headers,'photo_thumb_url')
+              : hIdx(headers,'photo_view_url'),
         tideName:  hIdx(headers,'tide_name'),
         tideTrend: hIdx(headers,'tide_trend'),
         tideLevel: hIdx(headers,'tide_level_cm'),
@@ -9765,7 +10218,19 @@
         const img = document.createElement('img');
         img.className = 'w-20 h-20 object-cover rounded-lg border border-slate-800 bg-slate-950';
         img.alt = 'photo';
-        setImageSrcIfChanged(img, resolvePhotoUrl(r[cidx.photo] || '') || '');
+        setImageSrcWithDiagnostics(
+          img,
+          resolvePhotoUrl(r[cidx.photo] || '') || '',
+          {
+            section: 'trip-mini-cards',
+            tripId,
+            catchIndex: i
+          },
+          {
+            maxRetries: 2,
+            placeholderUrl: NO_PHOTO_THUMB
+          }
+        );
         card.appendChild(img);
 
         const info = document.createElement('div');
@@ -9829,6 +10294,7 @@
         }
         draft.status='active'; draft.startedAt=nowIsoLocal();
         startedThisCall = true;
+        resetAndPrefetchLureMasterOnTripStart();
 
         if (navigator.geolocation){
           console.log('[startTrip] 📍 Getting GPS location...');
@@ -10296,7 +10762,7 @@
       editMode=true; editingId=id; modalTitle.textContent='釣果を編集'; catchForm={...c};
       // ★追加：編集開始時の snapshot を保存（ロールバック用）
       catchFormSnapshot = JSON.parse(JSON.stringify(c));
-      try{ inpCatchTime.value = toLocalInputValue(new Date(catchForm.timestamp)); }catch{ inpCatchTime.value=''; }
+      try{ inpCatchTime.value = toDatetimeLocalValue(new Date(catchForm.timestamp)); }catch{ inpCatchTime.value=''; }
       inpSpecies.value=catchForm.species||''; inpSize.value=(catchForm.size_cm??''); inpWeight.value=(catchForm.weight_g??''); inpMethod.value=catchForm.method||'';
       inpPhoto.value=''; if (catchForm.photoPreviewUrl){ imgPreview.src=catchForm.photoPreviewUrl; imgPreview.classList.remove('hidden'); } else { imgPreview.src=''; imgPreview.classList.add('hidden'); }
 
@@ -10454,8 +10920,11 @@
 
         // モーダルを表示
         console.log('[CloseCatchModal] Before showing modal - current display:', window.getComputedStyle(tripEditModal).display);
-        tripEditModal.style.display = 'grid';
+        tripEditModal.style.display = '';
         tripEditModal.classList.remove('hidden');
+        showTripEditBottomButtons();
+        tripEditSessionActive = true;
+        saveTripEditSessionState();
         console.log('[CloseCatchModal] After showing modal - display:', tripEditModal.style.display, 'classes:', tripEditModal.className);
       }
     }
@@ -10463,6 +10932,12 @@
     // ★追加：キャンセルしてホームに戻る際、データをクリアする関数
     function cancelAndReturnHome(){
       clearUploadReviewBackup();
+
+      if (window._returnToTripEditAfterCatch) {
+        closeCatchModal();
+        showTripEditBottomButtons();
+        return;
+      }
       
       // ★修正：編集モード時は snapshot からロールバック
       if (editMode && catchFormSnapshot) {
@@ -10961,7 +11436,7 @@
         catchForm.photoFileId = manualMetadata.photoFileId || '';
         catchForm.photoDriveUrl = manualMetadata.photoDriveUrl || '';
         catchForm.photoDriveThumbUrl = manualMetadata.photoDriveThumbUrl || '';
-        catchForm.photoPreviewUrl = manualMetadata.previewDataUrl || manualMetadata.photoDriveThumbUrl || '';
+        catchForm.photoPreviewUrl = manualMetadata.previewDataUrl || manualMetadata.photoDriveUrl || '';
         if (typeof manualMetadata.lat === 'number' && typeof manualMetadata.lng === 'number') {
           catchForm.exif_lat = manualMetadata.lat;
           catchForm.exif_lng = manualMetadata.lng;
@@ -11254,7 +11729,7 @@
 
       // ★追加: 手動入力からの保存時に“釣行中”へ自動遷移 & 開始時刻補完
      // ★変更: 手動入力の保存時は start 時刻をここでは入れない（後で補完ロジックに任せる）
-      if (draft.status !== 'active') {
+      if (draft.status !== 'active' && !window._returnToTripEditAfterCatch && !tripEditSessionActive) {
         draft.status = 'active';
         // draft.startedAt は空のまま維持（null/undefined）
         draft.manualStarted = true;  // 手動開始フラグのみ設定
@@ -11638,9 +12113,25 @@
     const btnCancelTripModal = document.getElementById('btnCancelTripModal');
     const btnSaveTrip   = document.getElementById('btnSaveTrip');
 
-    [inpCatchTime, editFormCatchTime, inpTripStart, inpTripEnd, editTripStarted, editTripEnded]
+    [editFormCatchTime, editTripStarted, editTripEnded]
       .filter(Boolean)
       .forEach(applyNumericDatetimeMask);
+
+    [
+      editTripStarted,
+      editTripEnded,
+      editTripLat,
+      editTripLng,
+      editFormCatchTime,
+      document.getElementById('editTripMemo'),
+      document.getElementById('editFormCatchSpecies'),
+      document.getElementById('editFormCatchSize'),
+      document.getElementById('editFormCatchWeight'),
+      document.getElementById('editFormCatchMethod')
+    ].filter(Boolean).forEach((el) => {
+      el.addEventListener('input', scheduleTripEditSessionSave);
+      el.addEventListener('change', scheduleTripEditSessionSave);
+    });
 
     // ★修正：釣行モーダルのキャンセルボタン
     if (btnCloseTripModal) btnCloseTripModal.onclick = ()=> {
@@ -12571,50 +13062,11 @@
         }
         draft.end_weather = endWx || null;
         
-        // ★追加：潮汐チャート画像を取得・アップロード
-        console.log('[openTripReview:Manual] ★ Starting tide image fetch for manual trip');
-        console.log('[openTripReview:Manual] Trip details:', {
-          startedAt: draft.startedAt,
-          endedAt: draft.endedAt,
-          flag: draft.shouldFetchTideImages,
-          catches: draft.catches.length
-        });
-        try {
-          const tideResult = await fetchAndUploadTideImages(draft.startedAt, draft.endedAt);
-          console.log('[openTripReview:Manual] ✅ Tide image fetch completed:', tideResult);
-          if (tideResult.ok && tideResult.images.length > 0) {
-            draft.tide_chart_images = tideResult.images;
-            console.log('[openTripReview:Manual] ✅ Stored', tideResult.images.length, 'tide chart images');
-          } else if (tideResult.skipped) {
-            console.log('[openTripReview:Manual] ℹ️ Tide image fetch skipped:', tideResult.reason);
-          }
-        } catch (err) {
-          console.warn('[openTripReview:Manual] ❌ Tide image fetch error:', err);
-        }
+        // ★修正：確認画面では潮流画像を取得しない（保存済みデータのみ表示）
+        console.log('[openTripReview:Manual] ℹ️ Tide image fetch skipped by design');
 
-        // ★追加：天気の経過記録を取得（10分間隔）
-        console.log('[openTripReview:Manual] ★ Starting weather timeline fetch');
-        if (typeof draft.lat === 'number' && typeof draft.lng === 'number' && draft.startedAt && draft.endedAt) {
-          try {
-            const weatherTimeline = await fetchWeatherTimeline(draft.lat, draft.lng, draft.startedAt, draft.endedAt);
-            draft.weather_timeline = weatherTimeline || [];
-            console.log('[openTripReview:Manual] ✅ Weather timeline fetch completed:', {
-              count: draft.weather_timeline.length,
-              entries: draft.weather_timeline.length > 0 ? draft.weather_timeline.map(w => ({ ts: w.timestamp, temp: w.data?.temp })) : []
-            });
-          } catch (err) {
-            console.warn('[openTripReview:Manual] ❌ Weather timeline fetch error:', err);
-            draft.weather_timeline = [];
-          }
-        } else {
-          console.warn('[openTripReview:Manual] ℹ️ Weather timeline skipped (missing lat/lng/startedAt/endedAt)', {
-            hasLat: typeof draft.lat === 'number',
-            hasLng: typeof draft.lng === 'number',
-            hasStart: !!draft.startedAt,
-            hasEnd: !!draft.endedAt
-          });
-          draft.weather_timeline = [];
-        }
+        // ★修正：確認画面では天気タイムラインを再取得しない（trip_raw の既存データを使用）
+        console.log('[openTripReview:Manual] ℹ️ Weather timeline refetch skipped by design');
         
         saveDraft(draft);
 
@@ -12798,50 +13250,11 @@
       }
       pendingEnd = { endedAt: endedAtTime, end_weather: endWx };
 
-      // ★追加：潮汐チャート画像を取得・アップロード
-      console.log('[openTripReview:Normal] ★ Starting tide image fetch for normal trip');
-      console.log('[openTripReview:Normal] Trip details:', {
-        startedAt: draft.startedAt,
-        endedAt: pendingEnd.endedAt,
-        flag: draft.shouldFetchTideImages,
-        catches: draft.catches.length
-      });
-      try {
-        const tideResult = await fetchAndUploadTideImages(draft.startedAt, pendingEnd.endedAt);
-        console.log('[openTripReview:Normal] ✅ Tide image fetch completed:', tideResult);
-        if (tideResult.ok && tideResult.images.length > 0) {
-          draft.tide_chart_images = tideResult.images;
-          console.log('[openTripReview:Normal] ✅ Stored', tideResult.images.length, 'tide chart images');
-        } else if (tideResult.skipped) {
-          console.log('[openTripReview:Normal] ℹ️ Tide image fetch skipped:', tideResult.reason);
-        }
-      } catch (err) {
-        console.warn('[openTripReview:Normal] ❌ Tide image fetch error:', err);
-      }
+      // ★修正：確認画面では潮流画像を取得しない（保存済みデータのみ表示）
+      console.log('[openTripReview:Normal] ℹ️ Tide image fetch skipped by design');
 
-      // ★追加：天気の経過記録を取得（10分間隔）
-      console.log('[openTripReview:Normal] ★ Starting weather timeline fetch');
-      if (typeof draft.lat === 'number' && typeof draft.lng === 'number' && draft.startedAt && pendingEnd?.endedAt) {
-        try {
-          const weatherTimeline = await fetchWeatherTimeline(draft.lat, draft.lng, draft.startedAt, pendingEnd.endedAt);
-          draft.weather_timeline = weatherTimeline || [];
-          console.log('[openTripReview:Normal] ✅ Weather timeline fetch completed:', {
-            count: draft.weather_timeline.length,
-            entries: draft.weather_timeline.length > 0 ? draft.weather_timeline.map(w => ({ ts: w.timestamp, temp: w.data?.temp })) : []
-          });
-        } catch (err) {
-          console.warn('[openTripReview:Normal] ❌ Weather timeline fetch error:', err);
-          draft.weather_timeline = [];
-        }
-      } else {
-        console.warn('[openTripReview:Normal] ℹ️ Weather timeline skipped (missing lat/lng/startedAt/endedAt)', {
-          hasLat: typeof draft.lat === 'number',
-          hasLng: typeof draft.lng === 'number',
-          hasStart: !!draft.startedAt,
-          hasEnd: !!pendingEnd?.endedAt
-        });
-        draft.weather_timeline = [];
-      }
+      // ★修正：確認画面では天気タイムラインを再取得しない（trip_raw の既存データを使用）
+      console.log('[openTripReview:Normal] ℹ️ Weather timeline refetch skipped by design');
 
       saveDraft(draft);
       captureUploadReviewBackup();
@@ -13219,10 +13632,10 @@
 
       try {
         if (reuseDraft) {
-          inpTripStart && (inpTripStart.value = draft.startedAt ? toLocalInputValue(new Date(draft.startedAt)) : '');
+          inpTripStart && (inpTripStart.value = draft.startedAt ? toDatetimeLocalValue(new Date(draft.startedAt)) : '');
           inpTripLat   && (inpTripLat.value   = (typeof draft.lat === 'number') ? String(draft.lat) : '');
           inpTripLng   && (inpTripLng.value   = (typeof draft.lng === 'number') ? String(draft.lng) : '');
-          inpTripEnd   && (inpTripEnd.value   = draft.endedAt ? toLocalInputValue(new Date(draft.endedAt)) : '');
+          inpTripEnd   && (inpTripEnd.value   = draft.endedAt ? toDatetimeLocalValue(new Date(draft.endedAt)) : '');
         } else {
           inpTripStart && (inpTripStart.value = '');
           inpTripLat   && (inpTripLat.value   = (typeof draft.lat === 'number') ? String(draft.lat) : '');
@@ -13273,12 +13686,25 @@
       console.log('[photoUploadModal] 🔓 Body overflow unlocked (cancel)');
       manualCatchMode = false;
       manualCatchPhotoMetadata = null;
+      const returnToTripEdit = !!window._returnToTripEditAfterCatch;
       manualCatchSuppressRecordView = false;
       resetManualPhotoPreview();
       if (photoUploadModal) photoUploadModal.classList.add('hidden');
       if (photoFieldWrapper) photoFieldWrapper.classList.remove('hidden');
       if (inpCatchTime) inpCatchTime.readOnly = false;
-      
+
+      if (returnToTripEdit) {
+        if (catchModal) catchModal.classList.add('hidden');
+        if (tripEditModal) {
+          tripEditModal.style.display = '';
+          tripEditModal.classList.remove('hidden');
+        }
+        showTripEditBottomButtons();
+        tripEditSessionActive = true;
+        saveTripEditSessionState();
+        return;
+      }
+
       resetDraft();
       if (catchModal) catchModal.classList.add('hidden');
       showView('home');
@@ -13395,15 +13821,15 @@
           catchForm.exif_lat = metadata.lat;
           catchForm.exif_lng = metadata.lng;
         }
-        if (metadata.previewDataUrl || metadata.photoDriveThumbUrl) {
-          catchForm.photoPreviewUrl = metadata.previewDataUrl || metadata.photoDriveThumbUrl;
+        if (metadata.previewDataUrl || metadata.photoDriveUrl) {
+          catchForm.photoPreviewUrl = metadata.previewDataUrl || metadata.photoDriveUrl;
         }
       }
       if (inpCatchTime) {
         if (metadata?.timestamp) {
           const parsed = new Date(metadata.timestamp);
           if (!isNaN(parsed.getTime())) {
-            inpCatchTime.value = toLocalInputValue(parsed);
+            inpCatchTime.value = toDatetimeLocalValue(parsed);
             inpCatchTime.readOnly = true;
           } else {
             inpCatchTime.value = '';
@@ -13425,7 +13851,7 @@
         photoFieldWrapper.classList.toggle('hidden', !!metadata);
       }
 
-      const previewSrc = metadata?.previewDataUrl || metadata?.photoDriveThumbUrl || '';
+      const previewSrc = metadata?.previewDataUrl || metadata?.photoDriveUrl || '';
       if (previewSrc) {
         imgPreview.src = previewSrc;
         imgPreview.classList.remove('hidden');
@@ -13486,6 +13912,7 @@
       draft.startedAt     = startedIso;  // ★修正: null の場合は null のまま
       draft.manualStarted = true; // ★追加：手動開始フラグを明示的にON
       draft.endedAt       = endedIso;
+      resetAndPrefetchLureMasterOnTripStart();
       
       if (typeof lat === 'number' && typeof lng === 'number' && isFinite(lat) && isFinite(lng)) {
         draft.lat = lat;
@@ -13809,6 +14236,263 @@
       'btnTopicOther': 'その他'
     };
 
+    const LURE_MASTER_SHEET_NAME = 'LureMaster';
+    const topicLureNameRow = document.getElementById('topicLureNameRow');
+    const inpLureName = document.getElementById('inpLureName');
+    const btnPickLureName = document.getElementById('btnPickLureName');
+    const btnTopicLureQuick = document.getElementById('btnTopicLureQuick');
+    const lurePickerModal = document.getElementById('lurePickerModal');
+    const btnCloseLurePicker = document.getElementById('btnCloseLurePicker');
+    const lureTop5List = document.getElementById('lureTop5List');
+    const lureAllList = document.getElementById('lureAllList');
+    const inpLureMasterNew = document.getElementById('inpLureMasterNew');
+    const btnAddLureMaster = document.getElementById('btnAddLureMaster');
+    const lureMasterStatus = document.getElementById('lureMasterStatus');
+    const lureMasterList = document.getElementById('lureMasterList');
+
+    let lureMasterItems = [];
+    let lureMasterLoaded = false;
+
+    function normalizeLureNameInput(value) {
+      const src = String(value || '').replace(/\u3000/g, ' ');
+      const halfWidth = src.replace(/[Ａ-Ｚａ-ｚ０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0));
+      return halfWidth.trim();
+    }
+
+    function lureItemMs(item) {
+      const ms = parseLooseDateMs(item?.updated_at || item?.last_used_at || item?.created_at || '');
+      return Number.isNaN(ms) ? 0 : ms;
+    }
+
+    function getTop5LureItems(items) {
+      return (items || [])
+        .slice()
+        .sort((a, b) => lureItemMs(b) - lureItemMs(a))
+        .slice(0, 5);
+    }
+
+    function getLureItemsAsc(items) {
+      return (items || [])
+        .slice()
+        .sort((a, b) => String(a?.lure_name || '').localeCompare(String(b?.lure_name || ''), 'ja'));
+    }
+
+    function setLureMasterStatus(message, isError = false) {
+      if (!lureMasterStatus) return;
+      lureMasterStatus.textContent = message || '';
+      lureMasterStatus.classList.toggle('text-rose-300', !!isError);
+      lureMasterStatus.classList.toggle('text-slate-300', !isError);
+    }
+
+    async function postLureMasterAction(payload) {
+      await configInitPromise;
+      const latestToken = await configStorage.getItem('WORKERS_AUTH_TOKEN');
+      if (latestToken) CONFIG.API.WORKERS_AUTH_TOKEN = latestToken;
+
+      const workerUrl = (CONFIG.API.FISHING_TRIP_API_WORKER || '').replace(/\/$/, '') + '/api/upload';
+      const res = await fetch(workerUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Auth-Token': CONFIG.API.WORKERS_AUTH_TOKEN || ''
+        },
+        body: JSON.stringify(payload)
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error || `HTTP ${res.status}`);
+      }
+      return json;
+    }
+
+    async function loadLureMaster(forceReload = false) {
+      if (lureMasterLoaded && !forceReload) return lureMasterItems;
+      const loaded = await loadSheetViaGAS(LURE_MASTER_SHEET_NAME, SHEET_ID).catch(() => ({ data: [] }));
+      const rows = Array.isArray(loaded?.data) ? loaded.data : [];
+      if (!rows.length) {
+        lureMasterItems = [];
+        lureMasterLoaded = true;
+        return lureMasterItems;
+      }
+
+      const headers = (rows[0] || []).map((h) => String(h || '').trim());
+      const idx = {};
+      headers.forEach((h, i) => { idx[h] = i; });
+      const items = [];
+
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i] || [];
+        const lureName = normalizeLureNameInput(r[idx.lure_name]);
+        if (!lureName) continue;
+        items.push({
+          lure_name: lureName,
+          use_count: Number(r[idx.use_count] || 0) || 0,
+          created_at: String(r[idx.created_at] || ''),
+          updated_at: String(r[idx.updated_at] || ''),
+          last_used_at: String(r[idx.last_used_at] || '')
+        });
+      }
+
+      lureMasterItems = items;
+      lureMasterLoaded = true;
+      return lureMasterItems;
+    }
+
+    async function resetAndPrefetchLureMasterOnTripStart() {
+      lureMasterItems = [];
+      lureMasterLoaded = false;
+      try {
+        await loadLureMaster(true);
+      } catch (err) {
+        console.warn('[LureMaster] prefetch failed:', err?.message || err);
+      }
+    }
+
+    async function upsertLureMaster(lureName, options = {}) {
+      const normalized = normalizeLureNameInput(lureName);
+      if (!normalized) return null;
+      const payload = {
+        action: 'upsertLureMaster',
+        lureName: normalized,
+        incrementUse: options.incrementUse !== false
+      };
+      if (options.previousName) payload.previousName = normalizeLureNameInput(options.previousName);
+      const result = await postLureMasterAction(payload);
+      await loadLureMaster(true);
+      return result;
+    }
+
+    async function deleteLureMaster(lureName) {
+      const normalized = normalizeLureNameInput(lureName);
+      if (!normalized) return null;
+      const result = await postLureMasterAction({ action: 'deleteLureMaster', lureName: normalized });
+      await loadLureMaster(true);
+      return result;
+    }
+
+    function syncTopicLureUi(category, content = '') {
+      if (!topicLureNameRow || !inpLureName || !inpTopicContent) return;
+      const isLureTopic = category === 'ルアーチェンジ';
+      topicLureNameRow.classList.toggle('hidden', !isLureTopic);
+      if (isLureTopic) {
+        inpLureName.value = normalizeLureNameInput(inpLureName.value || content || '');
+        inpTopicContent.placeholder = '補足メモ（任意）';
+      } else {
+        inpLureName.value = '';
+        inpTopicContent.placeholder = '具体的な内容を入力してください';
+      }
+    }
+
+    function closeLurePickerModal() {
+      if (!lurePickerModal) return;
+      lurePickerModal.classList.add('hidden');
+    }
+
+    function renderLurePickerList() {
+      if (!lureTop5List || !lureAllList) return;
+      lureTop5List.innerHTML = '';
+      lureAllList.innerHTML = '';
+
+      const top5 = getTop5LureItems(lureMasterItems);
+      const allAsc = getLureItemsAsc(lureMasterItems);
+
+      const appendItemButton = (container, item) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'w-full text-left px-3 py-2 rounded-lg border border-slate-700 hover:bg-slate-800 text-sm';
+        btn.textContent = `${item.lure_name}`;
+        btn.onclick = () => {
+          if (inpLureName) inpLureName.value = item.lure_name || '';
+          closeLurePickerModal();
+        };
+        container.appendChild(btn);
+      };
+
+      if (top5.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'text-xs text-slate-500 px-2 py-1';
+        empty.textContent = '候補がありません';
+        lureTop5List.appendChild(empty);
+      } else {
+        top5.forEach((item) => appendItemButton(lureTop5List, item));
+      }
+
+      if (allAsc.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'text-xs text-slate-500 px-2 py-1';
+        empty.textContent = '候補がありません';
+        lureAllList.appendChild(empty);
+      } else {
+        allAsc.forEach((item) => appendItemButton(lureAllList, item));
+      }
+    }
+
+    async function openLurePickerModal() {
+      if (!lurePickerModal) return;
+      await loadLureMaster();
+      renderLurePickerList();
+      lurePickerModal.classList.remove('hidden');
+    }
+
+    async function renderLureMasterSettings() {
+      if (!lureMasterList) return;
+      await loadLureMaster();
+      const allAsc = getLureItemsAsc(lureMasterItems);
+
+      lureMasterList.innerHTML = '';
+      if (allAsc.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'text-xs text-slate-500 px-2 py-1';
+        empty.textContent = '登録済みルアーはありません。';
+        lureMasterList.appendChild(empty);
+        return;
+      }
+
+      allAsc.forEach((item) => {
+        const row = document.createElement('div');
+        row.className = 'flex items-center gap-2';
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = item.lure_name || '';
+        input.className = 'flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm';
+
+        const saveBtn = document.createElement('button');
+        saveBtn.type = 'button';
+        saveBtn.className = 'px-2 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-xs font-semibold';
+        saveBtn.textContent = '保存';
+        saveBtn.onclick = async () => {
+          try {
+            await upsertLureMaster(input.value, { previousName: item.lure_name, incrementUse: false });
+            setLureMasterStatus('保存しました');
+            await renderLureMasterSettings();
+          } catch (err) {
+            setLureMasterStatus('保存に失敗しました', true);
+          }
+        };
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'px-2 py-2 rounded-lg border border-slate-700 hover:bg-slate-800 text-xs';
+        deleteBtn.textContent = '削除';
+        deleteBtn.onclick = async () => {
+          if (!confirm('このルアーを削除しますか？')) return;
+          try {
+            await deleteLureMaster(item.lure_name);
+            setLureMasterStatus('削除しました');
+            await renderLureMasterSettings();
+          } catch (err) {
+            setLureMasterStatus('削除に失敗しました', true);
+          }
+        };
+
+        row.appendChild(input);
+        row.appendChild(saveBtn);
+        row.appendChild(deleteBtn);
+        lureMasterList.appendChild(row);
+      });
+    }
+
     Object.entries(topicCategories).forEach(([btnId, category]) => {
       const btn = document.getElementById(btnId);
       if (btn) {
@@ -13818,6 +14502,45 @@
         };
       }
     });
+
+    if (btnTopicLureQuick) {
+      btnTopicLureQuick.onclick = () => {
+        closeActionButtonsPanel();
+        openTopicModal('ルアーチェンジ');
+      };
+    }
+
+    if (btnPickLureName) {
+      btnPickLureName.onclick = () => openLurePickerModal();
+    }
+
+    if (btnCloseLurePicker) {
+      btnCloseLurePicker.onclick = closeLurePickerModal;
+    }
+
+    if (lurePickerModal) {
+      lurePickerModal.addEventListener('click', (e) => {
+        if (e.target === lurePickerModal) closeLurePickerModal();
+      });
+    }
+
+    if (btnAddLureMaster) {
+      btnAddLureMaster.onclick = async () => {
+        const text = normalizeLureNameInput(inpLureMasterNew?.value || '');
+        if (!text) {
+          setLureMasterStatus('ルアー名を入力してください', true);
+          return;
+        }
+        try {
+          await upsertLureMaster(text, { incrementUse: false });
+          if (inpLureMasterNew) inpLureMasterNew.value = '';
+          setLureMasterStatus('追加しました');
+          await renderLureMasterSettings();
+        } catch (err) {
+          setLureMasterStatus('追加に失敗しました', true);
+        }
+      };
+    }
 
     // トピックモーダルハンドラ
     const topicModal = document.getElementById('topicModal');
@@ -13841,6 +14564,7 @@
       inpTopicTime.value = hasDefaultTime ? defaultTime : fallbackTime;
       inpTopicCategory.value = category;
       inpTopicContent.value = '';
+      syncTopicLureUi(category, '');
       editingTopicId = null;  // 新規モード
       topicModal.classList.remove('hidden');
     }
@@ -13857,6 +14581,7 @@
       inpTopicTime.value = topic.time || '';
       inpTopicCategory.value = topic.category || '';
       inpTopicContent.value = topic.content || '';
+      syncTopicLureUi(topic.category || '', topic.content || '');
       editingTopicId = topic.id;  // 編集モード
       topicModal.classList.remove('hidden');
     }
@@ -13865,6 +14590,7 @@
       topicModal.classList.add('hidden');
       editingTopicId = null;
       inpTopicContent.value = '';
+      if (inpLureName) inpLureName.value = '';
     }
 
     btnCloseTopicModal.onclick = closeTopicModal;
@@ -13873,7 +14599,20 @@
     btnSaveTopic.onclick = async () => {
       const time = inpTopicTime.value;
       const category = inpTopicCategory.value;
-      const content = inpTopicContent.value.trim();
+      const memoContent = inpTopicContent.value.trim();
+      const lureInput = normalizeLureNameInput(inpLureName?.value || '');
+      let content = memoContent;
+      let lureNameForMaster = '';
+
+      if (category === 'ルアーチェンジ') {
+        const lureName = normalizeLureNameInput(lureInput || memoContent);
+        if (!lureName) {
+          alert('ルアー名を入力してください');
+          return;
+        }
+        content = lureName;
+        lureNameForMaster = lureName;
+      }
 
       if (!time || !category) {
         alert('時刻とカテゴリを入力してください');
@@ -13927,6 +14666,14 @@
         renderEditTopicList();
       }
       render();
+
+      // 体感速度を優先し、辞書更新は保存完了後に非同期で実行する。
+      if (lureNameForMaster) {
+        upsertLureMaster(lureNameForMaster, { incrementUse: true })
+          .catch((err) => {
+            console.warn('[LureMaster] upsert failed:', err?.message || err);
+          });
+      }
     };
 
     function closeTimelineDetailModal() {
@@ -14091,6 +14838,9 @@
         return;
       }
 
+      tripEditSessionActive = true;
+      restoreTripEditSessionStateIfAny();
+
       // 釣行基本情報を入力欄に反映
       if (draft.startedAt) {
         const d = new Date(draft.startedAt);
@@ -14127,7 +14877,10 @@
       // モーダルを表示
       uploadReviewModal.classList.add('hidden');
       document.body.style.overflow = 'hidden';
+      tripEditModal.style.display = '';
       tripEditModal.classList.remove('hidden');
+      showTripEditBottomButtons();
+      saveTripEditSessionState();
       console.log('[uploadReviewModal] 🔓 Body overflow state managed (openTripEditModal hide)');
       console.log('[tripEditModal] 🔐 Body overflow locked (openTripEditModal)');
 
@@ -14241,6 +14994,7 @@
       const startedMs = parseLooseDateMs(draft.startedAt);
       if (!Number.isNaN(startedMs)) {
         list.appendChild(buildEventItem('start', new Date(startedMs).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', hour12: false }), '釣行開始'));
+        list.appendChild(buildInsertTopicButton(sorted[0]?.time || null));
       }
 
       sorted.forEach((topic, idx) => {
@@ -14293,6 +15047,10 @@
           list.appendChild(buildInsertTopicButton(topic?.time || null));
         }
       });
+
+      if (sorted.length > 0) {
+        list.appendChild(buildInsertTopicButton(sorted[sorted.length - 1]?.time || null));
+      }
 
       const endedMs = parseLooseDateMs(draft.endedAt);
       if (!Number.isNaN(endedMs)) {
@@ -14502,42 +15260,25 @@
 
     // ★追加：釣行編集モーダル内で釣果を編集
     function editCatchForm(catchIndex) {
-      // 既存の釣果フォームを使用
-      if (catchIndex >= 0 && catchIndex < draft.catches.length) {
-        catchForm = normalizeEditCatchEntry(draft.catches[catchIndex]);
-        LOG.app('[EditCatch] editing catch', { index: catchIndex });
-      } else {
-        catchForm = { timestamp: null, species: '', size_cm: null, weight_g: null, method: '', photoPreviewUrl: undefined, exif_date:null, exif_date_formatted:null, exif_lat:null, exif_lng:null, location_name:null, location_source:null, water_temp:null, location_candidates: [] };
-        LOG.app('[EditCatch] adding new catch');
+      if (!(catchIndex >= 0 && catchIndex < draft.catches.length)) {
+        LOG.app('[EditCatch] invalid index', { catchIndex, catches: draft.catches?.length || 0 });
+        return;
       }
 
-      // 入力欄に反映
-      if (catchForm.timestamp) {
-        const d = new Date(catchForm.timestamp);
-        inpCatchTime.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-      } else {
-        inpCatchTime.value = '';
+      const target = normalizeEditCatchEntry(draft.catches[catchIndex]);
+      const targetId = String(target?.id || '').trim();
+      if (!targetId) {
+        LOG.app('[EditCatch] missing catch id', { catchIndex });
+        return;
       }
-      inpSpecies.value = catchForm.species || '';
-      inpSize.value = catchForm.size_cm ?? '';
-      inpWeight.value = catchForm.weight_g ?? '';
-      inpMethod.value = catchForm.method || '';
-      
-      if (catchForm.photoPreviewUrl) {
-        imgPreview.src = catchForm.photoPreviewUrl;
-        imgPreview.classList.remove('hidden');
-      } else {
-        imgPreview.src = '';
-        imgPreview.classList.add('hidden');
-      }
-      inpPhoto.value = '';
 
-      // 釣行編集モーダルを閉じ、釣果フォームモーダルを開く
+      // カードタップ編集でも、既存の編集ボタンと同じ openEditCatch 経路を使う。
+      hideTripEditBottomButtons();
+      saveTripEditSessionState();
       tripEditModal.classList.add('hidden');
-      catchModal.classList.remove('hidden');
-
-      // submitCatch後に釣行編集モーダルに戻るフラグを設定
       window._returnToTripEditAfterCatch = true;
+      LOG.app('[EditCatch] route unified to openEditCatch', { catchIndex, targetId });
+      openEditCatch(targetId);
     }
 
     // ★追加：釣行編集モーダルのボタンイベント
@@ -14550,7 +15291,8 @@
       btnCloseTripEdit.onclick = () => {
         console.log('[ModalButton] Close button clicked');
         document.body.style.overflow = 'auto';
-        tripEditModal.style.display = 'none';
+        tripEditSessionActive = false;
+        clearTripEditSessionState();
         tripEditModal.classList.add('hidden');
         resetEditCatchState();
         const formSection = document.getElementById('editCatchFormSection');
@@ -14559,10 +15301,7 @@
           formSection.dataset.isEditing = 'false';
           formSection.dataset.editingIndex = '-1';
         }
-        const btnCancelTripEditBtn = document.getElementById('btnCancelTripEdit');
-        const btnSaveTripEditBtn = document.getElementById('btnSaveTripEdit');
-        if (btnCancelTripEditBtn) btnCancelTripEditBtn.style.cssText = '';
-        if (btnSaveTripEditBtn) btnSaveTripEditBtn.style.cssText = '';
+        showTripEditBottomButtons();
         console.log('[tripEditModal] 🔓 Body overflow unlocked');
       };
     }
@@ -14577,6 +15316,8 @@
         
         console.log('[ModalButton] Cancel button clicked');
         resetEditCatchState();
+        tripEditSessionActive = false;
+        clearTripEditSessionState();
         
         // ★追加：編集フォームをリセット
         const formSection = document.getElementById('editCatchFormSection');
@@ -14597,12 +15338,8 @@
           }
         }
         
-        tripEditModal.style.display = 'none';
         tripEditModal.classList.add('hidden');
-        const btnCancelTripEditBtn = document.getElementById('btnCancelTripEdit');
-        const btnSaveTripEditBtn = document.getElementById('btnSaveTripEdit');
-        if (btnCancelTripEditBtn) btnCancelTripEditBtn.style.cssText = '';
-        if (btnSaveTripEditBtn) btnSaveTripEditBtn.style.cssText = '';
+        showTripEditBottomButtons();
       };
     }
     if (btnAddCatchInEdit) {
@@ -14613,10 +15350,10 @@
           manualCatchSuppressRecordView = true;
           const tripEditModal = document.getElementById('tripEditModal');
           if (tripEditModal) {
-            tripEditModal.style.display = 'none';
             tripEditModal.classList.add('hidden');
           }
           window._returnToTripEditAfterCatch = true;
+          hideTripEditBottomButtons();
           openManualCatch();
           return;
         }
@@ -15595,6 +16332,133 @@
       };
     }
 
+    function setRowValueByHeader(headers, row, headerName, value) {
+      const idx = headers.findIndex(h => String(h || '').trim() === headerName);
+      if (idx >= 0) row[idx] = value;
+    }
+
+    function buildCatchCacheRow(headers, catchData, tripId) {
+      const row = new Array(headers.length).fill('');
+      const c = catchData || {};
+      const water = c.water_temp || null;
+
+      setRowValueByHeader(headers, row, 'tripId', tripId || '');
+      setRowValueByHeader(headers, row, 'catchId', c.id || c.catchId || '');
+      setRowValueByHeader(headers, row, 'timestamp', c.timestamp || '');
+      setRowValueByHeader(headers, row, 'species', c.species || '');
+      setRowValueByHeader(headers, row, 'size_cm', c.size_cm ?? '');
+      setRowValueByHeader(headers, row, 'weight_g', c.weight_g ?? '');
+      setRowValueByHeader(headers, row, 'method', c.method || '');
+
+      setRowValueByHeader(headers, row, 'wx_temp', c.wx_temp ?? '');
+      setRowValueByHeader(headers, row, 'wx_wind_speed', c.wx_wind_speed ?? '');
+      setRowValueByHeader(headers, row, 'wx_wind_deg', c.wx_wind_deg ?? '');
+      setRowValueByHeader(headers, row, 'wx_main', c.wx_main ?? '');
+      setRowValueByHeader(headers, row, 'wx_desc', c.wx_desc ?? '');
+
+      setRowValueByHeader(headers, row, 'tide_level_cm', c.tide_level_cm ?? '');
+      setRowValueByHeader(headers, row, 'tide_trend', c.tide_trend ?? '');
+      setRowValueByHeader(headers, row, 'tide_name', c.tide_name ?? '');
+      setRowValueByHeader(headers, row, 'tide_harbor_name', c.tide_harbor_name ?? '');
+      setRowValueByHeader(headers, row, 'tide_high_times', c.tide_high_times ?? '');
+      setRowValueByHeader(headers, row, 'tide_low_times', c.tide_low_times ?? '');
+
+      setRowValueByHeader(headers, row, 'location_name', c.location_name ?? '');
+      setRowValueByHeader(headers, row, 'location_source', c.location_source ?? '');
+      setRowValueByHeader(headers, row, 'location_lat', c.location_lat ?? c.exif_lat ?? '');
+      setRowValueByHeader(headers, row, 'location_lng', c.location_lng ?? c.exif_lng ?? '');
+
+      setRowValueByHeader(headers, row, 'water_temp_c', c.water_temp_c ?? water?.temperature_c ?? '');
+      setRowValueByHeader(headers, row, 'water_temp_point', c.water_temp_point ?? water?.point_name ?? '');
+      setRowValueByHeader(headers, row, 'water_temp_time', c.water_temp_time ?? water?.date ?? '');
+
+      setRowValueByHeader(headers, row, 'photo_file_id', c.photoFileId || '');
+      setRowValueByHeader(headers, row, 'photo_view_url', c.photoDriveUrl || '');
+      setRowValueByHeader(headers, row, 'photo_thumb_url', c.photoDriveThumbUrl || '');
+
+      setRowValueByHeader(headers, row, 'exif_date', c.exif_date ?? '');
+      setRowValueByHeader(headers, row, 'exif_date_formatted', c.exif_date_formatted ?? '');
+      setRowValueByHeader(headers, row, 'exif_lat', c.exif_lat ?? '');
+      setRowValueByHeader(headers, row, 'exif_lng', c.exif_lng ?? '');
+      return row;
+    }
+
+    async function applyEditedTripToSessionCaches(editedDraft, latestRawPayload) {
+      const tripId = String(editedDraft?.tripId || '').trim();
+      if (!tripId) return;
+
+      if (latestRawPayload && typeof latestRawPayload === 'object') {
+        tripRawMemoryCache.set(tripId, latestRawPayload);
+      }
+
+      if (Array.isArray(tripsCache) && tripsCache.length > 1) {
+        const headers = tripsCache[0] || [];
+        const tripIdIdx = headers.findIndex(h => String(h || '').trim() === 'tripId');
+        const rowIndex = tripIdIdx >= 0
+          ? tripsCache.findIndex((row, idx) => idx > 0 && String(row?.[tripIdIdx] || '') === tripId)
+          : -1;
+
+        if (rowIndex >= 1) {
+          const row = Array.isArray(tripsCache[rowIndex]) ? tripsCache[rowIndex].slice() : [];
+          setRowValueByHeader(headers, row, 'status', editedDraft.status || 'ended');
+          setRowValueByHeader(headers, row, 'startedAt', editedDraft.startedAt || '');
+          setRowValueByHeader(headers, row, 'endedAt', editedDraft.endedAt || '');
+          setRowValueByHeader(headers, row, 'pos_lat', editedDraft.lat ?? '');
+          setRowValueByHeader(headers, row, 'pos_lng', editedDraft.lng ?? '');
+          setRowValueByHeader(headers, row, 'memo', editedDraft.memo ?? '');
+          setRowValueByHeader(headers, row, 'catches_count', Array.isArray(editedDraft.catches) ? editedDraft.catches.length : 0);
+          setRowValueByHeader(headers, row, 'water_temp_c', editedDraft.start_water_temp?.temperature_c ?? '');
+          setRowValueByHeader(headers, row, 'water_temp_point', editedDraft.start_water_temp?.point_name ?? '');
+          setRowValueByHeader(headers, row, 'water_temp_time', editedDraft.start_water_temp?.date ?? '');
+          setRowValueByHeader(headers, row, 'start_temp', editedDraft.start_weather?.temp ?? '');
+          setRowValueByHeader(headers, row, 'start_wind_speed', editedDraft.start_weather?.wind_speed ?? '');
+          setRowValueByHeader(headers, row, 'start_wind_deg', editedDraft.start_weather?.wind_deg ?? '');
+          setRowValueByHeader(headers, row, 'start_weather_main', editedDraft.start_weather?.weather_main ?? '');
+          setRowValueByHeader(headers, row, 'start_weather_desc', editedDraft.start_weather?.weather_description ?? '');
+          setRowValueByHeader(headers, row, 'end_temp', editedDraft.end_weather?.temp ?? '');
+          setRowValueByHeader(headers, row, 'end_wind_speed', editedDraft.end_weather?.wind_speed ?? '');
+          setRowValueByHeader(headers, row, 'end_wind_deg', editedDraft.end_weather?.wind_deg ?? '');
+          setRowValueByHeader(headers, row, 'end_weather_main', editedDraft.end_weather?.weather_main ?? '');
+          setRowValueByHeader(headers, row, 'end_weather_desc', editedDraft.end_weather?.weather_description ?? '');
+          if (latestRawPayload && typeof latestRawPayload === 'object') {
+            setRowValueByHeader(headers, row, 'raw_json', JSON.stringify(latestRawPayload));
+          }
+          tripsCache[rowIndex] = row;
+        }
+
+        currentTripsHeader = tripsCache[0];
+        currentTripsRows = tripsCache.slice(1);
+        allTripsItems = currentTripsRows.slice();
+      }
+
+      if (Array.isArray(catchesCache) && catchesCache.length > 0) {
+        const headers = catchesCache[0] || [];
+        const tripIdIdx = headers.findIndex(h => String(h || '').trim() === 'tripId');
+        if (tripIdIdx >= 0) {
+          const keepRows = catchesCache.slice(1).filter(row => String(row?.[tripIdIdx] || '') !== tripId);
+          const sourceCatches = Array.isArray(latestRawPayload?.catches)
+            ? latestRawPayload.catches
+            : (Array.isArray(editedDraft.catches) ? editedDraft.catches : []);
+          const newRows = sourceCatches.map(c => buildCatchCacheRow(headers, c, tripId));
+          catchesCache = [headers, ...keepRows, ...newRows];
+
+          try {
+            allCatchItems = mapRowsToItems(catchesCache);
+          } catch (err) {
+            console.warn('[TripEditCache] catches list rebuild failed:', err?.message || err);
+          }
+        }
+      }
+
+      if (Array.isArray(tripsCache) && tripsCache.length > 1) {
+        const filtered = filterAndSortTrips(allTripsItems);
+        await renderTripsList([tripsCache[0], ...filtered]);
+        const total = tripsTotalCount || allTripsItems.length;
+        updateTripCountStatus(filtered.length, total);
+        updateTripsFilterButtonState();
+      }
+    }
+
     // ★追加：釣行編集データを上書き保存
     async function submitTripEditData() {
       // ★修正：CONFIG初期化完了を待機（API呼び出し前の必須処理）
@@ -15867,16 +16731,18 @@
 
       // ★修正：ボタンハンドラ内でオーバーレイは既に表示されているため、ここからはアップロード処理のみ実行
       try {
-        await uploadTripToSpreadsheet(draft);
+        const uploadResult = await uploadTripToSpreadsheet(draft);
+        await applyEditedTripToSessionCaches(draft, uploadResult?.payloadUsed || null);
         alert('釣行データを上書き保存しました');
         
         // ★修正：モーダルを閉じるときに body overflow を復帰
         document.body.style.overflow = 'auto';
-        tripEditModal.style.display = 'none';
         tripEditModal.classList.add('hidden');
+        showTripEditBottomButtons();
+        tripEditSessionActive = false;
+        clearTripEditSessionState();
         
         showView('trips');
-        loadTrips();
         
         draft = { tripId: uuid(), status: 'idle', catches: [], tide_daily_cache: {}, start_water_temp: null, memo: null };
         saveDraft(draft);
@@ -16074,7 +16940,7 @@
           images: result.saved?.images || 0
         });
 
-        return { ok: true, message: 'Upload successful', ...result };
+        return { ok: true, message: 'Upload successful', payloadUsed: payload, ...result };
 
       } catch (err) {
         LOG.app('[Upload] error', { error: err?.message || String(err) });
