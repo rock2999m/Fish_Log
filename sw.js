@@ -4,7 +4,7 @@
  */
 
 const CACHE_VERSION = `fishlog-${Date.now()}`;
-const APP_SHELL_URL = './index_v4.html?v=4.1.0';
+const APP_SHELL_URL = './index_v4.html?v=4.1.1';
 const ASSETS_TO_CACHE = [
   APP_SHELL_URL,
   './manifest.json',
