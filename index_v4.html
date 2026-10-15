@@ -1082,12 +1082,10 @@
       <details class="rounded-2xl bg-slate-900 border border-slate-800 p-4 mb-4">
         <summary class="cursor-pointer text-base font-semibold">ルアー候補管理</summary>
         <div class="text-xs text-slate-400 mt-3 mb-3">重複は表記ゆれを最小化した照合キーで判定します。表示名は入力内容を尊重し、既存登録がある場合は登録情報を優先します。</div>
-        <div class="flex justify-end mb-2">
+        <div class="flex justify-end gap-2 mb-2">
+          <button id="btnToggleLureMasterEdit" class="px-2 py-1 rounded-lg border border-slate-700 hover:bg-slate-800 text-xs whitespace-nowrap">編集</button>
+          <button id="btnAddLureMaster" class="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 font-semibold text-xs whitespace-nowrap">追加</button>
           <button id="btnReloadLureMaster" class="px-2 py-1 rounded-lg border border-slate-700 hover:bg-slate-800 text-xs whitespace-nowrap">再読込</button>
-        </div>
-        <div class="flex items-center gap-2">
-          <input id="inpLureMasterNew" type="text" placeholder="ルアー名を追加" class="min-w-0 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm" />
-          <button id="btnAddLureMaster" class="shrink-0 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-semibold text-xs whitespace-nowrap">追加</button>
         </div>
         <div id="lureMasterStatus" class="text-sm text-slate-300 mt-2"></div>
         <div id="lureMasterList" class="mt-3 space-y-1"></div>
@@ -1553,14 +1551,73 @@
         <button id="btnCloseLurePicker" class="text-slate-400 hover:text-slate-200">×</button>
       </div>
       <div class="space-y-3">
+        <div class="rounded-xl border border-slate-800 bg-slate-950/60 p-2 space-y-2">
+          <div>
+            <div class="text-xs text-slate-400 mb-1">メインタグ</div>
+            <select id="lurePickerMainFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-sm">
+              <option value="">絞り込みなし</option>
+            </select>
+          </div>
+          <div>
+            <div class="text-xs text-slate-400 mb-1">サブタグ</div>
+            <div id="lurePickerSubFilterList" class="flex flex-wrap gap-1"></div>
+          </div>
+          <div class="text-right">
+            <button id="btnClearLureTagFilter" type="button" class="px-2 py-1 rounded-lg border border-slate-700 hover:bg-slate-800 text-xs">タグ絞り込み解除</button>
+          </div>
+        </div>
+        <div id="lureTagMatchedSection" class="hidden">
+          <div class="text-xs text-emerald-300 mb-1">タグ一致候補</div>
+          <div id="lureTagMatchedList" class="grid grid-cols-1 gap-1"></div>
+        </div>
         <div>
           <div class="text-xs text-slate-400 mb-1">最近使用 TOP5</div>
           <div id="lureTop5List" class="grid grid-cols-1 gap-1"></div>
         </div>
         <div>
-          <div class="text-xs text-slate-400 mb-1">全ルアー（昇順）</div>
+          <div class="text-xs text-slate-400 mb-1">タグ未設定</div>
+          <div id="lureNoTagList" class="grid grid-cols-1 gap-1"></div>
+        </div>
+        <div>
+          <div class="text-xs text-slate-400 mb-1">その他（昇順）</div>
           <div id="lureAllList" class="grid grid-cols-1 gap-1"></div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="lureMasterEditModal" class="hidden fixed inset-0 z-50 bg-black/60 grid place-items-center p-4">
+    <div class="w-full max-w-md rounded-2xl bg-slate-900 border border-slate-800 p-4" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between mb-2">
+        <h3 id="lureMasterEditTitle" class="font-semibold">ルアーを追加</h3>
+        <button id="btnCloseLureMasterEditModal" class="text-slate-400 hover:text-slate-200">×</button>
+      </div>
+      <div class="space-y-3">
+        <label class="block">
+          <span class="text-sm text-slate-300">ルアー名</span>
+          <input id="inpLureMasterEditName" type="text" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm" />
+        </label>
+        <label class="block">
+          <span class="text-sm text-slate-300">メインタグ</span>
+          <input id="inpLureMasterEditMainTag" type="text" placeholder="例: プラグ" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm" />
+        </label>
+        <label class="block">
+          <span class="text-sm text-slate-300">サブタグ（スペース区切り）</span>
+          <input id="inpLureMasterEditSubTags" type="text" placeholder="例: ミノー 125F" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm" />
+        </label>
+        <div>
+          <div class="text-xs text-slate-400 mb-1">既存メインタグ</div>
+          <div id="lureMainTagSuggestList" class="flex flex-wrap gap-1"></div>
+        </div>
+        <div>
+          <div class="text-xs text-slate-400 mb-1">既存サブタグ</div>
+          <div id="lureSubTagSuggestList" class="flex flex-wrap gap-1"></div>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4">
+        <button id="btnDeleteLureMasterEdit" class="w-full py-2 rounded-xl border border-rose-700 text-rose-300 hover:bg-rose-900/30 hidden">削除</button>
+        <button id="btnCancelLureMasterEdit" class="w-full py-2 rounded-xl border border-slate-700 hover:bg-slate-800 sm:col-span-1">キャンセル</button>
+        <button id="btnSaveLureMasterEdit" class="w-full py-2 rounded-2xl bg-sky-600 hover:bg-sky-500 font-semibold sm:col-span-1">保存</button>
       </div>
     </div>
   </div>
@@ -2174,13 +2231,28 @@
       return { ...rawObject, ...base };
     }
     const homeGoRecord = document.getElementById('homeGoRecord');
-    if (homeGoRecord) homeGoRecord.onclick = () => { showView('record'); };
+    if (homeGoRecord) {
+      homeGoRecord.onclick = async () => {
+        if (draft.status === 'active') {
+          showView('record');
+          return;
+        }
+        await startTrip();
+      };
+    }
     navHome.onclick = () => showView('home');
     if (navRecord) navRecord.onclick = () => showView('record');
     navTrips.onclick = () => { showView('trips'); autoLoadTrips(); };                                  // ★追加
     navCatches.onclick = () => { showView('catches'); autoLoadCatches(); };
     if (btnAddTripInTrips) btnAddTripInTrips.onclick = () => openManualTripForm();
     document.getElementById('navSettings').onclick = () => { showView('settings'); };
+
+    function collapseSettingsDetails() {
+      if (!settingsView) return;
+      settingsView.querySelectorAll('details[open]').forEach((el) => {
+        el.open = false;
+      });
+    }
 
     function showView(name){
       const isRecordOrTrips = (name === 'record' || name === 'trips');
@@ -2191,11 +2263,16 @@
         console.log('[showView] suppressed navigation to', name, 'manualCatchSuppressRecordView still true');
         return;
       }
+      const wasSettingsOpen = settingsView && !settingsView.classList.contains('hidden');
       homeView.classList.toggle('hidden', name !== 'home');
       recordView.classList.toggle('hidden', name !== 'record');
       tripsView.classList.toggle('hidden', name !== 'trips');    // ★追加
       catchesView.classList.toggle('hidden', name !== 'catches');
       settingsView.classList.toggle('hidden', name !== 'settings'); // ★追加
+
+      if (wasSettingsOpen && name !== 'settings') {
+        collapseSettingsDetails();
+      }
 
       if (mainContent) {
         if (name === 'home') {
@@ -8335,14 +8412,7 @@
 
       // ★修正：状態に応じてボタンを表示
       buttonRow.innerHTML='';
-      if (draft.status==='idle'){
-        // 未開始時：釣行開始ボタン
-        const b=document.createElement('button'); 
-        b.textContent='Go Fishing';
-        b.className='go-fishing-btn w-full py-2 rounded-xl font-semibold text-white';
-        b.onclick=startTrip; 
-        buttonRow.appendChild(b);
-      } else if (draft.status==='ended'){
+      if (draft.status==='ended'){
         // ★追加：終了時：新規釣行ボタン
         const btnReset=document.createElement('button');
         btnReset.textContent='新規釣行';
@@ -10328,6 +10398,17 @@
 
 
     // ===== アクション =====
+    function applySelectedLocationToDraft(startedAtIso) {
+      if (!selectedLocationCandidate) return false;
+      draft.startedAt = startedAtIso || nowIsoLocal();
+      draft.selected_location_name = selectedLocationCandidate.name;
+      draft.selected_location_lat = selectedLocationCandidate.lat;
+      draft.selected_location_lng = selectedLocationCandidate.lng;
+      draft.status = 'active';
+      resetAndPrefetchLureMasterOnTripStart();
+      return true;
+    }
+
     async function startTrip(){
       clearUploadReviewBackup();
       console.log('[startTrip] 🟦 START startTrip');
@@ -10342,18 +10423,18 @@
         return;
       }
       
-      showUploadingOverlay('釣行を開始しています...');
+      showUploadingOverlay('位置を確認中...');
 
-      let startedThisCall = false;
       try{
         if (draft.status==='active') {
           console.log('[startTrip] ℹ️ Trip already active, skipping');
           hideUploadingOverlay();
+          showView('record');
           return;
         }
-        draft.status='active'; draft.startedAt=nowIsoLocal();
-        startedThisCall = true;
-        resetAndPrefetchLureMasterOnTripStart();
+
+        pendingLocationConfirmation = false;
+        selectedLocationCandidate = null;
 
         if (navigator.geolocation){
           console.log('[startTrip] 📍 Getting GPS location...');
@@ -10378,14 +10459,27 @@
         // ★修正：GPS取得後、位置選択モーダルを表示
         if (typeof draft.lat === 'number' && typeof draft.lng === 'number'){
           console.log('[startTrip] 📋 Showing location selection modal');
-          await showLocationSelectionModal(draft.lat, draft.lng);
-          // モーダルでの選択を待機（confirmボタンのコールバックが続行処理を実行）
+          const waitingConfirm = await showLocationSelectionModal(draft.lat, draft.lng);
+          if (!waitingConfirm && selectedLocationCandidate) {
+            if (!applySelectedLocationToDraft(nowIsoLocal())) {
+              hideUploadingOverlay();
+              return;
+            }
+            await continueStartTripAfterLocationSelection();
+          }
+          // waitingConfirm=true の場合は確定ボタン側で続行
         } else {
           // GPS失敗時はデフォルト位置で続行
           console.warn('[startTrip] ⚠️ GPS not available, using fallback');
-          draft.selected_location_name = '現在地';
-          draft.selected_location_lat = draft.lat || null;
-          draft.selected_location_lng = draft.lng || null;
+          selectedLocationCandidate = {
+            name: '現在地',
+            lat: draft.lat || null,
+            lng: draft.lng || null
+          };
+          if (!applySelectedLocationToDraft(nowIsoLocal())) {
+            hideUploadingOverlay();
+            return;
+          }
           LOG.app('[startTrip] Using fallback location', { name: draft.selected_location_name, lat: draft.selected_location_lat, lng: draft.selected_location_lng });
           await continueStartTripAfterLocationSelection();
         }
@@ -10478,6 +10572,7 @@
         await saveDraft(draft);
         console.log('[continueStartTripAfterLocationSelection] 💾 Draft saved');
         render();
+        showView('record');
         console.log('[continueStartTripAfterLocationSelection] ✅ Trip start completed successfully');
         LOG.app('[continueStartTripAfterLocationSelection] Trip started with location', {
           name: draft.selected_location_name,
@@ -10545,7 +10640,6 @@
         
         if (!candidates || candidates.length === 0) {
           console.warn('[LocationModal] ⚠️ No candidates found, using GPS location as default');
-          alert('水温地点が見つかりません。デフォルト位置を使用します。');
           selectedLocationCandidate = {
             name: '現在地',
             lat: lat,
@@ -10554,7 +10648,7 @@
           pendingLocationConfirmation = false;
           console.log('[LocationModal] ℹ️ Default candidate set:', selectedLocationCandidate);
           hideUploadingOverlay();  // ★修正：エラー時もオーバーレイを隠す
-          return; // モーダル表示を中止
+          return false; // モーダル表示せず自動続行
         }
 
         currentLocationCandidates = candidates; // グローバル変数に保存
@@ -10607,6 +10701,7 @@
         // ★修正：ユーザーが操作できるようにオーバーレイを解除
         hideUploadingOverlay();
         console.log('[LocationModal] ✅ Overlay hidden - user can now select location');
+        return true;
 
       } catch (e) {
         console.error('[LocationModal] ❌ Error:', e.message, e);
@@ -10614,6 +10709,7 @@
         selectedLocationCandidate = null;
         LOG.app('[LocationModal] Error in showLocationSelectionModal', { message: e.message });
         hideUploadingOverlay();  // ★修正：例外時もオーバーレイを隠す
+        return false;
       }
     }
 
@@ -14164,12 +14260,10 @@
           startedAt = toOffsetIsoLocal(parsedStart);
         }
 
-        draft.startedAt = startedAt;
-
-        // draft に選択位置を保存
-        draft.selected_location_name = selectedLocationCandidate.name;
-        draft.selected_location_lat = selectedLocationCandidate.lat;
-        draft.selected_location_lng = selectedLocationCandidate.lng;
+        if (!applySelectedLocationToDraft(startedAt)) {
+          alert('位置の確定に失敗しました。再度お試しください。');
+          return;
+        }
         console.log('[LocationModal] ✅ Location confirmed:', {
           name: draft.selected_location_name,
           lat: draft.selected_location_lat,
@@ -14322,17 +14416,84 @@
     const btnTopicLureQuick = document.getElementById('btnTopicLureQuick');
     const lurePickerModal = document.getElementById('lurePickerModal');
     const btnCloseLurePicker = document.getElementById('btnCloseLurePicker');
+    const lurePickerMainFilter = document.getElementById('lurePickerMainFilter');
+    const lurePickerSubFilterList = document.getElementById('lurePickerSubFilterList');
+    const btnClearLureTagFilter = document.getElementById('btnClearLureTagFilter');
+    const lureTagMatchedSection = document.getElementById('lureTagMatchedSection');
+    const lureTagMatchedList = document.getElementById('lureTagMatchedList');
     const lureTop5List = document.getElementById('lureTop5List');
+    const lureNoTagList = document.getElementById('lureNoTagList');
     const lureAllList = document.getElementById('lureAllList');
-    const inpLureMasterNew = document.getElementById('inpLureMasterNew');
     const btnAddLureMaster = document.getElementById('btnAddLureMaster');
+    const btnToggleLureMasterEdit = document.getElementById('btnToggleLureMasterEdit');
     const lureMasterStatus = document.getElementById('lureMasterStatus');
     const lureMasterList = document.getElementById('lureMasterList');
     const btnReloadLureMaster = document.getElementById('btnReloadLureMaster');
+    const lureMasterEditModal = document.getElementById('lureMasterEditModal');
+    const lureMasterEditTitle = document.getElementById('lureMasterEditTitle');
+    const btnCloseLureMasterEditModal = document.getElementById('btnCloseLureMasterEditModal');
+    const btnCancelLureMasterEdit = document.getElementById('btnCancelLureMasterEdit');
+    const btnSaveLureMasterEdit = document.getElementById('btnSaveLureMasterEdit');
+    const btnDeleteLureMasterEdit = document.getElementById('btnDeleteLureMasterEdit');
+    const inpLureMasterEditName = document.getElementById('inpLureMasterEditName');
+    const inpLureMasterEditMainTag = document.getElementById('inpLureMasterEditMainTag');
+    const inpLureMasterEditSubTags = document.getElementById('inpLureMasterEditSubTags');
+    const lureMainTagSuggestList = document.getElementById('lureMainTagSuggestList');
+    const lureSubTagSuggestList = document.getElementById('lureSubTagSuggestList');
 
     let lureMasterItems = [];
     let lureMasterLoaded = false;
     let lureMasterLoadError = null;
+    let lureMasterEditMode = false;
+    let editingLureMasterItem = null;
+    let lurePickerFilterMain = '';
+    let lurePickerFilterSubs = [];
+
+    function stripHoverTokensFromClassName(className) {
+      const tokens = String(className || '').split(/\s+/).filter(Boolean);
+      const filtered = tokens.filter((token) => !token.startsWith('hover:'));
+      return filtered.join(' ');
+    }
+
+    function removeHoverClassesInTree(root = document) {
+      if (!root) return;
+      const current = root.getAttribute && root.getAttribute('class');
+      if (typeof current === 'string' && current.includes('hover:')) {
+        const next = stripHoverTokensFromClassName(current);
+        if (next !== current) root.setAttribute('class', next);
+      }
+      if (!root.querySelectorAll) return;
+      root.querySelectorAll('[class*="hover:"]').forEach((el) => {
+        const oldClass = el.getAttribute('class') || '';
+        const newClass = stripHoverTokensFromClassName(oldClass);
+        if (newClass !== oldClass) el.setAttribute('class', newClass);
+      });
+    }
+
+    const hoverClassObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class' && mutation.target) {
+          const oldClass = mutation.target.getAttribute('class') || '';
+          if (!oldClass.includes('hover:')) return;
+          const newClass = stripHoverTokensFromClassName(oldClass);
+          if (newClass !== oldClass) mutation.target.setAttribute('class', newClass);
+          return;
+        }
+        if (mutation.type === 'childList') {
+          mutation.addedNodes.forEach((node) => {
+            if (node && node.nodeType === 1) removeHoverClassesInTree(node);
+          });
+        }
+      });
+    });
+
+    removeHoverClassesInTree(document.documentElement);
+    hoverClassObserver.observe(document.documentElement, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ['class']
+    });
 
     function normalizeLureNameDisplay(value) {
       return String(value || '').replace(/\u3000/g, ' ').trim();
@@ -14353,6 +14514,56 @@
 
     function normalizeLureNameInput(value) {
       return normalizeLureNameDisplay(value);
+    }
+
+    function normalizeTagText(value) {
+      return String(value || '').replace(/\u3000/g, ' ').trim().normalize('NFKC');
+    }
+
+    function normalizeMainTag(value) {
+      return normalizeTagText(value);
+    }
+
+    function parseSubTags(value) {
+      const raw = normalizeTagText(value);
+      if (!raw) return [];
+      const list = raw.split(/\s+/).map((x) => normalizeTagText(x)).filter(Boolean);
+      return Array.from(new Set(list));
+    }
+
+    function buildTagsRaw(mainTag, subTags) {
+      const main = normalizeMainTag(mainTag);
+      const subs = Array.isArray(subTags) ? subTags : parseSubTags(subTags || '');
+      if (!main) return '';
+      if (!subs.length) return main;
+      return `${main}:${subs.join(' ')}`;
+    }
+
+    function hasAnyTag(item) {
+      const main = normalizeMainTag(item?.tag_main || '');
+      const subs = Array.isArray(item?.tag_subs) ? item.tag_subs : parseSubTags(item?.tag_subs || '');
+      return !!main || subs.length > 0;
+    }
+
+    function collectLureTagIndex(items) {
+      const mainSet = new Set();
+      const subMap = new Map();
+      (items || []).forEach((item) => {
+        const main = normalizeMainTag(item?.tag_main || '');
+        const subs = Array.isArray(item?.tag_subs) ? item.tag_subs : parseSubTags(item?.tag_subs || '');
+        if (!main) return;
+        mainSet.add(main);
+        if (!subMap.has(main)) subMap.set(main, new Set());
+        const bucket = subMap.get(main);
+        subs.forEach((sub) => {
+          const val = normalizeTagText(sub);
+          if (val) bucket.add(val);
+        });
+      });
+      return {
+        mains: Array.from(mainSet).sort((a, b) => a.localeCompare(b, 'ja')),
+        subMap
+      };
     }
 
     function lureItemMs(item) {
@@ -14437,7 +14648,10 @@
           use_count: Number(r[idx.use_count] || 0) || 0,
           created_at: String(r[idx.created_at] || ''),
           updated_at: String(r[idx.updated_at] || ''),
-          last_used_at: String(r[idx.last_used_at] || '')
+          last_used_at: String(r[idx.last_used_at] || ''),
+          tag_main: normalizeMainTag(r[idx.tag_main] || ''),
+          tag_subs: parseSubTags(r[idx.tag_subs] || ''),
+          tags_raw: String(r[idx.tags_raw] || '')
         };
         byKey.set(lureKey, item);
         items.push(item);
@@ -14458,16 +14672,25 @@
       }
     }
 
-    async function upsertLureMaster(lureName, options = {}) {
-      const displayName = normalizeLureNameDisplay(lureName);
+    async function upsertLureMaster(lureNameOrPayload, options = {}) {
+      const payloadInput = (typeof lureNameOrPayload === 'object' && lureNameOrPayload)
+        ? lureNameOrPayload
+        : { lureName: lureNameOrPayload };
+      const displayName = normalizeLureNameDisplay(payloadInput.lureName);
       const lureKey = normalizeLureNameForMatch(displayName);
       if (!lureKey) return null;
+      const mainTag = normalizeMainTag(payloadInput.tagMain || '');
+      const subTags = parseSubTags(payloadInput.tagSubs || '');
+      const tagsRaw = normalizeTagText(payloadInput.tagsRaw || buildTagsRaw(mainTag, subTags));
       const payload = {
         action: 'upsertLureMaster',
         lureName: displayName,
         lureKey,
         incrementUse: options.incrementUse !== false
       };
+      if (mainTag) payload.tagMain = mainTag;
+      payload.tagSubs = subTags;
+      payload.tagsRaw = tagsRaw;
       if (options.previousName) {
         payload.previousName = normalizeLureNameDisplay(options.previousName);
         payload.previousKey = normalizeLureNameForMatch(options.previousName);
@@ -14504,43 +14727,129 @@
       lurePickerModal.classList.add('hidden');
     }
 
+    function appendLureItemButton(container, item) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'w-full text-left px-3 py-2 rounded-lg border border-slate-700 hover:bg-slate-800 text-sm';
+      const tagPart = item?.tag_main ? ` [${item.tag_main}${item.tag_subs?.length ? `:${item.tag_subs.join('/')}` : ''}]` : '';
+      btn.textContent = `${item.lure_name}${tagPart}`;
+      btn.onclick = () => {
+        if (inpLureName) inpLureName.value = item.lure_name || '';
+        closeLurePickerModal();
+      };
+      container.appendChild(btn);
+    }
+
+    function renderPickerEmpty(container, text = '候補がありません') {
+      if (!container) return;
+      const empty = document.createElement('div');
+      empty.className = 'text-xs text-slate-500 px-2 py-1';
+      empty.textContent = text;
+      container.appendChild(empty);
+    }
+
+    function renderLurePickerMainFilterOptions() {
+      if (!lurePickerMainFilter) return;
+      const tagIndex = collectLureTagIndex(lureMasterItems);
+      lurePickerMainFilter.innerHTML = '';
+      const none = document.createElement('option');
+      none.value = '';
+      none.textContent = '絞り込みなし';
+      lurePickerMainFilter.appendChild(none);
+      tagIndex.mains.forEach((main) => {
+        const op = document.createElement('option');
+        op.value = main;
+        op.textContent = main;
+        lurePickerMainFilter.appendChild(op);
+      });
+      lurePickerMainFilter.value = lurePickerFilterMain || '';
+    }
+
+    function renderLurePickerSubFilterOptions() {
+      if (!lurePickerSubFilterList) return;
+      lurePickerSubFilterList.innerHTML = '';
+      if (!lurePickerFilterMain) {
+        renderPickerEmpty(lurePickerSubFilterList, '先にメインタグを選択してください');
+        return;
+      }
+      const tagIndex = collectLureTagIndex(lureMasterItems);
+      const subs = Array.from(tagIndex.subMap.get(lurePickerFilterMain) || []).sort((a, b) => a.localeCompare(b, 'ja'));
+      if (!subs.length) {
+        renderPickerEmpty(lurePickerSubFilterList, 'サブタグがありません');
+        return;
+      }
+      subs.forEach((sub) => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        const selected = lurePickerFilterSubs.includes(sub);
+        chip.className = selected
+          ? 'px-2 py-1 rounded-lg bg-sky-600 text-white text-xs'
+          : 'px-2 py-1 rounded-lg border border-slate-700 hover:bg-slate-800 text-xs';
+        chip.textContent = sub;
+        chip.onclick = () => {
+          if (lurePickerFilterSubs.includes(sub)) {
+            lurePickerFilterSubs = lurePickerFilterSubs.filter((x) => x !== sub);
+          } else {
+            lurePickerFilterSubs = Array.from(new Set([...lurePickerFilterSubs, sub]));
+          }
+          renderLurePickerSubFilterOptions();
+          renderLurePickerList();
+        };
+        lurePickerSubFilterList.appendChild(chip);
+      });
+    }
+
+    function matchesLureTagFilter(item) {
+      if (!lurePickerFilterMain) return false;
+      const itemMain = normalizeMainTag(item?.tag_main || '');
+      if (itemMain !== lurePickerFilterMain) return false;
+      if (!lurePickerFilterSubs.length) return true;
+      const subs = Array.isArray(item?.tag_subs) ? item.tag_subs : [];
+      return lurePickerFilterSubs.every((sub) => subs.includes(sub));
+    }
+
     function renderLurePickerList() {
-      if (!lureTop5List || !lureAllList) return;
+      if (!lureTop5List || !lureAllList || !lureNoTagList) return;
       lureTop5List.innerHTML = '';
+      lureNoTagList.innerHTML = '';
       lureAllList.innerHTML = '';
+      if (lureTagMatchedList) lureTagMatchedList.innerHTML = '';
 
       const top5 = getTop5LureItems(lureMasterItems);
       const allAsc = getLureItemsAsc(lureMasterItems);
+      const matched = allAsc
+        .filter((item) => matchesLureTagFilter(item))
+        .slice()
+        .sort((a, b) => (Number(b.use_count || 0) - Number(a.use_count || 0)) || String(a.lure_name || '').localeCompare(String(b.lure_name || ''), 'ja'));
+      const noTag = allAsc.filter((item) => !hasAnyTag(item));
 
-      const appendItemButton = (container, item) => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'w-full text-left px-3 py-2 rounded-lg border border-slate-700 hover:bg-slate-800 text-sm';
-        btn.textContent = `${item.lure_name}`;
-        btn.onclick = () => {
-          if (inpLureName) inpLureName.value = item.lure_name || '';
-          closeLurePickerModal();
-        };
-        container.appendChild(btn);
+      const usedKeys = new Set();
+      const appendUnique = (container, list) => {
+        list.forEach((item) => {
+          const key = item.lure_key || normalizeLureNameForMatch(item.lure_name || '');
+          if (!key || usedKeys.has(key)) return;
+          usedKeys.add(key);
+          appendLureItemButton(container, item);
+        });
       };
 
-      if (top5.length === 0) {
-        const empty = document.createElement('div');
-        empty.className = 'text-xs text-slate-500 px-2 py-1';
-        empty.textContent = '候補がありません';
-        lureTop5List.appendChild(empty);
-      } else {
-        top5.forEach((item) => appendItemButton(lureTop5List, item));
+      if (lureTagMatchedSection) {
+        const hasFilter = !!lurePickerFilterMain;
+        lureTagMatchedSection.classList.toggle('hidden', !hasFilter);
+        if (hasFilter) {
+          if (matched.length) appendUnique(lureTagMatchedList, matched);
+          else renderPickerEmpty(lureTagMatchedList, 'タグ一致候補がありません');
+        }
       }
 
-      if (allAsc.length === 0) {
-        const empty = document.createElement('div');
-        empty.className = 'text-xs text-slate-500 px-2 py-1';
-        empty.textContent = '候補がありません';
-        lureAllList.appendChild(empty);
-      } else {
-        allAsc.forEach((item) => appendItemButton(lureAllList, item));
-      }
+      if (top5.length) appendUnique(lureTop5List, top5);
+      else renderPickerEmpty(lureTop5List);
+
+      if (noTag.length) appendUnique(lureNoTagList, noTag);
+      else renderPickerEmpty(lureNoTagList, 'タグ未設定候補はありません');
+
+      appendUnique(lureAllList, allAsc);
+      if (!lureAllList.children.length) renderPickerEmpty(lureAllList);
     }
 
     async function openLurePickerModal() {
@@ -14552,12 +14861,97 @@
         alert('ルアー候補の読み込みに失敗しました。設定画面の「再読込」をお試しください。');
         return;
       }
+      lurePickerFilterMain = '';
+      lurePickerFilterSubs = [];
+      renderLurePickerMainFilterOptions();
+      renderLurePickerSubFilterOptions();
       renderLurePickerList();
       lurePickerModal.classList.remove('hidden');
     }
 
+    function closeLureMasterEditModal() {
+      if (!lureMasterEditModal) return;
+      lureMasterEditModal.classList.add('hidden');
+      editingLureMasterItem = null;
+    }
+
+    function setSubTagsToInput(tags) {
+      if (!inpLureMasterEditSubTags) return;
+      inpLureMasterEditSubTags.value = Array.isArray(tags) ? tags.join(' ') : '';
+    }
+
+    function renderLureTagSuggestionChips() {
+      if (!lureMainTagSuggestList || !lureSubTagSuggestList) return;
+      lureMainTagSuggestList.innerHTML = '';
+      lureSubTagSuggestList.innerHTML = '';
+      const tagIndex = collectLureTagIndex(lureMasterItems);
+      const activeMain = normalizeMainTag(inpLureMasterEditMainTag?.value || '');
+      tagIndex.mains.forEach((main) => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        const selected = activeMain === main;
+        chip.className = selected
+          ? 'px-2 py-1 rounded-lg bg-sky-600 text-white text-xs'
+          : 'px-2 py-1 rounded-lg border border-slate-700 text-xs';
+        chip.textContent = main;
+        chip.onclick = () => {
+          if (inpLureMasterEditMainTag) inpLureMasterEditMainTag.value = main;
+          renderLureTagSuggestionChips();
+        };
+        lureMainTagSuggestList.appendChild(chip);
+      });
+
+      const subs = Array.from(tagIndex.subMap.get(activeMain) || []).sort((a, b) => a.localeCompare(b, 'ja'));
+      if (!subs.length) {
+        renderPickerEmpty(lureSubTagSuggestList, 'サブ候補なし');
+        return;
+      }
+      const currentSubs = parseSubTags(inpLureMasterEditSubTags?.value || '');
+      subs.forEach((sub) => {
+        const selected = currentSubs.includes(sub);
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = selected
+          ? 'px-2 py-1 rounded-lg bg-sky-600 text-white text-xs'
+          : 'px-2 py-1 rounded-lg border border-slate-700 hover:bg-slate-800 text-xs';
+        chip.textContent = sub;
+        chip.onclick = () => {
+          const next = selected
+            ? currentSubs.filter((x) => x !== sub)
+            : Array.from(new Set([...currentSubs, sub]));
+          setSubTagsToInput(next);
+          renderLureTagSuggestionChips();
+        };
+        lureSubTagSuggestList.appendChild(chip);
+      });
+    }
+
+    function openLureMasterEditModal(item = null) {
+      if (!lureMasterEditModal) return;
+      editingLureMasterItem = item ? { ...item } : null;
+      if (lureMasterEditTitle) {
+        lureMasterEditTitle.textContent = editingLureMasterItem ? 'ルアーを編集' : 'ルアーを追加';
+      }
+      if (inpLureMasterEditName) inpLureMasterEditName.value = editingLureMasterItem?.lure_name || '';
+      if (inpLureMasterEditMainTag) inpLureMasterEditMainTag.value = editingLureMasterItem?.tag_main || '';
+      setSubTagsToInput(editingLureMasterItem?.tag_subs || []);
+      if (btnDeleteLureMasterEdit) btnDeleteLureMasterEdit.classList.toggle('hidden', !editingLureMasterItem);
+      renderLureTagSuggestionChips();
+      lureMasterEditModal.classList.remove('hidden');
+    }
+
     async function renderLureMasterSettings() {
       if (!lureMasterList) return;
+      if (btnToggleLureMasterEdit) {
+        btnToggleLureMasterEdit.textContent = lureMasterEditMode ? '編集終了' : '編集';
+        btnToggleLureMasterEdit.className = lureMasterEditMode
+          ? 'px-2 py-1 rounded-lg border border-emerald-600 bg-emerald-900/30 text-emerald-300 hover:bg-emerald-900/50 text-xs whitespace-nowrap'
+          : 'px-2 py-1 rounded-lg border border-slate-700 hover:bg-slate-800 text-xs whitespace-nowrap';
+      }
+      if (btnAddLureMaster) {
+        btnAddLureMaster.classList.toggle('opacity-50', !lureMasterEditMode);
+      }
+
       try {
         setLureMasterStatus('読み込み中...');
         await loadLureMaster();
@@ -14571,9 +14965,7 @@
         return;
       }
 
-      if (!lureMasterLoadError) {
-        setLureMasterStatus('');
-      }
+      if (!lureMasterLoadError) setLureMasterStatus('');
       const allAsc = getLureItemsAsc(lureMasterItems);
 
       lureMasterList.innerHTML = '';
@@ -14586,69 +14978,135 @@
       }
 
       allAsc.forEach((item) => {
-        const row = document.createElement('div');
-        row.className = 'flex items-center gap-2';
-
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.value = item.lure_name || '';
-        input.className = 'min-w-0 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm';
-
-        const saveBtn = document.createElement('button');
-        saveBtn.type = 'button';
-        saveBtn.className = 'hidden shrink-0 px-3 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-xs font-semibold whitespace-nowrap';
-        saveBtn.textContent = '保存';
-        saveBtn.onclick = async () => {
-          try {
-            await upsertLureMaster(input.value, { previousName: item.lure_name, incrementUse: false });
-            setLureMasterStatus('保存しました');
-            await renderLureMasterSettings();
-          } catch (err) {
-            setLureMasterStatus('保存に失敗しました', true);
-          }
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = lureMasterEditMode
+          ? 'w-full text-left rounded-xl border border-slate-600 bg-transparent px-3 py-2 hover:border-sky-500 transition'
+          : 'w-full text-left rounded-xl border border-slate-700 bg-slate-900/50 px-3 py-2 transition';
+        const mainTag = normalizeMainTag(item.tag_main || '');
+        const subTags = Array.isArray(item.tag_subs) ? item.tag_subs : [];
+        const tagsLine = mainTag
+          ? `${mainTag}${subTags.length ? ` : ${subTags.join(' / ')}` : ''}`
+          : 'タグ未設定';
+        const titleClass = lureMasterEditMode ? 'font-semibold text-sm truncate text-slate-100' : 'font-semibold text-sm truncate text-slate-200';
+        const usageClass = lureMasterEditMode ? 'text-[11px] text-slate-300 shrink-0' : 'text-[11px] text-slate-400 shrink-0';
+        const tagClass = lureMasterEditMode ? 'mt-1 text-xs text-slate-300 truncate' : 'mt-1 text-xs text-slate-400 truncate';
+        card.innerHTML = `
+          <div class="flex items-center justify-between gap-2">
+            <div class="${titleClass}">${escapeHtml(item.lure_name || '')}</div>
+            <div class="${usageClass}">使用 ${Number(item.use_count || 0)}</div>
+          </div>
+          <div class="${tagClass}">${escapeHtml(tagsLine)}</div>
+        `;
+        card.onclick = () => {
+          if (!lureMasterEditMode) return;
+          openLureMasterEditModal(item);
         };
-
-        const deleteBtn = document.createElement('button');
-        deleteBtn.type = 'button';
-        deleteBtn.className = 'shrink-0 px-3 py-2 rounded-lg border border-slate-700 hover:bg-slate-800 text-xs whitespace-nowrap';
-        deleteBtn.textContent = '削除';
-        deleteBtn.onclick = async () => {
-          if (!confirm('このルアーを削除しますか？')) return;
-          try {
-            await deleteLureMaster(item.lure_name);
-            setLureMasterStatus('削除しました');
-            await renderLureMasterSettings();
-          } catch (err) {
-            setLureMasterStatus('削除に失敗しました', true);
-          }
-        };
-
-        let blurHideTimer = null;
-        input.addEventListener('focus', () => {
-          if (blurHideTimer) {
-            clearTimeout(blurHideTimer);
-            blurHideTimer = null;
-          }
-          saveBtn.classList.remove('hidden');
-        });
-        input.addEventListener('blur', () => {
-          blurHideTimer = setTimeout(() => {
-            saveBtn.classList.add('hidden');
-            blurHideTimer = null;
-          }, 120);
-        });
-        saveBtn.addEventListener('mousedown', () => {
-          if (blurHideTimer) {
-            clearTimeout(blurHideTimer);
-            blurHideTimer = null;
-          }
-        });
-
-        row.appendChild(input);
-        row.appendChild(saveBtn);
-        row.appendChild(deleteBtn);
-        lureMasterList.appendChild(row);
+        lureMasterList.appendChild(card);
       });
+    }
+
+    if (btnToggleLureMasterEdit) {
+      btnToggleLureMasterEdit.onclick = async () => {
+        lureMasterEditMode = !lureMasterEditMode;
+        await renderLureMasterSettings();
+      };
+    }
+
+    if (btnAddLureMaster) {
+      btnAddLureMaster.onclick = () => {
+        if (!lureMasterEditMode) {
+          setLureMasterStatus('編集ボタンを押してから追加できます', true);
+          return;
+        }
+        openLureMasterEditModal(null);
+      };
+    }
+
+    if (btnCloseLureMasterEditModal) btnCloseLureMasterEditModal.onclick = closeLureMasterEditModal;
+    if (btnCancelLureMasterEdit) btnCancelLureMasterEdit.onclick = closeLureMasterEditModal;
+    if (lureMasterEditModal) {
+      lureMasterEditModal.addEventListener('click', (e) => {
+        if (e.target === lureMasterEditModal) closeLureMasterEditModal();
+      });
+    }
+
+    if (inpLureMasterEditMainTag) {
+      inpLureMasterEditMainTag.addEventListener('input', () => {
+        renderLureTagSuggestionChips();
+      });
+    }
+    if (inpLureMasterEditSubTags) {
+      inpLureMasterEditSubTags.addEventListener('input', () => {
+        renderLureTagSuggestionChips();
+      });
+    }
+
+    if (btnSaveLureMasterEdit) {
+      btnSaveLureMasterEdit.onclick = async () => {
+        if (!lureMasterEditMode) return;
+        const lureName = normalizeLureNameDisplay(inpLureMasterEditName?.value || '');
+        if (!lureName) {
+          setLureMasterStatus('ルアー名を入力してください', true);
+          return;
+        }
+        const mainTag = normalizeMainTag(inpLureMasterEditMainTag?.value || '');
+        const subTags = parseSubTags(inpLureMasterEditSubTags?.value || '');
+        if (!mainTag && subTags.length) {
+          setLureMasterStatus('サブタグを使う場合はメインタグを入力してください', true);
+          return;
+        }
+        try {
+          await upsertLureMaster({
+            lureName,
+            tagMain: mainTag,
+            tagSubs: subTags,
+            tagsRaw: buildTagsRaw(mainTag, subTags)
+          }, {
+            previousName: editingLureMasterItem?.lure_name || '',
+            incrementUse: false
+          });
+          setLureMasterStatus('保存しました');
+          closeLureMasterEditModal();
+          await renderLureMasterSettings();
+        } catch (err) {
+          setLureMasterStatus('保存に失敗しました', true);
+        }
+      };
+    }
+
+    if (btnDeleteLureMasterEdit) {
+      btnDeleteLureMasterEdit.onclick = async () => {
+        if (!lureMasterEditMode || !editingLureMasterItem) return;
+        if (!confirm('このルアーを削除しますか？')) return;
+        try {
+          await deleteLureMaster(editingLureMasterItem.lure_name || '');
+          setLureMasterStatus('削除しました');
+          closeLureMasterEditModal();
+          await renderLureMasterSettings();
+        } catch (err) {
+          setLureMasterStatus('削除に失敗しました', true);
+        }
+      };
+    }
+
+    if (lurePickerMainFilter) {
+      lurePickerMainFilter.addEventListener('change', () => {
+        lurePickerFilterMain = normalizeMainTag(lurePickerMainFilter.value || '');
+        lurePickerFilterSubs = [];
+        renderLurePickerSubFilterOptions();
+        renderLurePickerList();
+      });
+    }
+
+    if (btnClearLureTagFilter) {
+      btnClearLureTagFilter.onclick = () => {
+        lurePickerFilterMain = '';
+        lurePickerFilterSubs = [];
+        if (lurePickerMainFilter) lurePickerMainFilter.value = '';
+        renderLurePickerSubFilterOptions();
+        renderLurePickerList();
+      };
     }
 
     Object.entries(topicCategories).forEach(([btnId, category]) => {
@@ -14705,33 +15163,6 @@
     if (lurePickerModal) {
       lurePickerModal.addEventListener('click', (e) => {
         if (e.target === lurePickerModal) closeLurePickerModal();
-      });
-    }
-
-    if (btnAddLureMaster) {
-      btnAddLureMaster.onclick = async () => {
-        const text = normalizeLureNameDisplay(inpLureMasterNew?.value || '');
-        if (!text) {
-          setLureMasterStatus('ルアー名を入力してください', true);
-          return;
-        }
-        try {
-          await upsertLureMaster(text, { incrementUse: false });
-          if (inpLureMasterNew) inpLureMasterNew.value = '';
-          setLureMasterStatus('追加しました');
-          await renderLureMasterSettings();
-        } catch (err) {
-          setLureMasterStatus('追加に失敗しました', true);
-        }
-      };
-    }
-
-    if (inpLureMasterNew && btnAddLureMaster) {
-      inpLureMasterNew.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          btnAddLureMaster.click();
-        }
       });
     }
 
