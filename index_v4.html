@@ -96,6 +96,36 @@
       #locationSelectionModal #inpLocationStartTime[type="time"]::-webkit-calendar-picker-indicator {
         margin: 0;
       }
+
+      #tripModal #inpTripStart[type="datetime-local"],
+      #tripModal #inpTripEnd[type="datetime-local"] {
+        -webkit-appearance: none;
+        appearance: none;
+        display: block;
+        box-sizing: border-box;
+        width: -webkit-fill-available;
+        width: 100%;
+        max-width: 100% !important;
+        min-width: 0;
+        min-inline-size: 0;
+      }
+
+      #tripModal #inpTripStart[type="datetime-local"]::-webkit-date-and-time-value,
+      #tripModal #inpTripEnd[type="datetime-local"]::-webkit-date-and-time-value {
+        text-align: left;
+      }
+
+      #tripModal #inpTripStart[type="datetime-local"]::-webkit-datetime-edit,
+      #tripModal #inpTripStart[type="datetime-local"]::-webkit-datetime-edit-fields-wrapper,
+      #tripModal #inpTripEnd[type="datetime-local"]::-webkit-datetime-edit,
+      #tripModal #inpTripEnd[type="datetime-local"]::-webkit-datetime-edit-fields-wrapper {
+        padding: 0;
+      }
+
+      #tripModal #inpTripStart[type="datetime-local"]::-webkit-calendar-picker-indicator,
+      #tripModal #inpTripEnd[type="datetime-local"]::-webkit-calendar-picker-indicator {
+        margin: 0;
+      }
     }
     
     /* ★追加：ピンチズーム完全無効化 */
