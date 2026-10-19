@@ -5,16 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#0f172a" />
   <meta name="description" content="釣行の記録、釣果の管理、潮汐情報の自動取得ができるPWAアプリケーション" />
-  <link rel="manifest" href="./manifest.json?v=4.1.1">
+  <link rel="manifest" href="./manifest.json?v=4.1.2">
   <link rel="apple-touch-icon" href="./icon-192.png">
   <link rel="icon" type="image/png" href="./icon-192.png" sizes="192x192">
   <link rel="icon" type="image/png" href="./icon-512.png" sizes="512x512">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Fishing Log">
-  <!-- ★Version: 4.1.1 - 2026-10-14 -->
-  <!-- ★Updates: 浮遊ボタン/モーダルUI調整、ThumbDiagの同一img競合抑制 -->
-  <title>Fishing Log V4.1.1（PWAフロント / コンパクトUI）</title>
+  <!-- ★Version: 4.1.2 - 2026-10-19 -->
+  <!-- ★Updates: ルアーピッカータップ導線短縮、検索フィルター適用ロジック改善、離脱時フィルターリセット -->
+  <title>Fishing Log V4.1.2（PWAフロント / コンパクトUI）</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -124,6 +124,31 @@
 
       #tripModal #inpTripStart[type="datetime-local"]::-webkit-calendar-picker-indicator,
       #tripModal #inpTripEnd[type="datetime-local"]::-webkit-calendar-picker-indicator {
+        margin: 0;
+      }
+
+      #catchModal #inpCatchTime[type="datetime-local"] {
+        -webkit-appearance: none;
+        appearance: none;
+        display: block;
+        box-sizing: border-box;
+        width: -webkit-fill-available;
+        width: 100%;
+        max-width: 100% !important;
+        min-width: 0;
+        min-inline-size: 0;
+      }
+
+      #catchModal #inpCatchTime[type="datetime-local"]::-webkit-date-and-time-value {
+        text-align: left;
+      }
+
+      #catchModal #inpCatchTime[type="datetime-local"]::-webkit-datetime-edit,
+      #catchModal #inpCatchTime[type="datetime-local"]::-webkit-datetime-edit-fields-wrapper {
+        padding: 0;
+      }
+
+      #catchModal #inpCatchTime[type="datetime-local"]::-webkit-calendar-picker-indicator {
         margin: 0;
       }
     }
@@ -841,7 +866,7 @@
         </div>
         <h1 class="absolute left-1/2 -translate-x-1/2 text-center text-[25px] font-bold whitespace-nowrap pointer-events-none">Fishing Log</h1>
         <div class="shrink-0 text-xs text-slate-500 font-semibold">
-          <span id="versionInfo">V4.1.1</span>
+          <span id="versionInfo">V4.1.2</span>
         </div>
       </div>
     </div>
@@ -1584,9 +1609,7 @@
         <div class="rounded-xl border border-slate-800 bg-slate-950/60 p-2 space-y-2">
           <div>
             <div class="text-xs text-slate-400 mb-1">メインタグ</div>
-            <select id="lurePickerMainFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-sm">
-              <option value="">絞り込みなし</option>
-            </select>
+            <div id="lurePickerMainFilterList" class="flex flex-wrap gap-1"></div>
           </div>
           <div>
             <div class="text-xs text-slate-400 mb-1">サブタグ</div>
@@ -2284,6 +2307,8 @@
       });
     }
 
+    let isFilterUiReady = false;
+
     function showView(name){
       const isRecordOrTrips = (name === 'record' || name === 'trips');
       if (isRecordOrTrips) {
@@ -2314,14 +2339,12 @@
         }
       }
       
-      // ★追加：catches画面に切り替わるときフィルター条件を復元
-      if (name === 'catches') {
-        loadFilterConditions();
+      // フィルター条件はページ離脱時に都度リセット（永続化しない）
+      if (isFilterUiReady && name !== 'catches') {
+        resetCatchFiltersOnLeave();
       }
-
-      // ★追加：trips画面に切り替わるときフィルター条件を復元
-      if (name === 'trips') {
-        loadTripsFilterConditions();
+      if (isFilterUiReady && name !== 'trips') {
+        resetTripsFiltersOnLeave();
       }
 
       if (name === 'settings') {
@@ -3572,6 +3595,7 @@
     let allCatchItems = [];
     const CATCHES_PAGE_SIZE = 10;
     let currentCatchListItems = [];
+    let catchesFilteredDisplayLimit = CATCHES_PAGE_SIZE;
     let catchesServerOffset = 0;
     let catchesHasMore = false;
     let catchesTotalCount = 0;
@@ -3932,9 +3956,15 @@
         catchesHasMore = !!result?.meta?.hasMore;
         catchesServerOffset = Number(result?.meta?.nextOffset ?? currentCatchListItems.length);
 
-        // setupMapping() の初回プレビュー描画で一覧は1回描画されるため、ここでは重複描画しない
-        updateCatchCount(catchesTotalCount, currentCatchListItems.length);
-        if (btnLoadMoreCatches) btnLoadMoreCatches.classList.toggle('hidden', !catchesHasMore);
+        if (isCatchFilterActive()) {
+          await ensureAllCatchesLoadedForFilter();
+          catchesFilteredDisplayLimit = CATCHES_PAGE_SIZE;
+        }
+        const filtered = filterAndSortCatches(currentCatchListItems);
+        const visible = isCatchFilterActive() ? filtered.slice(0, catchesFilteredDisplayLimit) : filtered;
+        renderRemoteList(visible);
+        updateCatchCount(catchesTotalCount, filtered.length);
+        updateLoadMoreCatchesButton(filtered.length);
         hasLoadedOnce = true;
 
       }catch(e){
@@ -3946,7 +3976,7 @@
         catchesLoading = false;
       }
     };
-    btnClearSheet && (btnClearSheet.onclick = ()=>{ remoteCatchList.innerHTML=''; closeCatchDetailModal(); sheetStatus.textContent=''; lastRows=null; lastHeaders=[]; hasLoadedOnce=false; tripsById={}; allCatchItems=[]; currentCatchListItems=[]; catchesServerOffset=0; catchesHasMore=false; catchesTotalCount=0; catchesPagingMode=true; catchesLoading=false; if (btnLoadMoreCatches) btnLoadMoreCatches.classList.add('hidden'); });
+    btnClearSheet && (btnClearSheet.onclick = ()=>{ remoteCatchList.innerHTML=''; closeCatchDetailModal(); sheetStatus.textContent=''; lastRows=null; lastHeaders=[]; hasLoadedOnce=false; tripsById={}; allCatchItems=[]; currentCatchListItems=[]; catchesFilteredDisplayLimit=CATCHES_PAGE_SIZE; catchesServerOffset=0; catchesHasMore=false; catchesTotalCount=0; catchesPagingMode=true; catchesLoading=false; if (btnLoadMoreCatches) { btnLoadMoreCatches.classList.add('hidden'); btnLoadMoreCatches.textContent='さらに読み込む'; btnLoadMoreCatches.disabled=false; btnLoadMoreCatches.classList.remove('opacity-50','cursor-not-allowed'); } });
     btnCloseDetail && (btnCloseDetail.onclick = ()=> closeCatchDetailModal());
     detailWrap && detailWrap.addEventListener('click', (e) => {
       if (e.target === detailWrap) closeCatchDetailModal();
@@ -4006,9 +4036,11 @@
         document.querySelector('input[name="sortOption"][value="newest"]').checked = true;
 
         // 全件表示
+        catchesFilteredDisplayLimit = CATCHES_PAGE_SIZE;
         const filtered = filterAndSortCatches(allCatchItems);
-        updateCatchCount(allCatchItems.length, allCatchItems.length);
+        updateCatchCount(allCatchItems.length, filtered.length);
         renderRemoteList(allCatchItems);
+        updateLoadMoreCatchesButton(filtered.length);
         updateCatchFilterButtonState();
         
         // localStorage をクリア
@@ -4028,23 +4060,24 @@
 
     // ★追加：適応ボタン
     if (btnApplyFilter) {
-      btnApplyFilter.onclick = (e) => {
+      btnApplyFilter.onclick = async (e) => {
         e.preventDefault();
         console.log('[Filter] Apply button clicked');
         
-        // フィルター・ソート条件を保存
-        saveFilterConditions();
-        
         // フィルター・ソート実行
+        await ensureAllCatchesLoadedForFilter();
+        catchesFilteredDisplayLimit = CATCHES_PAGE_SIZE;
         const filtered = filterAndSortCatches(allCatchItems);
+        const visible = filtered.slice(0, catchesFilteredDisplayLimit);
         
         // 件数更新
         updateCatchCount(allCatchItems.length, filtered.length);
         updateCatchFilterButtonState();
         
         // UIで表示
-        renderRemoteList(filtered);
-        console.log('[Filter] Applied:', filtered.length, 'items displayed');
+        renderRemoteList(visible);
+        updateLoadMoreCatchesButton(filtered.length);
+        console.log('[Filter] Applied:', visible.length, '/', filtered.length, 'items displayed');
         
         // モーダルを自動閉じる
         filterModal.classList.add('hidden');
@@ -4732,6 +4765,18 @@
     }
     btnLoadMoreCatches && (btnLoadMoreCatches.onclick = async () => {
       try {
+        if (isCatchFilterActive()) {
+          const filteredAll = filterAndSortCatches(allCatchItems);
+          if (Math.min(catchesFilteredDisplayLimit, filteredAll.length) >= filteredAll.length) {
+            updateLoadMoreCatchesButton(filteredAll.length);
+            return;
+          }
+          catchesFilteredDisplayLimit += CATCHES_PAGE_SIZE;
+          renderRemoteList(filteredAll.slice(0, catchesFilteredDisplayLimit));
+          updateCatchCount(catchesTotalCount || currentCatchListItems.length, filteredAll.length);
+          updateLoadMoreCatchesButton(filteredAll.length);
+          return;
+        }
         if (!catchesPagingMode || catchesLoading || !catchesHasMore) return;
         catchesLoading = true;
         sheetStatus.textContent = 'さらに読込中...';
@@ -4752,9 +4797,10 @@
         catchesHasMore = !!result?.meta?.hasMore;
         catchesServerOffset = Number(result?.meta?.nextOffset ?? currentCatchListItems.length);
 
-        renderRemoteList(currentCatchListItems);
-        updateCatchCount(catchesTotalCount || currentCatchListItems.length, currentCatchListItems.length);
-        if (btnLoadMoreCatches) btnLoadMoreCatches.classList.toggle('hidden', !catchesHasMore);
+        const filtered = filterAndSortCatches(currentCatchListItems);
+        renderRemoteList(filtered);
+        updateCatchCount(catchesTotalCount || currentCatchListItems.length, filtered.length);
+        updateLoadMoreCatchesButton(filtered.length);
       } catch (e) {
         console.error('[btnLoadMoreCatches] Error:', e);
         sheetStatus.textContent = `追加読込失敗: ${e.message||e}`;
@@ -4795,59 +4841,23 @@
       };
     }
 
-    // ★追加：フィルター条件をローカルストレージに保存
-    function saveFilterConditions() {
-      try {
-        const conditions = getFilterConditionsFromUI();
-        localStorage.setItem('catchFilterConditions', JSON.stringify(conditions));
-        console.log('[Filter] Conditions saved:', conditions);
-      } catch (e) {
-        console.warn('[Filter] Failed to save conditions:', e);
-      }
-    }
-
-    // ★追加：フィルター条件をローカルストレージから読み込み
-    function loadFilterConditions() {
-      try {
-        const saved = localStorage.getItem('catchFilterConditions');
-        if (saved) {
-          const conditions = JSON.parse(saved);
-          
-          // UIに反映
-          filterSpecies.value = conditions.species || '';
-          if (conditions.dateStart) filterDateStart.value = conditions.dateStart.split('T')[0];
-          if (conditions.dateEnd) filterDateEnd.value = conditions.dateEnd.split('T')[0];
-          
-          // 潮名チェックボックス
-          (conditions.tideNames || []).forEach(name => {
-            const idMap = {
-              '大潮': 'filterTideOomori',
-              '中潮': 'filterTideChusio',
-              '小潮': 'filterTideKosio',
-              '長潮': 'filterTideNagatide',
-              '若潮': 'filterTideWakatide'
-            };
-            const id = idMap[name];
-            if (id && document.getElementById(id)) {
-              document.getElementById(id).checked = true;
-            }
-          });
-          
-          // 潮位傾向
-          if ((conditions.trends || []).includes('上げ')) filterTrendUp.checked = true;
-          if ((conditions.trends || []).includes('下げ')) filterTrendDown.checked = true;
-          
-          // ソート
-          const sortRadio = document.querySelector(`input[name="sortOption"][value="${conditions.sortBy}"]`);
-          if (sortRadio) sortRadio.checked = true;
-          
-          console.log('[Filter] Conditions loaded:', conditions);
-        }
-      } catch (e) {
-        console.warn('[Filter] Failed to load conditions:', e);
-      } finally {
-        updateCatchFilterButtonState();
-      }
+    function resetCatchFiltersOnLeave() {
+      if (!filterSpecies || !filterDateStart || !filterDateEnd || !filterTrendUp || !filterTrendDown) return;
+      filterSpecies.value = '';
+      filterDateStart.value = '';
+      filterDateEnd.value = '';
+      document.getElementById('filterTideOomori').checked = false;
+      document.getElementById('filterTideChusio').checked = false;
+      document.getElementById('filterTideKosio').checked = false;
+      document.getElementById('filterTideNagatide').checked = false;
+      document.getElementById('filterTideWakatide').checked = false;
+      filterTrendUp.checked = false;
+      filterTrendDown.checked = false;
+      const newest = document.querySelector('input[name="sortOption"][value="newest"]');
+      if (newest) newest.checked = true;
+      catchesFilteredDisplayLimit = CATCHES_PAGE_SIZE;
+      updateCatchFilterButtonState();
+      updateLoadMoreCatchesButton();
     }
 
     function isCatchFilterActive() {
@@ -4968,6 +4978,45 @@
       if (status) {
         status.textContent = `${filtered}/${total}`;
       }
+    }
+
+    function updateLoadMoreCatchesButton(filteredTotal = null) {
+      if (!btnLoadMoreCatches) return;
+      const active = isCatchFilterActive();
+      if (!active) {
+        btnLoadMoreCatches.textContent = 'さらに読み込む';
+        btnLoadMoreCatches.disabled = false;
+        btnLoadMoreCatches.classList.toggle('hidden', !catchesHasMore);
+        btnLoadMoreCatches.classList.remove('opacity-50', 'cursor-not-allowed');
+        return;
+      }
+
+      const total = Number(filteredTotal || 0);
+      const done = Math.min(catchesFilteredDisplayLimit, total) >= total;
+      btnLoadMoreCatches.classList.remove('hidden');
+      btnLoadMoreCatches.textContent = done ? 'すべての結果' : 'さらに読み込む';
+      btnLoadMoreCatches.disabled = done;
+      btnLoadMoreCatches.classList.toggle('opacity-50', done);
+      btnLoadMoreCatches.classList.toggle('cursor-not-allowed', done);
+    }
+
+    async function ensureAllCatchesLoadedForFilter() {
+      if (!isCatchFilterActive()) return;
+      const id = SHEET_ID.trim();
+      while (catchesHasMore) {
+        const result = await loadSheetViaGAS(SHEET_NAME, id, { limit: CATCHES_PAGE_SIZE, offset: catchesServerOffset, order: 'desc' });
+        const rows = result?.data || [];
+        if (rows.length < 2) {
+          catchesHasMore = false;
+          break;
+        }
+        const appended = mapRowsToItems(rows);
+        currentCatchListItems = currentCatchListItems.concat(appended);
+        allCatchItems = currentCatchListItems.slice();
+        catchesHasMore = !!result?.meta?.hasMore;
+        catchesServerOffset = Number(result?.meta?.nextOffset ?? currentCatchListItems.length);
+      }
+      catchesTotalCount = Math.max(catchesTotalCount, currentCatchListItems.length);
     }
 
     function showDetail(it) {
@@ -5108,7 +5157,7 @@
     // ===== PWA: Service Worker 登録 =====
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=4.1.1', {
+        navigator.serviceWorker.register('./sw.js?v=4.1.2', {
           scope: './'
         })
           .then(registration => {
@@ -8688,10 +8737,13 @@
     const TRIPS_PAGE_SIZE = 10;
     let currentTripsRows = [];
     let currentTripsHeader = [];
+    let tripsFilteredDisplayLimit = TRIPS_PAGE_SIZE;
     let tripsServerOffset = 0;
     let tripsHasMore = false;
     let tripsTotalCount = 0;
     let tripsLoading = false;
+
+    isFilterUiReady = true;
 
     // モーダルを開く
     if (btnShowTripsFilter) {
@@ -8733,9 +8785,11 @@
         document.querySelector('input[name="tripsSortOption"][value="newest"]').checked = true;
 
         // 全件表示
+        tripsFilteredDisplayLimit = TRIPS_PAGE_SIZE;
         await renderTripsList([tripsCache[0], ...allTripsItems]);
         updateTripCountStatus(allTripsItems.length, allTripsItems.length);
         updateTripsFilterButtonState();
+        updateLoadMoreTripsButton(allTripsItems.length);
         
         // localStorage をクリア
         try {
@@ -8752,37 +8806,15 @@
       };
     }
 
-    // ★追加：釣行フィルター・ソート関数
-    function saveTripsFilterConditions() {
-      try {
-        const conditions = {
-          dateStart: tripsFilterDateStart.value,
-          dateEnd: tripsFilterDateEnd.value,
-          sortBy: document.querySelector('input[name="tripsSortOption"]:checked').value || 'newest'
-        };
-        localStorage.setItem('tripsFilterConditions', JSON.stringify(conditions));
-        console.log('[Trips Filter] Conditions saved:', conditions);
-      } catch (e) {
-        console.warn('[Trips Filter] Failed to save conditions:', e);
-      }
-    }
-
-    function loadTripsFilterConditions() {
-      try {
-        const saved = localStorage.getItem('tripsFilterConditions');
-        if (saved) {
-          const conditions = JSON.parse(saved);
-          if (conditions.dateStart) tripsFilterDateStart.value = conditions.dateStart;
-          if (conditions.dateEnd) tripsFilterDateEnd.value = conditions.dateEnd;
-          const sortRadio = document.querySelector(`input[name="tripsSortOption"][value="${conditions.sortBy}"]`);
-          if (sortRadio) sortRadio.checked = true;
-          console.log('[Trips Filter] Conditions loaded:', conditions);
-        }
-      } catch (e) {
-        console.warn('[Trips Filter] Failed to load conditions:', e);
-      } finally {
-        updateTripsFilterButtonState();
-      }
+    function resetTripsFiltersOnLeave() {
+      if (!tripsFilterDateStart || !tripsFilterDateEnd) return;
+      tripsFilterDateStart.value = '';
+      tripsFilterDateEnd.value = '';
+      const newest = document.querySelector('input[name="tripsSortOption"][value="newest"]');
+      if (newest) newest.checked = true;
+      tripsFilteredDisplayLimit = TRIPS_PAGE_SIZE;
+      updateTripsFilterButtonState();
+      updateLoadMoreTripsButton();
     }
 
     function isTripsFilterActive() {
@@ -8798,6 +8830,44 @@
     function updateTripCountStatus(displayed, total) {
       if (!tripStatus) return;
       tripStatus.textContent = `${displayed}/${total}`;
+    }
+
+    function updateLoadMoreTripsButton(filteredTotal = null) {
+      if (!btnLoadMoreTrips) return;
+      const active = isTripsFilterActive();
+      if (!active) {
+        btnLoadMoreTrips.textContent = 'さらに読み込む';
+        btnLoadMoreTrips.disabled = false;
+        btnLoadMoreTrips.classList.toggle('hidden', !tripsHasMore);
+        btnLoadMoreTrips.classList.remove('opacity-50', 'cursor-not-allowed');
+        return;
+      }
+
+      const total = Number(filteredTotal || 0);
+      const done = Math.min(tripsFilteredDisplayLimit, total) >= total;
+      btnLoadMoreTrips.classList.remove('hidden');
+      btnLoadMoreTrips.textContent = done ? 'すべての結果' : 'さらに読み込む';
+      btnLoadMoreTrips.disabled = done;
+      btnLoadMoreTrips.classList.toggle('opacity-50', done);
+      btnLoadMoreTrips.classList.toggle('cursor-not-allowed', done);
+    }
+
+    async function ensureAllTripsLoadedForFilter() {
+      if (!isTripsFilterActive()) return;
+      while (tripsHasMore) {
+        const result = await loadSheetViaGAS(TRIPS_SHEET_NAME, SHEET_ID, { limit: TRIPS_PAGE_SIZE, offset: tripsServerOffset, order: 'desc' });
+        const rows = result?.data || [];
+        if (!rows || rows.length < 2) {
+          tripsHasMore = false;
+          break;
+        }
+        if (!currentTripsHeader.length) currentTripsHeader = rows[0];
+        currentTripsRows = currentTripsRows.concat(rows.slice(1));
+        allTripsItems = currentTripsRows.slice();
+        tripsHasMore = !!result?.meta?.hasMore;
+        tripsServerOffset = Number(result?.meta?.nextOffset ?? currentTripsRows.length);
+      }
+      tripsTotalCount = Math.max(tripsTotalCount, currentTripsRows.length);
     }
 
     function filterAndSortTrips(items) {
@@ -8861,19 +8931,19 @@
         e.preventDefault();
         console.log('[Trips Filter] Apply button clicked');
         
-        // フィルター・ソート条件を保存
-        saveTripsFilterConditions();
-        
         // フィルター・ソート実行
+        await ensureAllTripsLoadedForFilter();
+        tripsFilteredDisplayLimit = TRIPS_PAGE_SIZE;
         const filtered = filterAndSortTrips(allTripsItems);
         
         // ★修正：renderTripsListはheader+body形式を期待している
-        const tripsWithHeader = [tripsCache[0], ...filtered];
+        const tripsWithHeader = [tripsCache[0], ...filtered.slice(0, tripsFilteredDisplayLimit)];
         
         // UIで表示
         await renderTripsList(tripsWithHeader);
         updateTripCountStatus(filtered.length, allTripsItems.length);
         updateTripsFilterButtonState();
+        updateLoadMoreTripsButton(filtered.length);
         console.log('[Trips Filter] Applied:', filtered.length, 'items displayed');
         
         // モーダルを自動閉じる
@@ -8888,12 +8958,13 @@
       allTripsItems = []; 
       currentTripsRows = [];
       currentTripsHeader = [];
+      tripsFilteredDisplayLimit = TRIPS_PAGE_SIZE;
       tripsServerOffset = 0;
       tripsHasMore = false;
       tripsTotalCount = 0;
       tripsLoading = false;
       tripListEl.innerHTML = ''; 
-      if (btnLoadMoreTrips) btnLoadMoreTrips.classList.add('hidden');
+      if (btnLoadMoreTrips) { btnLoadMoreTrips.classList.add('hidden'); btnLoadMoreTrips.textContent = 'さらに読み込む'; btnLoadMoreTrips.disabled = false; btnLoadMoreTrips.classList.remove('opacity-50', 'cursor-not-allowed'); }
       tripDetailWrap.classList.add('hidden'); 
       tripStatus.textContent = '';
     };
@@ -8928,10 +8999,17 @@
         tripsHasMore = !!result?.meta?.hasMore;
         tripsServerOffset = Number(result?.meta?.nextOffset ?? currentTripsRows.length);
 
-        await renderTripsList([currentTripsHeader, ...currentTripsRows]);
-        updateTripCountStatus(currentTripsRows.length, tripsTotalCount);
+        if (isTripsFilterActive()) {
+          await ensureAllTripsLoadedForFilter();
+          tripsFilteredDisplayLimit = TRIPS_PAGE_SIZE;
+        }
+
+        const filtered = filterAndSortTrips(allTripsItems);
+        const visible = isTripsFilterActive() ? filtered.slice(0, tripsFilteredDisplayLimit) : filtered;
+        await renderTripsList([currentTripsHeader, ...visible]);
+        updateTripCountStatus(filtered.length, tripsTotalCount);
         updateTripsFilterButtonState();
-        if (btnLoadMoreTrips) btnLoadMoreTrips.classList.toggle('hidden', !tripsHasMore);
+        updateLoadMoreTripsButton(filtered.length);
       }catch(e){
         console.error('[loadTrips] Error:', e);
         console.error('[loadTrips] Stack:', e.stack);
@@ -10317,6 +10395,18 @@
 
     btnLoadMoreTrips && (btnLoadMoreTrips.onclick = async () => {
       try {
+        if (isTripsFilterActive()) {
+          const filteredAll = filterAndSortTrips(allTripsItems);
+          if (Math.min(tripsFilteredDisplayLimit, filteredAll.length) >= filteredAll.length) {
+            updateLoadMoreTripsButton(filteredAll.length);
+            return;
+          }
+          tripsFilteredDisplayLimit += TRIPS_PAGE_SIZE;
+          await renderTripsList([currentTripsHeader, ...filteredAll.slice(0, tripsFilteredDisplayLimit)]);
+          updateTripCountStatus(filteredAll.length, tripsTotalCount);
+          updateLoadMoreTripsButton(filteredAll.length);
+          return;
+        }
         if (tripsLoading || !tripsHasMore) return;
         tripsLoading = true;
         tripStatus.textContent = 'さらに読込中...';
@@ -10337,10 +10427,11 @@
         tripsHasMore = !!result?.meta?.hasMore;
         tripsServerOffset = Number(result?.meta?.nextOffset ?? currentTripsRows.length);
 
-        await renderTripsList([currentTripsHeader, ...currentTripsRows]);
-        updateTripCountStatus(currentTripsRows.length, tripsTotalCount);
+        const filtered = filterAndSortTrips(allTripsItems);
+        await renderTripsList([currentTripsHeader, ...filtered]);
+        updateTripCountStatus(filtered.length, tripsTotalCount);
         updateTripsFilterButtonState();
-        if (btnLoadMoreTrips) btnLoadMoreTrips.classList.toggle('hidden', !tripsHasMore);
+        updateLoadMoreTripsButton(filtered.length);
       } catch (e) {
         console.error('[btnLoadMoreTrips] Error:', e);
         tripStatus.textContent = `追加読込失敗: ${e.message||e}`;
@@ -14446,7 +14537,7 @@
     const btnTopicLureQuick = document.getElementById('btnTopicLureQuick');
     const lurePickerModal = document.getElementById('lurePickerModal');
     const btnCloseLurePicker = document.getElementById('btnCloseLurePicker');
-    const lurePickerMainFilter = document.getElementById('lurePickerMainFilter');
+    const lurePickerMainFilterList = document.getElementById('lurePickerMainFilterList');
     const lurePickerSubFilterList = document.getElementById('lurePickerSubFilterList');
     const btnClearLureTagFilter = document.getElementById('btnClearLureTagFilter');
     const lureTagMatchedSection = document.getElementById('lureTagMatchedSection');
@@ -14557,7 +14648,10 @@
     function parseSubTags(value) {
       const raw = normalizeTagText(value);
       if (!raw) return [];
-      const list = raw.split(/\s+/).map((x) => normalizeTagText(x)).filter(Boolean);
+      const list = raw
+        .split(/[\s,、]+/)
+        .map((x) => normalizeTagText(x))
+        .filter(Boolean);
       return Array.from(new Set(list));
     }
 
@@ -14761,8 +14855,7 @@
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'w-full text-left px-3 py-2 rounded-lg border border-slate-700 hover:bg-slate-800 text-sm';
-      const tagPart = item?.tag_main ? ` [${item.tag_main}${item.tag_subs?.length ? `:${item.tag_subs.join('/')}` : ''}]` : '';
-      btn.textContent = `${item.lure_name}${tagPart}`;
+      btn.textContent = `${item.lure_name}`;
       btn.onclick = () => {
         if (inpLureName) inpLureName.value = item.lure_name || '';
         closeLurePickerModal();
@@ -14779,20 +14872,31 @@
     }
 
     function renderLurePickerMainFilterOptions() {
-      if (!lurePickerMainFilter) return;
+      if (!lurePickerMainFilterList) return;
       const tagIndex = collectLureTagIndex(lureMasterItems);
-      lurePickerMainFilter.innerHTML = '';
-      const none = document.createElement('option');
-      none.value = '';
-      none.textContent = '絞り込みなし';
-      lurePickerMainFilter.appendChild(none);
+      lurePickerMainFilterList.innerHTML = '';
+
+      const appendMainChip = (label, value) => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        const selected = (lurePickerFilterMain || '') === (value || '');
+        chip.className = selected
+          ? 'px-2 py-1 rounded-lg bg-sky-600 text-white text-xs'
+          : 'px-2 py-1 rounded-lg border border-slate-700 text-xs';
+        chip.textContent = label;
+        chip.onclick = () => {
+          lurePickerFilterMain = normalizeMainTag(value || '');
+          lurePickerFilterSubs = [];
+          renderLurePickerMainFilterOptions();
+          renderLurePickerSubFilterOptions();
+          renderLurePickerList();
+        };
+        lurePickerMainFilterList.appendChild(chip);
+      };
+
       tagIndex.mains.forEach((main) => {
-        const op = document.createElement('option');
-        op.value = main;
-        op.textContent = main;
-        lurePickerMainFilter.appendChild(op);
+        appendMainChip(main, main);
       });
-      lurePickerMainFilter.value = lurePickerFilterMain || '';
     }
 
     function renderLurePickerSubFilterOptions() {
@@ -15011,22 +15115,34 @@
         const card = document.createElement('button');
         card.type = 'button';
         card.className = lureMasterEditMode
-          ? 'w-full text-left rounded-xl border border-slate-600 bg-transparent px-3 py-2 hover:border-sky-500 transition'
-          : 'w-full text-left rounded-xl border border-slate-700 bg-slate-900/50 px-3 py-2 transition';
+          ? 'w-full text-left rounded-xl border border-slate-600 bg-transparent px-3 py-2 transition'
+          : 'w-full text-left rounded-xl border border-slate-700 bg-transparent px-3 py-2 transition';
         const mainTag = normalizeMainTag(item.tag_main || '');
         const subTags = Array.isArray(item.tag_subs) ? item.tag_subs : [];
-        const tagsLine = mainTag
-          ? `${mainTag}${subTags.length ? ` : ${subTags.join(' / ')}` : ''}`
-          : 'タグ未設定';
         const titleClass = lureMasterEditMode ? 'font-semibold text-sm truncate text-slate-100' : 'font-semibold text-sm truncate text-slate-200';
         const usageClass = lureMasterEditMode ? 'text-[11px] text-slate-300 shrink-0' : 'text-[11px] text-slate-400 shrink-0';
-        const tagClass = lureMasterEditMode ? 'mt-1 text-xs text-slate-300 truncate' : 'mt-1 text-xs text-slate-400 truncate';
+        const chipWrapClass = lureMasterEditMode ? 'mt-2 flex flex-wrap items-center gap-1.5 text-[11px]' : 'mt-2 flex flex-wrap items-center gap-1.5 text-[11px]';
+        const chipLabelClass = lureMasterEditMode ? 'text-slate-400' : 'text-slate-500';
+        const chipClass = lureMasterEditMode
+          ? 'inline-flex items-center rounded-full border border-slate-600 px-2 py-0.5 text-slate-200'
+          : 'inline-flex items-center rounded-full border border-slate-600 bg-transparent px-2 py-0.5 text-slate-300';
+        const mainChipHtml = `<span class="${chipClass}">${escapeHtml(mainTag || '未設定')}</span>`;
+        const subChipHtml = subTags.length
+          ? subTags.map((sub) => `<span class="${chipClass}">${escapeHtml(sub)}</span>`).join('')
+          : `<span class="${chipClass}">未設定</span>`;
         card.innerHTML = `
           <div class="flex items-center justify-between gap-2">
             <div class="${titleClass}">${escapeHtml(item.lure_name || '')}</div>
             <div class="${usageClass}">使用 ${Number(item.use_count || 0)}</div>
           </div>
-          <div class="${tagClass}">${escapeHtml(tagsLine)}</div>
+          <div class="${chipWrapClass}">
+            <span class="${chipLabelClass}">メイン:</span>
+            ${mainChipHtml}
+          </div>
+          <div class="${chipWrapClass}">
+            <span class="${chipLabelClass}">サブ:</span>
+            ${subChipHtml}
+          </div>
         `;
         card.onclick = () => {
           if (!lureMasterEditMode) return;
@@ -15120,20 +15236,11 @@
       };
     }
 
-    if (lurePickerMainFilter) {
-      lurePickerMainFilter.addEventListener('change', () => {
-        lurePickerFilterMain = normalizeMainTag(lurePickerMainFilter.value || '');
-        lurePickerFilterSubs = [];
-        renderLurePickerSubFilterOptions();
-        renderLurePickerList();
-      });
-    }
-
     if (btnClearLureTagFilter) {
       btnClearLureTagFilter.onclick = () => {
         lurePickerFilterMain = '';
         lurePickerFilterSubs = [];
-        if (lurePickerMainFilter) lurePickerMainFilter.value = '';
+        renderLurePickerMainFilterOptions();
         renderLurePickerSubFilterOptions();
         renderLurePickerList();
       };
