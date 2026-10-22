@@ -1198,15 +1198,45 @@
         </div>
         
         <div class="space-y-4">
-          <!-- 日時範囲フィルター -->
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="text-xs text-slate-400 block mb-1">開始日</label>
-              <input type="date" id="tripsFilterDateStart" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-sky-500">
+          <!-- 月範囲フィルター -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div class="min-w-0">
+              <label class="text-xs text-slate-400 block mb-1">開始月</label>
+              <select id="tripsFilterDateStart" class="w-full min-w-0 bg-slate-800 border border-slate-700 rounded-lg px-2 py-2 text-slate-100 text-sm focus:outline-none focus:border-sky-500"></select>
             </div>
-            <div>
-              <label class="text-xs text-slate-400 block mb-1">終了日</label>
-              <input type="date" id="tripsFilterDateEnd" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-sky-500">
+            <div class="min-w-0">
+              <label class="text-xs text-slate-400 block mb-1">終了月</label>
+              <select id="tripsFilterDateEnd" class="w-full min-w-0 bg-slate-800 border border-slate-700 rounded-lg px-2 py-2 text-slate-100 text-sm focus:outline-none focus:border-sky-500"></select>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs text-slate-400 block mb-1">魚種（部分一致）</label>
+            <input type="text" id="tripsFilterSpecies" placeholder="例：アジ" class="w-full min-w-0 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-sky-500">
+          </div>
+
+          <div>
+            <label class="text-xs text-slate-400 block mb-2">潮名</label>
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="tripsFilterTideOomori" value="大潮" class="w-4 h-4"><span class="text-sm">大潮</span></label>
+              <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="tripsFilterTideChusio" value="中潮" class="w-4 h-4"><span class="text-sm">中潮</span></label>
+              <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="tripsFilterTideKosio" value="小潮" class="w-4 h-4"><span class="text-sm">小潮</span></label>
+              <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="tripsFilterTideNagatide" value="長潮" class="w-4 h-4"><span class="text-sm">長潮</span></label>
+              <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="tripsFilterTideWakatide" value="若潮" class="w-4 h-4"><span class="text-sm">若潮</span></label>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs text-slate-400 block mb-2">釣果</label>
+            <div class="flex gap-4">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="tripsFilterHasCatchWith" class="w-4 h-4">
+                <span class="text-sm">釣果あり</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="tripsFilterHasCatchWithout" class="w-4 h-4">
+                <span class="text-sm">釣果なし</span>
+              </label>
             </div>
           </div>
 
@@ -1290,15 +1320,15 @@
               <input type="text" id="filterSpecies" placeholder="例：マゴチ、トラフグ" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-sky-500">
             </div>
 
-            <!-- 日時範囲フィルター -->
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="text-xs text-slate-400 block mb-1">開始日</label>
-                <input type="date" id="filterDateStart" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-sky-500">
+            <!-- 月範囲フィルター -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div class="min-w-0">
+                <label class="text-xs text-slate-400 block mb-1">開始月</label>
+                <select id="filterDateStart" class="w-full min-w-0 bg-slate-800 border border-slate-700 rounded-lg px-2 py-2 text-slate-100 text-sm focus:outline-none focus:border-sky-500"></select>
               </div>
-              <div>
-                <label class="text-xs text-slate-400 block mb-1">終了日</label>
-                <input type="date" id="filterDateEnd" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-sky-500">
+              <div class="min-w-0">
+                <label class="text-xs text-slate-400 block mb-1">終了月</label>
+                <select id="filterDateEnd" class="w-full min-w-0 bg-slate-800 border border-slate-700 rounded-lg px-2 py-2 text-slate-100 text-sm focus:outline-none focus:border-sky-500"></select>
               </div>
             </div>
 
@@ -4024,8 +4054,8 @@
 
         // 【B案】フォームをクリア
         filterSpecies.value = '';
-        filterDateStart.value = '';
-        filterDateEnd.value = '';
+        clearYearMonthSelector(filterDateStart);
+        clearYearMonthSelector(filterDateEnd);
         document.getElementById('filterTideOomori').checked = false;
         document.getElementById('filterTideChusio').checked = false;
         document.getElementById('filterTideKosio').checked = false;
@@ -4812,8 +4842,10 @@
     // ★追加：フィルター条件をUIから読み込む
     function getFilterConditionsFromUI() {
       const species = (filterSpecies.value || '').trim();
-      const dateStart = filterDateStart.value ? new Date(filterDateStart.value) : null;
-      const dateEnd = filterDateEnd.value ? new Date(filterDateEnd.value) : null;
+      const startYm = buildYearMonthValue(filterDateStart);
+      const endYm = buildYearMonthValue(filterDateEnd);
+      const dateStart = startYm ? parseMonthStart(startYm) : null;
+      const dateEnd = endYm ? parseMonthEnd(endYm) : null;
       
       // 潮名チェックボックス
       const tideNames = [];
@@ -4841,11 +4873,61 @@
       };
     }
 
+    function buildYearMonthValue(selectEl) {
+      if (!selectEl) return '';
+      return String(selectEl.value || '').trim();
+    }
+
+    function clearYearMonthSelector(selectEl) {
+      if (selectEl) selectEl.value = '';
+    }
+
+    function initYearMonthSelector(selectEl, yearFrom = 2010, yearTo = (new Date().getFullYear())) {
+      if (!selectEl || selectEl.dataset.initialized) return;
+
+      const now = new Date();
+      const nowYear = now.getFullYear();
+      const nowMonth = now.getMonth() + 1;
+
+      selectEl.innerHTML = '<option value="">年月</option>';
+      for (let y = yearTo; y >= yearFrom; y--) {
+        for (let m = 12; m >= 1; m--) {
+          if (y > nowYear) continue;
+          if (y === nowYear && m > nowMonth) continue;
+          const mm = String(m).padStart(2, '0');
+          const opt = document.createElement('option');
+          opt.value = `${y}-${mm}`;
+          opt.textContent = `${y}年${m}月`;
+          selectEl.appendChild(opt);
+        }
+      }
+      selectEl.dataset.initialized = '1';
+    }
+
+    function initAllYearMonthSelectors() {
+      initYearMonthSelector(filterDateStart);
+      initYearMonthSelector(filterDateEnd);
+      initYearMonthSelector(tripsFilterDateStart);
+      initYearMonthSelector(tripsFilterDateEnd);
+    }
+
+    function parseMonthStart(value) {
+      const m = String(value || '').match(/^(\d{4})-(\d{2})$/);
+      if (!m) return null;
+      return new Date(Number(m[1]), Number(m[2]) - 1, 1, 0, 0, 0, 0);
+    }
+
+    function parseMonthEnd(value) {
+      const m = String(value || '').match(/^(\d{4})-(\d{2})$/);
+      if (!m) return null;
+      return new Date(Number(m[1]), Number(m[2]), 0, 23, 59, 59, 999);
+    }
+
     function resetCatchFiltersOnLeave() {
       if (!filterSpecies || !filterDateStart || !filterDateEnd || !filterTrendUp || !filterTrendDown) return;
       filterSpecies.value = '';
-      filterDateStart.value = '';
-      filterDateEnd.value = '';
+      clearYearMonthSelector(filterDateStart);
+      clearYearMonthSelector(filterDateEnd);
       document.getElementById('filterTideOomori').checked = false;
       document.getElementById('filterTideChusio').checked = false;
       document.getElementById('filterTideKosio').checked = false;
@@ -8732,6 +8814,16 @@
     const tripsFilterModal = document.getElementById('tripsFilterModal');
     const tripsFilterDateStart = document.getElementById('tripsFilterDateStart');
     const tripsFilterDateEnd = document.getElementById('tripsFilterDateEnd');
+    const tripsFilterSpecies = document.getElementById('tripsFilterSpecies');
+    const tripsFilterHasCatchWith = document.getElementById('tripsFilterHasCatchWith');
+    const tripsFilterHasCatchWithout = document.getElementById('tripsFilterHasCatchWithout');
+    const tripsFilterTideOomori = document.getElementById('tripsFilterTideOomori');
+    const tripsFilterTideChusio = document.getElementById('tripsFilterTideChusio');
+    const tripsFilterTideKosio = document.getElementById('tripsFilterTideKosio');
+    const tripsFilterTideNagatide = document.getElementById('tripsFilterTideNagatide');
+    const tripsFilterTideWakatide = document.getElementById('tripsFilterTideWakatide');
+
+    initAllYearMonthSelectors();
 
     let allTripsItems = [];
     const TRIPS_PAGE_SIZE = 10;
@@ -8780,8 +8872,16 @@
         console.log('[Trips Filter] Reset button clicked');
 
         // フォームをクリア
-        tripsFilterDateStart.value = '';
-        tripsFilterDateEnd.value = '';
+        clearYearMonthSelector(tripsFilterDateStart);
+        clearYearMonthSelector(tripsFilterDateEnd);
+        if (tripsFilterSpecies) tripsFilterSpecies.value = '';
+        if (tripsFilterHasCatchWith) tripsFilterHasCatchWith.checked = false;
+        if (tripsFilterHasCatchWithout) tripsFilterHasCatchWithout.checked = false;
+        if (tripsFilterTideOomori) tripsFilterTideOomori.checked = false;
+        if (tripsFilterTideChusio) tripsFilterTideChusio.checked = false;
+        if (tripsFilterTideKosio) tripsFilterTideKosio.checked = false;
+        if (tripsFilterTideNagatide) tripsFilterTideNagatide.checked = false;
+        if (tripsFilterTideWakatide) tripsFilterTideWakatide.checked = false;
         document.querySelector('input[name="tripsSortOption"][value="newest"]').checked = true;
 
         // 全件表示
@@ -8808,8 +8908,16 @@
 
     function resetTripsFiltersOnLeave() {
       if (!tripsFilterDateStart || !tripsFilterDateEnd) return;
-      tripsFilterDateStart.value = '';
-      tripsFilterDateEnd.value = '';
+      clearYearMonthSelector(tripsFilterDateStart);
+      clearYearMonthSelector(tripsFilterDateEnd);
+      if (tripsFilterSpecies) tripsFilterSpecies.value = '';
+      if (tripsFilterHasCatchWith) tripsFilterHasCatchWith.checked = false;
+      if (tripsFilterHasCatchWithout) tripsFilterHasCatchWithout.checked = false;
+      if (tripsFilterTideOomori) tripsFilterTideOomori.checked = false;
+      if (tripsFilterTideChusio) tripsFilterTideChusio.checked = false;
+      if (tripsFilterTideKosio) tripsFilterTideKosio.checked = false;
+      if (tripsFilterTideNagatide) tripsFilterTideNagatide.checked = false;
+      if (tripsFilterTideWakatide) tripsFilterTideWakatide.checked = false;
       const newest = document.querySelector('input[name="tripsSortOption"][value="newest"]');
       if (newest) newest.checked = true;
       tripsFilteredDisplayLimit = TRIPS_PAGE_SIZE;
@@ -8819,7 +8927,18 @@
 
     function isTripsFilterActive() {
       const sortBy = document.querySelector('input[name="tripsSortOption"]:checked')?.value || 'newest';
-      return !!(tripsFilterDateStart.value || tripsFilterDateEnd.value || sortBy !== 'newest');
+      const tideActive = (tripsFilterTideOomori?.checked || tripsFilterTideChusio?.checked || tripsFilterTideKosio?.checked || tripsFilterTideNagatide?.checked || tripsFilterTideWakatide?.checked);
+      const hasCatchActive = (tripsFilterHasCatchWith?.checked || tripsFilterHasCatchWithout?.checked);
+      const startYm = buildYearMonthValue(tripsFilterDateStart);
+      const endYm = buildYearMonthValue(tripsFilterDateEnd);
+      return !!(
+        startYm ||
+        endYm ||
+        sortBy !== 'newest' ||
+        (tripsFilterSpecies && tripsFilterSpecies.value.trim()) ||
+        hasCatchActive ||
+        tideActive
+      );
     }
 
     function updateTripsFilterButtonState() {
@@ -8871,11 +8990,22 @@
     }
 
     function filterAndSortTrips(items) {
-      const dateStart = tripsFilterDateStart.value ? new Date(tripsFilterDateStart.value) : null;
-      const dateEnd = tripsFilterDateEnd.value ? new Date(tripsFilterDateEnd.value) : null;
+      const startYm = buildYearMonthValue(tripsFilterDateStart);
+      const endYm = buildYearMonthValue(tripsFilterDateEnd);
+      const dateStart = startYm ? parseMonthStart(startYm) : null;
+      const dateEnd = endYm ? parseMonthEnd(endYm) : null;
       const sortBy = document.querySelector('input[name="tripsSortOption"]:checked').value || 'newest';
+      const speciesKeyword = (tripsFilterSpecies?.value || '').trim().toLowerCase();
+      const hasCatchWith = !!tripsFilterHasCatchWith?.checked;
+      const hasCatchWithout = !!tripsFilterHasCatchWithout?.checked;
+      const tideNames = [];
+      if (tripsFilterTideOomori?.checked) tideNames.push('大潮');
+      if (tripsFilterTideChusio?.checked) tideNames.push('中潮');
+      if (tripsFilterTideKosio?.checked) tideNames.push('小潮');
+      if (tripsFilterTideNagatide?.checked) tideNames.push('長潮');
+      if (tripsFilterTideWakatide?.checked) tideNames.push('若潮');
       
-      console.log('[Trips Filter] Applying conditions:', { dateStart, dateEnd, sortBy });
+      console.log('[Trips Filter] Applying conditions:', { dateStart, dateEnd, sortBy, speciesKeyword, hasCatchWith, hasCatchWithout, tideNames });
       
       // ★修正：headerからstartedAtカラムのインデックスを取得
       const headers = tripsCache[0];
@@ -8888,11 +9018,26 @@
         if (itemDate) {
           if (dateStart && itemDate < dateStart) return false;
           if (dateEnd) {
-            const endOfDay = new Date(dateEnd);
-            endOfDay.setHours(23, 59, 59, 999);
-            if (itemDate > endOfDay) return false;
+            if (itemDate > dateEnd) return false;
           }
         }
+
+        const catchesCountIdx = headers.findIndex(h => String(h||'').trim() === 'catches_count');
+        const count = catchesCountIdx >= 0 ? Number(item[catchesCountIdx] || 0) : 0;
+        if (hasCatchWith && !hasCatchWithout && !(count > 0)) return false;
+        if (!hasCatchWith && hasCatchWithout && count > 0) return false;
+
+        const rawIdx = headers.findIndex(h => String(h||'').trim() === 'raw_json');
+        const raw = rawIdx >= 0 ? parseTripRawJsonCell(item[rawIdx]) : null;
+        const tideName = String(raw?.start_tide?.tideName || '').trim();
+        if (tideNames.length > 0 && !tideNames.includes(tideName)) return false;
+
+        if (speciesKeyword) {
+          const catches = Array.isArray(raw?.catches) ? raw.catches : [];
+          const hit = catches.some((c) => String(c?.species || '').toLowerCase().includes(speciesKeyword));
+          if (!hit) return false;
+        }
+
         return true;
       });
       
