@@ -1486,6 +1486,14 @@
         <label class="block"><span class="text-sm text-slate-300">時刻</span>
           <input id="inpCatchTime" type="datetime-local" step="60" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" />
         </label>
+        <div id="photoFieldWrapper" class="block">
+          <div class="block"><span class="text-sm text-slate-300">写真</span>
+            <input id="inpPhoto" type="file" accept="image/*" class="hidden" />
+            <button id="btnSelectPhoto" class="mt-1 w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-sm text-white font-semibold" type="button">ファイルを選択</button>
+            <div id="photoFileName" class="mt-2 text-xs text-slate-400 hidden">選択: <span id="photoFileNameText"></span></div>
+          </div>
+          <img id="imgPreview" alt="preview" class="hidden mt-2 max-h-64 w-full object-contain rounded-xl border border-slate-800" />
+        </div>
         <label class="block"><span class="text-sm text-slate-300">魚種</span>
           <input id="inpSpecies" type="text" placeholder="例：アジ" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" />
         </label>
@@ -1510,19 +1518,10 @@
           </div>
           <div id="catchLocationCandidatesList" class="mt-2 text-xs text-slate-400"></div>
         </label>
-        
-        <div id="photoFieldWrapper" class="block">
-          <div class="block"><span class="text-sm text-slate-300">写真</span>
-            <input id="inpPhoto" type="file" accept="image/*" class="hidden" />
-            <button id="btnSelectPhoto" class="mt-1 w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-sm text-white font-semibold" type="button">ファイルを選択</button>
-            <div id="photoFileName" class="mt-2 text-xs text-slate-400 hidden">選択: <span id="photoFileNameText"></span></div>
-          </div>
-          <img id="imgPreview" alt="preview" class="hidden mt-2 max-h-64 w-full object-contain rounded-xl border border-slate-800" />
-        </div>
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
-        <button id="btnCancelCatch" class="w-full py-2 rounded-xl border border-slate-700 hover:bg-slate-800">キャンセル</button>
-        <button id="btnSaveCatch" class="w-full py-2 rounded-2xl bg-sky-600 hover:bg-sky-500 font-semibold">保存</button>
+      <div class="grid grid-cols-3 gap-2 mt-4">
+        <button id="btnCancelCatch" class="col-span-1 w-full py-2 rounded-xl border border-slate-700 hover:bg-slate-800">キャンセル</button>
+        <button id="btnSaveCatch" class="col-span-2 w-full py-2 rounded-2xl bg-sky-600 hover:bg-sky-500 font-semibold">保存</button>
       </div>
     </div>
   </div>
@@ -1539,7 +1538,7 @@
           <label for="manualPhotoInput" class="block text-sm text-slate-300 mb-2">写真（JPEG推奨）</label>
           <input id="manualPhotoInput" type="file" accept="image/*" class="hidden" />
           <button type="button" onclick="document.getElementById('manualPhotoInput').click()" class="w-full py-2 px-3 rounded-xl bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-100 font-semibold transition">
-            ファイルを選択
+            写真を選択
           </button>
         </div>
         <div id="manualPhotoPreview" class="hidden">
@@ -1550,9 +1549,9 @@
           写真を追加しない
         </button>
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
-        <button id="btnCancelManualPhoto" class="w-full py-2 rounded-xl border border-slate-700 hover:bg-slate-800 font-semibold transition" type="button">戻る</button>
-        <button id="btnUploadManualPhoto" class="w-full py-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 font-semibold transition" type="button">アップロードして補完</button>
+      <div class="grid grid-cols-3 gap-2 mt-4">
+        <button id="btnCancelManualPhoto" class="col-span-1 w-full py-2 rounded-xl border border-slate-700 hover:bg-slate-800 font-semibold transition" type="button">キャンセル</button>
+        <button id="btnUploadManualPhoto" class="col-span-2 w-full py-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 font-semibold transition" type="button">アップロード</button>
       </div>
     </div>
   </div>
@@ -1623,7 +1622,7 @@
       <div id="timelineDetailBody" class="text-sm text-slate-200 whitespace-pre-wrap break-words min-h-[3rem]"></div>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4">
         <button id="btnTimelineDetailEdit" class="w-full py-2 rounded-xl border border-slate-700 hover:bg-slate-800">編集</button>
-        <button id="btnTimelineDetailDelete" class="w-full py-2 rounded-xl border border-slate-700 hover:bg-slate-800">削除</button>
+        <button id="btnTimelineDetailDelete" class="w-full py-2 rounded-xl border border-slate-700 hover:bg-slate-800 inline-flex items-center justify-center" aria-label="削除"><img src="./assets/Delete_icon.png" alt="削除" class="w-5 h-5 object-contain" /></button>
         <button id="btnTimelineDetailClose" class="w-full py-2 rounded-xl bg-slate-700 hover:bg-slate-600">閉じる</button>
       </div>
     </div>
@@ -1698,7 +1697,7 @@
         </div>
       </div>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4">
-        <button id="btnDeleteLureMasterEdit" class="w-full py-2 rounded-xl border border-rose-700 text-rose-300 hover:bg-rose-900/30 hidden">削除</button>
+        <button id="btnDeleteLureMasterEdit" class="w-full py-2 rounded-xl border border-rose-700 text-rose-300 hover:bg-rose-900/30 hidden inline-flex items-center justify-center" aria-label="削除"><img src="./assets/Delete_icon.png" alt="削除" class="w-5 h-5 object-contain" /></button>
         <button id="btnCancelLureMasterEdit" class="w-full py-2 rounded-xl border border-slate-700 hover:bg-slate-800 sm:col-span-1">キャンセル</button>
         <button id="btnSaveLureMasterEdit" class="w-full py-2 rounded-2xl bg-sky-600 hover:bg-sky-500 font-semibold sm:col-span-1">保存</button>
       </div>
@@ -1712,14 +1711,18 @@
         <button id="btnCloseTripModal" class="text-slate-400 hover:text-slate-200">×</button>
       </div>
       <div class="space-y-3">
-        <label class="block"><span class="text-sm text-slate-300">開始日時（空ならEXIFから補完）</span>
-          <input id="inpTripStart" type="datetime-local" step="60" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" />
+        <label class="block"><span class="text-sm text-slate-300">開始年月（空ならEXIFから補完）</span>
+          <select id="inpTripStart" class="mt-1 w-full h-10 text-sm bg-slate-950 border border-slate-700 rounded-xl px-3 py-2"></select>
         </label>
-        <label class="block"><span class="text-sm text-slate-300">終了日時（未入力の場合、終了時に再確認）</span>
-          <input id="inpTripEnd" type="datetime-local" step="60" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" />
+        <label class="block"><span class="text-sm text-slate-300">終了年月（未入力の場合、終了時に再確認）</span>
+          <select id="inpTripEnd" class="mt-1 w-full h-10 text-sm bg-slate-950 border border-slate-700 rounded-xl px-3 py-2"></select>
         </label>
+        <!-- ★追加：マップから港選択ボタン（常時表示） -->
+        <button type="button" onclick="(async () => { await openMapModalForManualTrip(parseFloat(inpTripLat.value) || 34.6165, parseFloat(inpTripLng.value) || 135.0224, (port) => { inpTripLat.value = port.lat; inpTripLng.value = port.lon; }); })()" class="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition flex items-center justify-center gap-2">
+          📍 マップから港を選択
+        </button>
         <details class="rounded-xl border border-slate-700 bg-slate-950 p-3">
-          <summary class="cursor-pointer text-sm text-slate-300 font-semibold">緯度・経度入力（任意）</summary>
+          <summary class="cursor-pointer text-sm text-slate-300 font-semibold">▶ 緯度経度を入力</summary>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
             <label class="block">
               <span class="text-sm text-slate-300">緯度（任意）</span>
@@ -1732,14 +1735,10 @@
           </div>
           <p class="text-xs text-slate-400 mt-2">※ 緯度・経度があると、開始天気・開始潮汐・水温を自動取得します。</p>
         </details>
-        <!-- ★追加：マップから港選択ボタン -->
-        <button type="button" onclick="(async () => { await openMapModalForManualTrip(parseFloat(inpTripLat.value) || 34.6165, parseFloat(inpTripLng.value) || 135.0224, (port) => { inpTripLat.value = port.lat; inpTripLng.value = port.lon; }); })()" class="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-semibold transition flex items-center justify-center gap-2">
-          📍 マップから港を選択
-        </button>
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
-        <button id="btnCancelTripModal" class="w-full py-2 rounded-2xl bg-slate-700 hover:bg-slate-600 font-semibold">キャンセル</button>
-        <button id="btnSaveTrip" class="w-full py-2 rounded-2xl bg-indigo-600 hover:bg-indigo-500 font-semibold">登録</button>
+      <div class="grid grid-cols-3 gap-2 mt-4">
+        <button id="btnCancelTripModal" class="col-span-1 w-full py-2 rounded-2xl bg-slate-700 hover:bg-slate-600 font-semibold">キャンセル</button>
+        <button id="btnSaveTrip" class="col-span-2 w-full py-2 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold">釣果を登録する</button>
       </div>
     </div>
   </div>
@@ -9451,7 +9450,7 @@
             <div class="grid md:grid-cols-2 gap-3 mt-2" data-role="trip-catches-list"></div>
           </div>
           <div class="flex justify-end gap-2 mt-3">
-            <button type="button" data-role="trip-delete" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 rounded text-white text-xs font-medium">🗑️ 削除</button>
+            <button type="button" data-role="trip-delete" class="px-2 py-1.5 bg-red-600 hover:bg-red-700 rounded text-white text-xs font-medium inline-flex items-center justify-center" aria-label="削除"><img src="./assets/Delete_icon.png" alt="削除" class="w-4 h-4 object-contain" /></button>
             <button type="button" data-role="trip-edit" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-white text-xs font-medium">✎ 編集</button>
           </div>
         `;
@@ -9917,8 +9916,9 @@
               };
 
               const btnDelete = document.createElement('button');
-              btnDelete.className = 'text-xs py-1 px-2 rounded bg-red-900 hover:bg-red-800 text-red-200 ml-2';
-              btnDelete.textContent = '削除';
+              btnDelete.className = 'ml-2 inline-flex items-center justify-center w-8 h-8 rounded bg-red-900 hover:bg-red-800';
+              btnDelete.setAttribute('aria-label', '削除');
+              btnDelete.innerHTML = '<img src="./assets/Delete_icon.png" alt="削除" class="w-4 h-4 object-contain" />';
               btnDelete.onclick = async (e) => {
                 e.stopPropagation();
                 console.log('[DEBUG-EditDelete] 1. Delete button clicked in edit modal, idx:', idx);
@@ -10009,8 +10009,9 @@
                       `;
 
                       const btnDeleteTemp = document.createElement('button');
-                      btnDeleteTemp.className = 'text-xs py-1 px-2 rounded bg-red-900 hover:bg-red-800 text-red-200 ml-2';
-                      btnDeleteTemp.textContent = '削除';
+                      btnDeleteTemp.className = 'ml-2 inline-flex items-center justify-center w-8 h-8 rounded bg-red-900 hover:bg-red-800';
+                      btnDeleteTemp.setAttribute('aria-label', '削除');
+                      btnDeleteTemp.innerHTML = '<img src="./assets/Delete_icon.png" alt="削除" class="w-4 h-4 object-contain" />';
                       btnDeleteTemp.onclick = async (e) => {
                         e.stopPropagation();
                         console.log('[DEBUG-EditDeleteNested] 1. Nested delete button clicked, i:', i);
@@ -11323,8 +11324,9 @@
           `;
 
           const btnDeleteTemp = document.createElement('button');
-          btnDeleteTemp.className = 'text-xs py-1 px-2 rounded bg-red-900 hover:bg-red-800 text-red-200 ml-2';
-          btnDeleteTemp.textContent = '削除';
+          btnDeleteTemp.className = 'ml-2 inline-flex items-center justify-center w-8 h-8 rounded bg-red-900 hover:bg-red-800';
+          btnDeleteTemp.setAttribute('aria-label', '削除');
+          btnDeleteTemp.innerHTML = '<img src="./assets/Delete_icon.png" alt="削除" class="w-4 h-4 object-contain" />';
           btnDeleteTemp.onclick = async (e) => {
             e.stopPropagation();
             if (confirm('この釣果を削除しますか？')) {
@@ -12533,6 +12535,9 @@
     const btnCloseTripModal = document.getElementById('btnCloseTripModal');
     const btnCancelTripModal = document.getElementById('btnCancelTripModal');
     const btnSaveTrip   = document.getElementById('btnSaveTrip');
+
+    initYearMonthSelector(inpTripStart);
+    initYearMonthSelector(inpTripEnd);
 
     [editFormCatchTime, editTripStarted, editTripEnded]
       .filter(Boolean)
@@ -14048,15 +14053,21 @@
     function openManualTripForm(arg){
       const opts = (arg && typeof arg === 'object' && !('target' in arg) && !('currentTarget' in arg)) ? arg : {};
       const { reuseDraft = false, focusEnd = false } = opts;
+      const toYearMonthValue = (iso) => {
+        if (!iso) return '';
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return '';
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      };
       // ★追加: モーダル親の recordView を表示させる（親の hidden を外す）
       showView('record');
 
       try {
         if (reuseDraft) {
-          inpTripStart && (inpTripStart.value = draft.startedAt ? toDatetimeLocalValue(new Date(draft.startedAt)) : '');
+          inpTripStart && (inpTripStart.value = draft.startedAt ? toYearMonthValue(draft.startedAt) : '');
           inpTripLat   && (inpTripLat.value   = (typeof draft.lat === 'number') ? String(draft.lat) : '');
           inpTripLng   && (inpTripLng.value   = (typeof draft.lng === 'number') ? String(draft.lng) : '');
-          inpTripEnd   && (inpTripEnd.value   = draft.endedAt ? toDatetimeLocalValue(new Date(draft.endedAt)) : '');
+          inpTripEnd   && (inpTripEnd.value   = draft.endedAt ? toYearMonthValue(draft.endedAt) : '');
         } else {
           inpTripStart && (inpTripStart.value = '');
           inpTripLat   && (inpTripLat.value   = (typeof draft.lat === 'number') ? String(draft.lat) : '');
@@ -14307,20 +14318,20 @@
 
       // 1) モーダル入力のみ採用（未入力は未設定のまま）
       if (inpTripStart && inpTripStart.value) {
-        const parsed = parseDisplayDatetime(inpTripStart.value.trim());
-        if (parsed) {
+        const parsed = parseMonthStart(inpTripStart.value.trim());
+        if (parsed && !isNaN(parsed.getTime())) {
           startedIso = toOffsetIsoLocal(parsed);
         } else {
-          console.warn('[TripManual] Failed to parse start time:', inpTripStart.value);
+          console.warn('[TripManual] Failed to parse start month:', inpTripStart.value);
           startedIso = null;
         }
       }
       if (inpTripEnd && inpTripEnd.value) {
-        const parsed = parseDisplayDatetime(inpTripEnd.value.trim());
-        if (parsed) {
+        const parsed = parseMonthEnd(inpTripEnd.value.trim());
+        if (parsed && !isNaN(parsed.getTime())) {
           endedIso = toOffsetIsoLocal(parsed);
         } else {
-          console.warn('[TripManual] Failed to parse end time:', inpTripEnd.value);
+          console.warn('[TripManual] Failed to parse end month:', inpTripEnd.value);
         }
       }
       if (inpTripLat && inpTripLat.value)     lat = Number(inpTripLat.value);
@@ -14478,15 +14489,14 @@
     catchModal.addEventListener('click', (e)=>{ if (e.target === catchModal) cancelAndReturnHome(); });
 
     if (manualPhotoInput) manualPhotoInput.addEventListener('change', handleManualPhotoInputChange);
-    if (btnSkipManualPhoto) btnSkipManualPhoto.onclick = ()=>{
+    if (btnSkipManualPhoto) btnSkipManualPhoto.onclick = async ()=>{
       // スキップ処理：写真なしで釣果情報入力に進む
       manualCatchPhotoMetadata = null;
       resetManualPhotoPreview();
       if (photoUploadModal) photoUploadModal.classList.add('hidden');
       if (photoFieldWrapper) photoFieldWrapper.classList.add('hidden');
       if (inpCatchTime) inpCatchTime.readOnly = false;
-      alert('写真をスキップしました。釣果情報を入力してください。');
-      openCatchModal('manual');
+      await openManualCatchConfirmationModal();
     };
     if (btnUploadManualPhoto) btnUploadManualPhoto.onclick = handleManualPhotoUpload;
     if (btnCancelManualPhoto) btnCancelManualPhoto.onclick = cancelManualPhotoFlow;
@@ -16162,8 +16172,9 @@
         };
 
         const btnDelete = document.createElement('button');
-        btnDelete.className = 'text-xs py-1 px-2 rounded bg-red-900 hover:bg-red-800 text-red-200 ml-2';
-        btnDelete.textContent = '削除';
+        btnDelete.className = 'ml-2 inline-flex items-center justify-center w-8 h-8 rounded bg-red-900 hover:bg-red-800';
+        btnDelete.setAttribute('aria-label', '削除');
+        btnDelete.innerHTML = '<img src="./assets/Delete_icon.png" alt="削除" class="w-4 h-4 object-contain" />';
         btnDelete.onclick = () => {
           if (confirm('この釣果を削除しますか？')) {
             draft.catches.splice(idx, 1);
@@ -17186,8 +17197,9 @@
               };
 
               const btnDeleteTemp = document.createElement('button');
-              btnDeleteTemp.className = 'text-xs py-1 px-2 rounded bg-red-900 hover:bg-red-800 text-red-200 ml-2';
-              btnDeleteTemp.textContent = '削除';
+              btnDeleteTemp.className = 'ml-2 inline-flex items-center justify-center w-8 h-8 rounded bg-red-900 hover:bg-red-800';
+              btnDeleteTemp.setAttribute('aria-label', '削除');
+              btnDeleteTemp.innerHTML = '<img src="./assets/Delete_icon.png" alt="削除" class="w-4 h-4 object-contain" />';
               btnDeleteTemp.onclick = (e) => {
                 e.stopPropagation();
                 if (confirm('この釣果を削除しますか？')) {
