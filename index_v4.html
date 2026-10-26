@@ -224,6 +224,24 @@
       animation: slideOut 0.3s ease-in-out;
     }
 
+    /* 閉じるボタン（×）の見た目を統一 */
+    button[id^="btnClose"],
+    #btnTimelineDetailClose,
+    #btnCloseActionOverlay,
+    [data-role="modal-close"] {
+      color: #94a3b8 !important;
+      font-size: 1.125rem !important;
+      line-height: 1 !important;
+      font-weight: 700 !important;
+    }
+
+    button[id^="btnClose"]:hover,
+    #btnTimelineDetailClose:hover,
+    #btnCloseActionOverlay:hover,
+    [data-role="modal-close"]:hover {
+      color: #e2e8f0 !important;
+    }
+
     /* ===== 釣行中タイムライン ===== */
 
     .timeline-list {
@@ -974,7 +992,7 @@
         <div id="editCatchFormSection" class="hidden border-b border-slate-700 pb-4">
           <div class="flex items-center justify-between mb-3">
             <h4 class="text-sm font-semibold text-slate-300">釣果を追加</h4>
-            <button id="btnCloseCatchFormInEdit" class="text-xs text-slate-400 hover:text-slate-200">閉じる</button>
+            <button id="btnCloseCatchFormInEdit" class="text-slate-400 hover:text-slate-200 text-lg leading-none font-semibold" aria-label="閉じる">×</button>
           </div>
           
           <div class="space-y-2 max-h-80 overflow-auto">
@@ -1138,7 +1156,7 @@
         <summary class="cursor-pointer text-base font-semibold">ルアー候補管理</summary>
         <div class="text-xs text-slate-400 mt-3 mb-3">重複は表記ゆれを最小化した照合キーで判定します。表示名は入力内容を尊重し、既存登録がある場合は登録情報を優先します。</div>
         <div class="flex justify-end gap-2 mb-2">
-          <button id="btnToggleLureMasterEdit" class="px-2 py-1 rounded-lg border border-slate-700 hover:bg-slate-800 text-xs whitespace-nowrap">編集</button>
+          <button id="btnToggleLureMasterEdit" class="h-8 w-8 rounded-lg border border-slate-700 hover:bg-slate-800 inline-flex items-center justify-center" aria-label="編集モード切替"><img src="./assets/edit_icon.png" alt="編集" class="w-4 h-4 object-contain" /></button>
           <button id="btnAddLureMaster" class="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 font-semibold text-xs whitespace-nowrap">追加</button>
           <button id="btnReloadLureMaster" class="px-2 py-1 rounded-lg border border-slate-700 hover:bg-slate-800 text-xs whitespace-nowrap">再読込</button>
         </div>
@@ -1182,7 +1200,7 @@
         <div id="tripDetailPanel" class="w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-2xl bg-slate-900 border border-slate-800 px-2 py-4" onclick="event.stopPropagation()">
           <div class="flex items-center justify-between mb-3">
             <h3 class="font-semibold">釣行の詳細</h3>
-            <button id="btnCloseTripDetail" class="text-sm px-3 py-1.5 rounded-xl border border-slate-700 hover:bg-slate-800">閉じる</button>
+            <button id="btnCloseTripDetail" class="text-slate-400 hover:text-slate-200 text-lg leading-none font-semibold" aria-label="閉じる">×</button>
           </div>
           <div id="tripDetailBody" class="space-y-4 max-h-[calc(90vh-6rem)] overflow-y-auto pr-1"></div>
         </div>
@@ -1283,10 +1301,6 @@
         </div>
       </div>
 
-      <div id="catchAddWrap" class="mb-2">
-        <button id="btnAddCatchInCatches" class="w-full h-7 rounded-xl text-base leading-none font-semibold" title="釣果を追加" aria-label="釣果を追加">＋</button>
-      </div>
-
       <!-- 一覧 -->
       <div class="grid grid-cols-1 gap-3" id="remoteCatchList"></div>
       <div class="mt-2 text-center">
@@ -1298,7 +1312,7 @@
           <div id="remoteCatchDetailPanel" class="w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-2xl bg-slate-900 border border-slate-800 px-2 py-4" onclick="event.stopPropagation()">
             <div class="flex items-center justify-between mb-3">
               <h3 class="font-semibold">詳細</h3>
-              <button id="btnCloseDetail" class="text-sm px-3 py-1.5 rounded-xl border border-slate-700 hover:bg-slate-800">閉じる</button>
+              <button id="btnCloseDetail" class="text-slate-400 hover:text-slate-200 text-lg leading-none font-semibold" aria-label="閉じる">×</button>
             </div>
             <div id="detailBody" class="space-y-4 max-h-[calc(90vh-6rem)] overflow-y-auto pr-1"></div>
           </div>
@@ -1621,9 +1635,9 @@
       </div>
       <div id="timelineDetailBody" class="text-sm text-slate-200 whitespace-pre-wrap break-words min-h-[3rem]"></div>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4">
-        <button id="btnTimelineDetailEdit" class="w-full py-2 rounded-xl border border-slate-700 hover:bg-slate-800">編集</button>
+        <button id="btnTimelineDetailEdit" class="w-full py-2 rounded-xl border border-slate-700 hover:bg-slate-800 inline-flex items-center justify-center" aria-label="編集"><img src="./assets/edit_icon.png" alt="編集" class="w-5 h-5 object-contain" /></button>
         <button id="btnTimelineDetailDelete" class="w-full py-2 rounded-xl border border-slate-700 hover:bg-slate-800 inline-flex items-center justify-center" aria-label="削除"><img src="./assets/Delete_icon.png" alt="削除" class="w-5 h-5 object-contain" /></button>
-        <button id="btnTimelineDetailClose" class="w-full py-2 rounded-xl bg-slate-700 hover:bg-slate-600">閉じる</button>
+        <button id="btnTimelineDetailClose" class="text-slate-400 hover:text-slate-200 text-lg leading-none font-semibold" aria-label="閉じる">×</button>
       </div>
     </div>
   </div>
@@ -1696,10 +1710,9 @@
           <div id="lureSubTagSuggestList" class="flex flex-wrap gap-1"></div>
         </div>
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4">
-        <button id="btnDeleteLureMasterEdit" class="w-full py-2 rounded-xl border border-rose-700 text-rose-300 hover:bg-rose-900/30 hidden inline-flex items-center justify-center" aria-label="削除"><img src="./assets/Delete_icon.png" alt="削除" class="w-5 h-5 object-contain" /></button>
-        <button id="btnCancelLureMasterEdit" class="w-full py-2 rounded-xl border border-slate-700 hover:bg-slate-800 sm:col-span-1">キャンセル</button>
-        <button id="btnSaveLureMasterEdit" class="w-full py-2 rounded-2xl bg-sky-600 hover:bg-sky-500 font-semibold sm:col-span-1">保存</button>
+      <div class="grid grid-cols-2 gap-2 mt-4">
+        <button id="btnDeleteLureMasterEdit" class="w-full py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold hidden inline-flex items-center justify-center" aria-label="削除"><img src="./assets/Delete_icon.png" alt="削除" class="w-5 h-5 object-contain" /></button>
+        <button id="btnSaveLureMasterEdit" class="w-full py-2 rounded-2xl bg-sky-600 hover:bg-sky-500 text-white font-semibold">保存</button>
       </div>
     </div>
   </div>
@@ -2356,6 +2369,8 @@
 
       if (wasSettingsOpen && name !== 'settings') {
         collapseSettingsDetails();
+        lureMasterEditMode = false;
+        closeLureMasterEditModal();
       }
 
       if (mainContent) {
@@ -9451,7 +9466,7 @@
           </div>
           <div class="flex justify-end gap-2 mt-3">
             <button type="button" data-role="trip-delete" class="px-2 py-1.5 bg-red-600 hover:bg-red-700 rounded text-white text-xs font-medium inline-flex items-center justify-center" aria-label="削除"><img src="./assets/Delete_icon.png" alt="削除" class="w-4 h-4 object-contain" /></button>
-            <button type="button" data-role="trip-edit" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-white text-xs font-medium">✎ 編集</button>
+            <button type="button" data-role="trip-edit" class="px-2 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-white text-xs font-medium inline-flex items-center justify-center" aria-label="編集"><img src="./assets/edit_icon.png" alt="編集" class="w-4 h-4 object-contain" /></button>
           </div>
         `;
 
@@ -9768,8 +9783,9 @@
 
               // ★追加：編集ボタン
               const btnEdit = document.createElement('button');
-              btnEdit.className = 'text-xs py-1 px-2 rounded bg-blue-900 hover:bg-blue-800 text-blue-200 ml-2';
-              btnEdit.textContent = '編集';
+              btnEdit.className = 'ml-2 inline-flex items-center justify-center w-8 h-8 rounded bg-blue-900 hover:bg-blue-800';
+              btnEdit.setAttribute('aria-label', '編集');
+              btnEdit.innerHTML = '<img src="./assets/edit_icon.png" alt="編集" class="w-4 h-4 object-contain" />';
               btnEdit.onclick = async (e) => {
                 e.stopPropagation();
                 
@@ -10444,6 +10460,17 @@
             });
           };
 
+          const catchesRequestId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+          if (listEl) {
+            listEl.dataset.requestId = catchesRequestId;
+            listEl.innerHTML = '';
+            delete listEl.dataset.loaded;
+          }
+          if (loadingEl) {
+            loadingEl.textContent = '読み込み中...';
+            loadingEl.classList.remove('hidden');
+          }
+
           if (listEl.dataset.loaded === '1') return; // 二重ロード防止
 
           try{
@@ -10479,6 +10506,8 @@
               photos: items.map((x, idx) => ({ idx, species: x.species || '', photo: x.photo || '' }))
             });
 
+            if (listEl && listEl.dataset.requestId !== catchesRequestId) return;
+
             renderTripEventsTimeline(items);
 
             if (loadingEl) loadingEl.remove();
@@ -10486,8 +10515,11 @@
               const empty = document.createElement('div');
               empty.className = 'text-sm text-slate-500';
               empty.textContent = '該当する釣果はありません。';
+              listEl.innerHTML = '';
               listEl.appendChild(empty);
+              listEl.dataset.loaded = '1';
             }else{
+              listEl.innerHTML = '';
               items.forEach((c, itemIndex)=>{
                 const card = document.createElement('div');
                 card.className = 'rounded-lg bg-slate-900 border border-slate-800 py-3 px-1.5 flex gap-3 items-start';
@@ -10525,6 +10557,7 @@
               listEl.dataset.loaded = '1';
             }
           }catch(e){
+            if (listEl && listEl.dataset.requestId !== catchesRequestId) return;
             renderTripEventsTimeline([]);
             if (loadingEl) {
               loadingEl.textContent = '読み込みに失敗しました。';
@@ -12716,12 +12749,20 @@
       };
 
       try{
+        const applied = await applyUploadReviewDatetimeEdits();
+        if (!applied) {
+          hideUploadingOverlay();
+          return;
+        }
+
         if (pendingEnd){
           draft.status = 'ended';
           draft.endedAt = pendingEnd.endedAt;
           draft.end_weather = pendingEnd.end_weather || null;
           saveDraft(draft);
         }
+
+        await _complementTripDataOnly();
         
         // ★追加：メモをdraftに保存（アップロード直前）
         const tripMemoInput = document.getElementById('tripMemoInput');
@@ -13015,6 +13056,65 @@
       }
     }
 
+    let uploadReviewTimeEditMode = false;
+
+    function setUploadReviewTimeEditMode(enabled){
+      uploadReviewTimeEditMode = !!enabled;
+      const startText = document.getElementById('uploadReviewStartText');
+      const endText = document.getElementById('uploadReviewEndText');
+      const startInput = document.getElementById('uploadReviewStartInput');
+      const endInput = document.getElementById('uploadReviewEndInput');
+      const btnEdit = document.getElementById('btnUploadReviewEditTime');
+      if (startText) startText.classList.toggle('hidden', uploadReviewTimeEditMode);
+      if (endText) endText.classList.toggle('hidden', uploadReviewTimeEditMode);
+      if (startInput) startInput.classList.toggle('hidden', !uploadReviewTimeEditMode);
+      if (endInput) endInput.classList.toggle('hidden', !uploadReviewTimeEditMode);
+      if (btnEdit) btnEdit.classList.toggle('opacity-70', uploadReviewTimeEditMode);
+    }
+
+    async function applyUploadReviewDatetimeEdits(){
+      const startInput = document.getElementById('uploadReviewStartInput');
+      const endInput = document.getElementById('uploadReviewEndInput');
+      if (!startInput || !endInput) return true;
+
+      const startRaw = String(startInput.value || '').trim();
+      const endRaw = String(endInput.value || '').trim();
+
+      if (startRaw) {
+        const parsedStart = parseDisplayDatetime(startRaw);
+        if (!parsedStart) {
+          showError('開始日時の形式が正しくありません（yyyy/mm/dd hh:mm）');
+          return false;
+        }
+        draft.startedAt = toOffsetIsoLocal(parsedStart);
+      }
+
+      if (endRaw) {
+        const parsedEnd = parseDisplayDatetime(endRaw);
+        if (!parsedEnd) {
+          showError('終了日時の形式が正しくありません（yyyy/mm/dd hh:mm）');
+          return false;
+        }
+        const nextEndedAt = toOffsetIsoLocal(parsedEnd);
+        if (!pendingEnd) pendingEnd = { endedAt: nextEndedAt, end_weather: null };
+        pendingEnd.endedAt = nextEndedAt;
+        draft.endedAt = nextEndedAt;
+
+        if (typeof draft.lat === 'number' && typeof draft.lng === 'number') {
+          try {
+            const endWx = await fetchWeather(draft.lat, draft.lng, nextEndedAt);
+            pendingEnd.end_weather = endWx || null;
+            draft.end_weather = endWx || null;
+          } catch (e) {
+            console.warn('[UploadReview] end weather refetch failed:', e?.message || e);
+          }
+        }
+      }
+
+      saveDraft(draft);
+      return true;
+    }
+
     // 終了前レビュー
     function openUploadReview(){
       const reviewDraft = uploadReviewDraftBackup || draft;
@@ -13042,10 +13142,30 @@
       const head = document.createElement('div');
       head.innerHTML =
         `<div class="text-slate-300">Trip ID: <span class="text-slate-100">${reviewDraft.tripId.slice(0,8)}</span></div>
-        <div class="text-slate-300">開始: <span class="text-slate-100">${formatDateTimeNoSeconds(reviewDraft.startedAt)}</span></div>
-        <div class="text-slate-300">終了: <span class="text-slate-100">${endAtDisplay}</span></div>
+        <div class="flex items-center justify-between mt-1 mb-1">
+          <div class="text-slate-300 text-sm">開始/終了日時</div>
+          <button id="btnUploadReviewEditTime" type="button" class="h-8 w-8 rounded-lg border border-slate-700 hover:bg-slate-800 inline-flex items-center justify-center" aria-label="日時を編集">
+            <img src="./assets/edit_icon.png" alt="編集" class="w-4 h-4 object-contain" />
+          </button>
+        </div>
+        <div class="text-slate-300">開始: <span id="uploadReviewStartText" class="text-slate-100">${formatDateTimeNoSeconds(reviewDraft.startedAt)}</span></div>
+        <input id="uploadReviewStartInput" type="text" placeholder="yyyy/mm/dd hh:mm" class="hidden mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm" value="${formatDateTimeNoSeconds(reviewDraft.startedAt) === '—' ? '' : formatDateTimeNoSeconds(reviewDraft.startedAt)}" />
+        <div class="text-slate-300 mt-1">終了: <span id="uploadReviewEndText" class="text-slate-100">${endAtDisplay}</span></div>
+        <input id="uploadReviewEndInput" type="text" placeholder="yyyy/mm/dd hh:mm" class="hidden mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm" value="${endAtDisplay === '—' ? '' : endAtDisplay}" />
         <div class="text-slate-300">件数: <span class="text-slate-100">${cts.length}</span></div>`;
       sum.appendChild(head);
+
+      const btnUploadReviewEditTime = head.querySelector('#btnUploadReviewEditTime');
+      const uploadReviewStartInput = head.querySelector('#uploadReviewStartInput');
+      const uploadReviewEndInput = head.querySelector('#uploadReviewEndInput');
+      if (uploadReviewStartInput) applyNumericDatetimeMask(uploadReviewStartInput);
+      if (uploadReviewEndInput) applyNumericDatetimeMask(uploadReviewEndInput);
+      if (btnUploadReviewEditTime) {
+        btnUploadReviewEditTime.onclick = () => {
+          setUploadReviewTimeEditMode(!uploadReviewTimeEditMode);
+        };
+      }
+      setUploadReviewTimeEditMode(false);
 
       const wx = document.createElement('div');
       wx.className='grid grid-cols-1 sm:grid-cols-2 gap-2';
@@ -15232,10 +15352,10 @@
     async function renderLureMasterSettings() {
       if (!lureMasterList) return;
       if (btnToggleLureMasterEdit) {
-        btnToggleLureMasterEdit.textContent = lureMasterEditMode ? '編集終了' : '編集';
+        btnToggleLureMasterEdit.setAttribute('aria-label', lureMasterEditMode ? '編集モード終了' : '編集モード開始');
         btnToggleLureMasterEdit.className = lureMasterEditMode
-          ? 'px-2 py-1 rounded-lg border border-emerald-600 bg-emerald-900/30 text-emerald-300 hover:bg-emerald-900/50 text-xs whitespace-nowrap'
-          : 'px-2 py-1 rounded-lg border border-slate-700 hover:bg-slate-800 text-xs whitespace-nowrap';
+          ? 'h-8 w-8 rounded-lg border border-emerald-600 bg-emerald-900/30 text-emerald-300 hover:bg-emerald-900/50 inline-flex items-center justify-center'
+          : 'h-8 w-8 rounded-lg border border-slate-700 hover:bg-slate-800 inline-flex items-center justify-center';
       }
       if (btnAddLureMaster) {
         btnAddLureMaster.classList.toggle('opacity-50', !lureMasterEditMode);
@@ -17040,8 +17160,9 @@
 
               // ★追加：編集ボタン
               const btnEditTemp = document.createElement('button');
-              btnEditTemp.className = 'text-xs py-1 px-2 rounded bg-blue-900 hover:bg-blue-800 text-blue-200 ml-2';
-              btnEditTemp.textContent = '編集';
+              btnEditTemp.className = 'ml-2 inline-flex items-center justify-center w-8 h-8 rounded bg-blue-900 hover:bg-blue-800';
+              btnEditTemp.setAttribute('aria-label', '編集');
+              btnEditTemp.innerHTML = '<img src="./assets/edit_icon.png" alt="編集" class="w-4 h-4 object-contain" />';
               btnEditTemp.onclick = async (e) => {
                 e.stopPropagation();
                 console.log('[EditButton] Edit button clicked!');
@@ -17945,7 +18066,7 @@
     <!-- ヘッダー -->
     <div class="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-950">
       <h2 class="text-lg font-semibold text-slate-100">📍 港を選択</h2>
-      <button onclick="closeMapModal()" class="text-slate-400 hover:text-slate-200">×</button>
+      <button onclick="closeMapModal()" data-role="modal-close">×</button>
     </div>
 
     <!-- メインコンテンツ（マップのみ） -->
