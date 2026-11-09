@@ -1635,8 +1635,8 @@
       </div>
       <div id="timelineDetailBody" class="text-sm text-slate-200 whitespace-pre-wrap break-words min-h-[3rem]"></div>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4">
-        <button id="btnTimelineDetailEdit" class="w-full py-2 rounded-xl border border-slate-700 hover:bg-slate-800 inline-flex items-center justify-center" aria-label="編集"><img src="./assets/edit_icon.png" alt="編集" class="w-5 h-5 object-contain" /></button>
-        <button id="btnTimelineDetailDelete" class="w-full py-2 rounded-xl border border-slate-700 hover:bg-slate-800 inline-flex items-center justify-center" aria-label="削除"><img src="./assets/Delete_icon.png" alt="削除" class="w-5 h-5 object-contain" /></button>
+        <button id="btnTimelineDetailEdit" class="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white inline-flex items-center justify-center" aria-label="編集"><img src="./assets/edit_icon.png" alt="編集" class="w-5 h-5 object-contain" /></button>
+        <button id="btnTimelineDetailDelete" class="w-full py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white inline-flex items-center justify-center" aria-label="削除"><img src="./assets/Delete_icon.png" alt="削除" class="w-5 h-5 object-contain" /></button>
         <button id="btnTimelineDetailClose" class="text-slate-400 hover:text-slate-200 text-lg leading-none font-semibold" aria-label="閉じる">×</button>
       </div>
     </div>
@@ -15075,6 +15075,9 @@
       const payloadInput = (typeof lureNameOrPayload === 'object' && lureNameOrPayload)
         ? lureNameOrPayload
         : { lureName: lureNameOrPayload };
+      const hasTagMainInput = Object.prototype.hasOwnProperty.call(payloadInput, 'tagMain');
+      const hasTagSubsInput = Object.prototype.hasOwnProperty.call(payloadInput, 'tagSubs');
+      const hasTagsRawInput = Object.prototype.hasOwnProperty.call(payloadInput, 'tagsRaw');
       const displayName = normalizeLureNameDisplay(payloadInput.lureName);
       const lureKey = normalizeLureNameForMatch(displayName);
       if (!lureKey) return null;
@@ -15087,9 +15090,9 @@
         lureKey,
         incrementUse: options.incrementUse !== false
       };
-      if (mainTag) payload.tagMain = mainTag;
-      payload.tagSubs = subTags;
-      payload.tagsRaw = tagsRaw;
+      if (hasTagMainInput) payload.tagMain = mainTag;
+      if (hasTagSubsInput) payload.tagSubs = subTags;
+      if (hasTagsRawInput) payload.tagsRaw = tagsRaw;
       if (options.previousName) {
         payload.previousName = normalizeLureNameDisplay(options.previousName);
         payload.previousKey = normalizeLureNameForMatch(options.previousName);
