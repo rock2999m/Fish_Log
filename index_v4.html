@@ -13611,8 +13611,19 @@
         // ★修正：確認画面では潮流画像を取得しない（保存済みデータのみ表示）
         console.log('[openTripReview:Manual] ℹ️ Tide image fetch skipped by design');
 
-        // ★修正：確認画面では天気タイムラインを再取得しない（trip_raw の既存データを使用）
-        console.log('[openTripReview:Manual] ℹ️ Weather timeline refetch skipped by design');
+        // 釣行終了時に天気の経過記録を取得し、確認画面と保存データに反映
+        if (typeof draft.lat === 'number' && typeof draft.lng === 'number' && draft.startedAt) {
+          try {
+            draft.weather_timeline = await fetchWeatherTimeline(
+              draft.lat, draft.lng, draft.startedAt, draft.endedAt
+            );
+            console.log('[openTripReview:Manual] Weather timeline fetched:', draft.weather_timeline.length, 'entries');
+          } catch (e) {
+            console.error('[openTripReview:Manual] Weather timeline fetch error:', e);
+          }
+        } else {
+          console.warn('[openTripReview:Manual] Weather timeline fetch skipped: missing trip time or coordinates');
+        }
         
         saveDraft(draft);
 
@@ -13799,8 +13810,19 @@
       // ★修正：確認画面では潮流画像を取得しない（保存済みデータのみ表示）
       console.log('[openTripReview:Normal] ℹ️ Tide image fetch skipped by design');
 
-      // ★修正：確認画面では天気タイムラインを再取得しない（trip_raw の既存データを使用）
-      console.log('[openTripReview:Normal] ℹ️ Weather timeline refetch skipped by design');
+      // 釣行終了時に天気の経過記録を取得し、確認画面と保存データに反映
+      if (typeof draft.lat === 'number' && typeof draft.lng === 'number' && draft.startedAt) {
+        try {
+          draft.weather_timeline = await fetchWeatherTimeline(
+            draft.lat, draft.lng, draft.startedAt, endedAtTime
+          );
+          console.log('[openTripReview:Normal] Weather timeline fetched:', draft.weather_timeline.length, 'entries');
+        } catch (e) {
+          console.error('[openTripReview:Normal] Weather timeline fetch error:', e);
+        }
+      } else {
+        console.warn('[openTripReview:Normal] Weather timeline fetch skipped: missing trip time or coordinates');
+      }
 
       saveDraft(draft);
       captureUploadReviewBackup();
@@ -18134,5 +18156,4 @@
 
 </body>
 </html>
-
 
